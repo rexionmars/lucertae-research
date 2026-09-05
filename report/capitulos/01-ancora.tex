@@ -1,0 +1,165 @@
+\chapter{A proposta original e as duas medidas que a redefiniram}
+\label{cap:ancora}
+
+A proposta que abriu esta linha de trabalho detectaria instalações
+fotovoltaicas por imagem de satélite e cruzaria a detecção com o registro da
+ANEEL, para verificar programas de crédito rural. Duas medidas a redefiniram
+antes que qualquer modelo fosse treinado, e elas fecham caminhos distintos. A
+primeira contamina o alvo de qualquer modelo de geração, inclusive de geração
+centralizada. A segunda fecha o segmento que a proposta original queria
+auditar.
+
+\section{Magnitude e composição do corte no SIN}
+\label{sec:fig1}
+
+\begin{ficha}
+  \item[Janela]      abril de 2024 a julho de 2026
+  \item[Amostra]     85 usinas com apuração de \textit{constrained-off}
+  \item[Unidade]     usina por intervalo de 30 minutos
+  \item[Fonte]       ONS, restrição por \textit{constrained-off} fotovoltaico
+                     e fator de capacidade
+  \item[Teste]       nenhum: a análise é descritiva
+\end{ficha}
+
+O ONS publica, por intervalo restrito, a geração verificada e uma geração de
+referência estimada a partir da curva de desempenho da própria usina. O
+\termo{corte} é a diferença entre as duas, truncada em zero:
+
+\[ C = \max\bigl(\text{referência} - \text{verificada},\; 0\bigr) \]
+
+A definição vale apenas nos intervalos em que há razão de restrição apurada. O
+campo \texttt{val\_\allowbreak geracaolimitada} não é a energia cortada. Ele registra o teto
+ao qual a geração foi limitada. Sua correlação com a geração verificada é 0,86,
+e com a perda apurada é 0,02. Usá-lo como energia cortada superestima a perda.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig1_curtailment_sin.pdf}
+\caption{\textbf{O corte de geração fotovoltaica no SIN é sistêmico, de razão
+energética e incide sobre toda a janela solar.}
+\textbf{a}, Perfil diurno médio da potência fotovoltaica das usinas com apuração
+de \textit{constrained-off}. A área azul é a geração verificada e a área
+vermelha é a energia cortada; a soma define a potência que estaria disponível.
+Médias sobre todos os intervalos de 30 minutos do período, em horário de
+Brasília, sem correção para hora solar local.
+\textbf{b}, Taxa mensal de corte por subsistema, definida como energia cortada
+dividida pela energia disponível.
+\textbf{c}, Energia total cortada por razão de restrição, decomposta em origem
+sistêmica e local. Os rótulos indicam o total por razão.
+\textbf{d}, Distribuição espacial das usinas e conjuntos com apuração. A cor
+codifica a taxa de corte acumulada e o tamanho, a capacidade instalada. A escala
+de cor satura no percentil 97 para preservar contraste. Contornos estaduais do
+IBGE.}
+\label{fig:corte-sin}
+\end{figure*}
+
+A taxa de corte no parque com apuração é de 21,6\%. A razão energética responde
+pela maior parte da energia cortada, e a origem declarada é predominantemente
+sistêmica. O corte incide sobre toda a janela solar, e não sobre um horário de
+ponta. As taxas do Nordeste e do Sudeste com Centro-Oeste crescem em ritmo
+semelhante.
+
+\conclusao{O corte é de razão energética e origem sistêmica, e não de falha
+local. Isso o torna uma propriedade do despacho do sistema, e não um atributo
+da usina cortada.}
+
+\campo{Consequência para modelagem} Onde a geração de uma usina é limitada por
+decisão operativa, um modelo que preveja geração a partir de irradiância ajusta
+um alvo que incorpora essa decisão. O mesmo vale para um modelo que parta de
+imagem de satélite. O erro não é aleatório, porque a decisão de cortar depende
+de carga, de despacho térmico e de posição na rede.
+
+\begin{objecao}
+O denominador é o das usinas com apuração, e não o do parque solar nacional. A
+geração distribuída tem regime de restrição distinto e não entra. A geração de
+referência é estimativa do operador, e em 21,8\% dos intervalos restritos ela
+fica abaixo da geração verificada; o truncamento em zero torna a estimativa
+conservadora, e não exata. Razão e origem são classificações operativas do ONS,
+e não inferência causal independente.
+\end{objecao}
+
+\campo{Comparação internacional} Os 21,6\% são de solar centralizada com
+apuração. O ONS reporta 20,7\% para eólica e solar em 2025, com denominador
+diferente e mesma ordem de grandeza. Os valores publicados para outros sistemas
+são menores: 17\% da renovável variável disponível no Chile em 2024, cerca de
+11\% na Espanha em julho de 2025, e 4,3\% de média para a solar da Califórnia.
+O'Shaughnessy, Cruce e Xu \cite{oshaughnessy2020} organizam a série global de
+corte fotovoltaico e mostram que a taxa cresce com a penetração e não com a
+idade do sistema, o que põe o valor brasileiro na trajetória esperada e não fora
+dela. Novan e Wang \cite{novan2024} medem que a taxa marginal é cerca de duas
+vezes a média, o que implica exposição maior para uma usina que entre agora.
+
+\section{Detectabilidade da geração distribuída}
+\label{sec:fig2}
+
+\begin{ficha}
+  \item[Janela]      conexões registradas até abril de 2026
+  \item[Amostra]     4,6 milhões de instalações
+  \item[Unidade]     empreendimento
+  \item[Fonte]       ANEEL, geração distribuída e informações técnicas
+                     fotovoltaicas
+  \item[Teste]       nenhum: a análise é descritiva sobre censo administrativo
+\end{ficha}
+
+A ANEEL publica a área do arranjo de cada instalação registrada. O número de
+pixels que um sensor de resolução $r_s$ entrega sobre um arranjo de área
+$A$ é
+
+\[ \mathrm{px}(s) = A / r_s^2 \]
+
+A conta transforma a resolução do sensor em uma grandeza comparável com o
+registro, instalação por instalação.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig2_mmgd_detectabilidade.pdf}
+\caption{\textbf{A geração distribuída brasileira é majoritariamente sub-pixel
+no Sentinel-2, e a série de conexões carrega uma descontinuidade regulatória.}
+\textbf{a}, Distribuição acumulada da área do arranjo das instalações
+registradas na ANEEL. As linhas tracejadas marcam a área de um pixel de cada
+sensor, e o rótulo indica a fração de instalações menor que um pixel.
+\textbf{b}, Fração de instalações que atinge o piso operacional de quatro
+pixels, por classe de consumo e sensor.
+\textbf{c}, Conexões mensais. A linha tracejada marca o fim da janela de
+transição da Lei 14.300/2022, e o marcador indica o mês de pico.
+\textbf{d}, Participação da classe rural no total de instalações de cada unidade
+da federação. Contornos do IBGE.}
+\label{fig:mmgd}
+\end{figure*}
+
+No Sentinel-2 a mediana é de 0,29 pixel por instalação, e a fração sub-pixel é
+de 91,2\%. No CBERS-4A WPM são 7,25 pixels e 0,5\%. Num sensor comercial de
+0,5 m são 116 pixels e fração próxima de zero. A classe rural, alvo dos
+programas de crédito, tem área mediana de 41 m\textsuperscript{2} e 5,2\% de
+segmentabilidade no Sentinel-2.
+
+\conclusao{Nove em cada dez instalações de geração distribuída ocupam menos de
+um pixel do Sentinel-2. A verificação por segmentação exige 2 m ou melhor.}
+
+\campo{A resolução não é a restrição dominante} O registro não traz localização
+utilizável. Os campos de coordenada existem no esquema e estão preenchidos em
+0,06\% dos casos. Há o campo \texttt{CodCEP}, completo para os 7,7\% de pessoa
+jurídica e truncado em cinco dígitos para os 92,3\% de pessoa física. A mediana
+é de um prefixo por município, o que não refina o alvo rural. Sem coordenada por
+instalação, a verificação exige varredura exaustiva do território. Apenas o
+segmento de pessoa jurídica é endereçável.
+
+\campo{A data de conexão não é exógena} A janela de transição da Lei
+14.300/2022 concentrou 98 mil conexões em um único mês, quatro vezes a média do
+ano anterior. Um estudo de evento sobre a data de conexão mediria a antecipação
+regulatória, e não o efeito da política.
+
+\begin{objecao}
+Contar pixels não é o mesmo que detectar. Um objeto sub-pixel ainda altera a
+assinatura espectral da célula. O que a contagem descarta é a segmentação, e não
+a detecção espectral. O piso de quatro pixels é convenção declarada, e não
+constante física. O conjunto é censo administrativo, e não amostra, de modo que
+não há erro amostral a declarar.
+\end{objecao}
+
+\campo{Posição na literatura} Os trabalhos que segmentam telhados operam entre
+0,1 e 0,3 m. O DeepSolar \cite{yu2018} usa imagem aérea submétrica, e o conjunto
+multirresolução de Jiang et al. \cite{jiang2021} vai de 0,1 a 0,8 m. O
+inventário global de Kruitwagen et al. \cite{kruitwagen2021} é a referência com
+Sentinel-2, e cobre apenas instalações acima de 10 kW. Não foi localizado
+trabalho que segmente telhado residencial a 10 m.

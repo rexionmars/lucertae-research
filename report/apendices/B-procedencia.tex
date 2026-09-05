@@ -1,0 +1,119 @@
+\clearpage
+\begin{landscape}
+
+\chapter{Procedência das fontes}
+\label{ap:procedencia}
+
+\begin{promancha}
+Todas as análises usam dados abertos e sem autenticação. As fontes não têm o
+mesmo peso probatório, e a tabela final separa as revisadas por pares das
+demais.
+\end{promancha}
+
+\section*{Reprodução}
+
+\begin{promancha}
+Cada figura exporta em CSV os dados que produzem cada painel, sob
+\texttt{data/processed/}. Os notebooks e scripts geradores ficam em
+\texttt{notebooks/}, e as figuras compostas em \texttt{figures/}. As métricas
+citadas no corpo saem desses arquivos, e não da leitura da imagem.
+\end{promancha}
+
+\section*{Bases de dados}
+
+\begin{promancha}
+\campo{ONS, Portal de Dados Abertos} Restrição por \textit{constrained-off}
+fotovoltaico e eólico; geração térmica por motivo de despacho; fator de
+capacidade; curva de carga; intercâmbio nacional; energia armazenada por
+subsistema; Custo Marginal de Operação semi-horário; relação entre conjunto e
+usina; linhas de transmissão e subestações da Rede de Operação.
+
+\campo{ANEEL} Sistema de Informações de Geração; relação de empreendimentos de
+geração distribuída e informações técnicas fotovoltaicas; SIGET, com contrato,
+módulo, linha de transmissão e subestações de origem e destino.
+
+\campo{EPE} Webmap institucional, em serviço ArcGIS REST: camadas de linhas de
+transmissão e subestações em operação, com geometria.
+
+\campo{ESA e Copernicus} Sentinel-2 L2A, pelo catálogo STAC público da AWS em
+\texttt{earth-\allowbreak search.\allowbreak aws.\allowbreak element84.\allowbreak com}.
+
+\campo{NASA POWER} Irradiância diária, de MERRA-2 e SYN1DEG.
+
+\campo{IBGE} Malhas territoriais das unidades da federação.
+\end{promancha}
+
+\section*{Comparação internacional}
+
+\begin{promancha}
+\tabfontw
+\begin{tabular}{@{}>{\rag\arraybackslash}p{6.4cm}rr
+                  >{\rag\arraybackslash}p{5.0cm}@{}}
+\toprule
+\cab{Sistema} & \cab{Taxa} & & \cab{Referência} \\
+\midrule
+Brasil, solar com apuração    & 21,6\% & & este relatório \\
+Brasil, eólica e solar, 2025  & 20,7\% & & ONS \\
+Chile, 2024                   & 17\%   & & imprensa setorial \\
+Brasil, eólica com apuração   & 15,9\% & & este relatório \\
+Irlanda, eólica, 2025         & 11,3\% & & EirGrid \\
+Espanha, julho de 2025        & 11\%   & & imprensa setorial \\
+Califórnia, solar             &  4,3\% & & Novan e Wang \\
+\bottomrule
+\end{tabular}
+\notas{Os denominadores diferem, e a comparação com sistemas estrangeiros é de
+ordem de grandeza, e não pareada. As duas linhas brasileiras são pareadas entre
+si: ambas são razão de energia cortada sobre disponível, na janela de abril de
+2024 a agosto de 2026, em que solar e eólica têm apuração simultânea, sobre 87
+conjuntos solares e 178 eólicos. Numa extração única elas dão 22,1\% e 15,9\%; a
+linha da solar preserva os 21,6\% da seção~\ref{sec:fig1}, de extração
+anterior.}
+\end{promancha}
+
+\begin{promancha}
+As taxas brasileiras ficam no topo da faixa internacional para as duas fontes. A
+solar perde cerca de 1,4 vez o que a eólica perde. O que separa os dois regimes
+não é a magnitude do corte, e sim a composição da causa: 91\% de origem
+sistêmica na solar contra 76\% na eólica, medido na seção~\ref{sec:fig11}.
+\end{promancha}
+
+\section*{Mudança regulatória durante a execução}
+
+\begin{promancha}
+A pergunta que a seção~\ref{sec:fig3} deixou em aberto, sobre se o corte é
+ressarcido, deixou de ser hipotética. A Lei 15.269/2025 criou compensação por
+\textit{constrained-off} para eólicas e solares, custeada por Encargos de
+Serviços do Sistema, com efeitos retroativos a 1 de setembro de 2023 e
+condicionada à renúncia de ações judiciais e à assinatura de termo de
+compromisso. A Portaria MME 140 regulamentou os cortes ocorridos até 25 de
+novembro de 2025, e os posteriores ficam com a ANEEL.
+
+A primeira fase reuniu manifestação de interesse de 1.539 usinas, com cerca de
+53 GW instalados. Estimativas setoriais apontam perda da ordem de R\$ 6,5
+bilhões em 2025, mesma ordem de grandeza da valoração ao CMO da
+seção~\ref{sec:fig3} extrapolada para o parque.
+
+Isso reforça a objeção daquela seção. O CMO mede valor sistêmico, e não
+ressarcimento. Com a lei, os dois divergem por construção: o gerador é
+compensado por energia cujo valor sistêmico, no instante do corte, era próximo
+de zero.
+\end{promancha}
+
+\section*{Peso das fontes}
+
+\begin{promancha}
+\campo{Revisadas por pares} Vieira et al. (2026), Novan e Wang (2024),
+Kruitwagen et al. (2021), Yu et al. (2018), Jiang et al. (2021), Alix-García e
+Millimet (2023), Bird et al. (2016), Callaway e Sant'Anna (2021), Maji et al.
+(2025).
+
+\campo{Working papers e pré-prints} Newbery (2024), Proctor et al. (2023), Silva
+et al. (2026), Global Renewables Watch (2025), Robinson et al. (2021).
+
+\campo{Fontes normativas} Lei 15.269/2025, Portaria MME 140 e Lei 14.300/2022.
+
+\campo{Imprensa setorial} Taxas de Chile, Espanha e Europa, e o valor de R\$ 6,5
+bilhões. Usadas como ordem de grandeza, e nunca como evidência de mecanismo.
+\end{promancha}
+
+\end{landscape}

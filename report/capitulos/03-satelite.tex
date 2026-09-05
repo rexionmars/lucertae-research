@@ -1,0 +1,153 @@
+\chapter{O que o satélite gratuito separa, e a que preço o comercial resolve}
+\label{cap:satelite}
+
+A seção~\ref{sec:fig2} fecha a verificação de geração distribuída por imagem
+gratuita. Restam duas perguntas: se a rota funciona para geração centralizada,
+onde o arranjo tem centenas de hectares, e quanto custaria comprar a resolução
+que o sensor gratuito não entrega.
+
+\section{Construção e operação de usina centralizada}
+\label{sec:fig7}
+
+\begin{ficha}
+  \item[Janela]      2018 a 2026, uma cena por ano
+  \item[Amostra]     34 conjuntos, 306 medições
+  \item[Unidade]     conjunto por ano
+  \item[Fonte]       Sentinel-2 L2A pelo catálogo STAC público; ANEEL/SIGA
+  \item[Teste]       Wilcoxon pareado, duas comparações
+\end{ficha}
+
+Para cada conjunto mede-se a razão entre o brilho no vermelho dentro do arranjo
+e num anel de controle afastado:
+
+\[ \rho(t)=\frac{\overline{B_{\text{red}}}\big|_{d\le 400\,\mathrm{m}}}
+{\overline{B_{\text{red}}}\big|_{1{,}5\le d\le 3\,\mathrm{km}}} \]
+
+O anel controla iluminação, estação e umidade do solo, que afetam as duas
+regiões da mesma forma. As séries são alinhadas pela data de entrada em operação
+registrada no SIGA, e não pelo calendário.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig7_deteccao_construcao.pdf}
+\caption{\textbf{A construção de usinas fotovoltaicas é detectável e datável por
+Sentinel-2; a operação não é.}
+\textbf{a}, Razão entre o brilho no vermelho dentro do arranjo e num anel de
+controle de 1,5 a 3 km, por usina em linha cinza e mediana entre usinas em linha
+vermelha, com faixa entre quartis, alinhadas pela data de entrada em operação do
+SIGA.
+\textbf{b}, Sentinel-2 em cor natural sobre o complexo Sol do Cerrado, em escala
+de refletância fixa entre as datas. Os círculos marcam as 17 usinas do SIGA.
+\textbf{c}, Comparação pareada da razão de brilho entre fases, uma linha por
+usina, com a mediana em destaque, e valor de $p$ de Wilcoxon pareado.
+\textbf{d}, Diferença entre o ano de pico do brilho relativo e o ano de entrada
+em operação. As barras em vermelho indicam erro de até um ano.}
+\label{fig:construcao}
+\end{figure*}
+
+Da fase de base para a de construção a razão sobe de 1,01 para 1,30, um ganho de
+34\% na mediana, em 24 de 30 usinas, com $p = 1{,}2 \times 10^{-5}$. Da base
+para a operação a mediana vai de 0,95 para 1,02, um ganho de 6,6\%, com 11 de 18
+usinas em alta contra 7 em queda e $p = 0{,}09$.
+
+\conclusao{A obra tem assinatura espectral e data a entrada em operação. A fase
+operacional não se separa do entorno a 10 m de resolução.}
+
+A construção remove vegetação de centenas de hectares, e solo exposto tem
+refletância alta no vermelho. Na fase operacional não há sinal em nenhuma
+direção. Módulos são escuros, mas a 10 m o pixel mistura painel, corredor, via
+de serviço e solo entre fileiras.
+
+\campo{O que isso responde da proposta original} A hipótese de cruzar registro
+com evidência de satélite é executável para geração centralizada, com uma
+inversão. O satélite confirma a usina pela cicatriz da obra, e não pelo arranjo
+em si. Como a cicatriz é evento transitório, a auditoria exige monitoramento
+contínuo da série, e não observação do estado atual.
+
+\campo{Uma correção de método dominou o resultado} A primeira execução usou a
+coordenada do conjunto publicada pelo ONS, que corresponde à subestação
+coletora, e resultou nula. Em 31 de 37 conjuntos a subestação fica a mais de
+750 m do centroide do arranjo, com mediana de 1,9 km. A máscara amostrava
+terreno fora do arranjo. Refeita com as coordenadas de usina do SIGA, a
+diferença entre fases aparece.
+
+\begin{objecao}
+A qualidade da geolocalização de referência domina o resultado, e qualquer
+replicação depende dessa camada. Uma cena por ano fixa a datação em resolução
+anual, com acerto exato em 21\% dos casos e erro de até um ano em 62\%. Os
+círculos de 400 m não são o polígono do arranjo, e delinear por segmentação
+melhoraria o contraste. O pulso indica remoção de vegetação, que também ocorre
+em lavoura, mineração e loteamento; a atribuição depende do cruzamento com o
+registro. Nada disso se estende a telhados.
+\end{objecao}
+
+\campo{Posição na literatura} A razão dentro e fora do arranjo é uma versão
+simplificada do \textit{Temporal Cluster Matching} \cite{robinson2021}, que data
+construções comparando a relação espectral dentro e fora da pegada. Aquele
+método foi aplicado a usinas solares em Karnataka. O Global Renewables Watch
+\cite{grw2025} estima datas de construção em escala global com imagem de alta
+resolução. O que esta seção acrescenta é a validação contra o registro de
+outorga e o resultado negativo sobre a fase operacional.
+
+\section{Resolução, cobertura e custo de imagem comercial}
+\label{sec:aux}
+
+A curva de detectabilidade da seção~\ref{sec:fig2} posiciona qualquer catálogo
+de sensor comercial. Os 21 sensores de um fornecedor típico caem sobre ela em
+três grupos.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/aux_geopera_capacidade.pdf}
+\caption{\textbf{Os sensores de um catálogo comercial posicionados contra a
+curva de detectabilidade da geração distribuída, e o custo de aquisição por
+área.}
+\textbf{a}, Resolução e faixa de imageamento dos sensores do catálogo.
+\textbf{b}, Fração da geração distribuída registrada que atinge o piso de quatro
+pixels em cada resolução, com os sensores do catálogo sobrepostos.
+\textbf{c}, Custo de aquisição por instalação verificada, no cenário com
+coordenada por instalação e no cenário de varredura municipal.}
+\label{fig:comercial}
+\end{figure*}
+
+A transição de detectabilidade ocorre entre 1 m e 5 m. Abaixo de 1 m, 99,5\% da
+geração distribuída é segmentável, e os 18 sensores submétricos do catálogo
+estão todos no platô. Acima, a fração cai para 86,6\% a 2 m, 7,5\% a 5,3 m e
+1,6\% no Sentinel-2. Os dois sensores hiperespectrais do catálogo ficam acima do
+joelho da curva.
+
+A faixa de 2 m custa entre AUD 2 e 3 por km\textsuperscript{2} e entrega a mesma
+resolução do CBERS-4A WPM, que é público. Entre 0,80 m e 2 m há apenas arquivo,
+sem programação de aquisição.
+
+\conclusao{O custo de verificação é determinado pela ausência de localização no
+registro, e não pela resolução disponível no mercado.}
+
+Com coordenada por instalação, um recorte de 0,01 km\textsuperscript{2} a 30 cm
+custa entre AUD 0,18 e 0,28. Sem ela, a varredura de 1.000 km\textsuperscript{2}
+de um município custa entre AUD 18 mil e 28 mil. São cinco ordens de grandeza
+entre os dois cenários.
+
+\campo{O que fica viável} Varrer entre 100 e 400 km\textsuperscript{2} da área
+ocupada de dois ou três municípios rurais custa entre AUD 1.800 e 11.200, e
+permite auditar a contagem agregada contra o registro municipal. A verificação
+por instalação na classe rural permanece inviável.
+
+As 361.622 instalações de pessoa jurídica têm CEP completo no registro,
+geocodificável em nível de rua. Para esse segmento, com arranjos medianos de 66
+e 92 m\textsuperscript{2} em comércio e indústria, o recorte dirigido é viável,
+com custo da ordem de AUD 0,20 por instalação.
+
+\begin{objecao}
+Preços e sensores são os publicados pelo fornecedor, em dólar australiano e sem
+tributo, e mudam sem aviso. A profundidade de arquivo não é publicada por
+sensor, o que é decisivo porque todo desenho deste relatório é longitudinal. O
+catálogo é apenas óptico, sem radar de abertura sintética, que seria o
+complemento imune a nuvem.
+\end{objecao}
+
+\campo{Onde está a análise energética por satélite} A abordagem em uso
+operacional emprega satélite meteorológico geoestacionário, com índice de nuvem
+convertido em irradiância e depois em geração por modelo de desempenho, a 1 ou
+2 km e passo de 10 minutos. Ela mede a nuvem, e não o arranjo. É a abordagem do
+capítulo~\ref{cap:calibracao}.

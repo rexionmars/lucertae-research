@@ -1,0 +1,151 @@
+\chapter{Estudo de caso pareado e cronologia do entorno}
+\label{cap:caso}
+
+Duas usinas do mesmo subsistema, sujeitas ao mesmo despacho, perdem frações
+distintas da energia disponível. As explicações locais que a diferença sugere
+são testáveis na frota, e o período anterior ao início da apuração é alcançável
+pelo fator de capacidade.
+
+\section{Dois ativos com taxas de corte distintas}
+\label{sec:fig3}
+
+\begin{ficha}
+  \item[Janela]      outubro de 2024 a agosto de 2026, recorte comum ao par
+  \item[Amostra]     2 ativos no par; 60 conjuntos no teste de frota
+  \item[Unidade]     conjunto
+  \item[Fonte]       ONS e ANEEL/SIGA
+  \item[Teste]       Spearman sobre 5 covariáveis, sem correção
+\end{ficha}
+
+Sol do Cerrado tem 681,3 MW, é produtor independente, reúne 17 sociedades de
+propósito específico de um mesmo grupo e conecta em barramento compartilhado de
+Jaíba, em 230 kV. O conjunto Três Marias 3 tem 70,0 MW, opera sob autoprodução
+de sete empresas privadas distintas e tem ponto de conexão exclusivo. Os dois
+ficam em Minas Gerais, no mesmo subsistema. A janela comum foi recortada
+programaticamente.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig3_estudo_caso.pdf}
+\caption{\textbf{Dois ativos solares em Minas Gerais diferem 3,0 vezes na taxa
+de corte, e a diferença não se reproduz como padrão no parque.}
+\textbf{a}, Perfil diurno médio de potência, em pu da capacidade instalada, na
+janela comum aos dois ativos. Em azul a geração verificada, em vermelho a
+energia cortada.
+\textbf{b}, Custo Marginal de Operação do subsistema Sudeste ponderado pela
+energia, durante os intervalos de corte e durante a geração.
+\textbf{c}, Taxa de corte mensal dos dois ativos.
+\textbf{d}, Pixels Sentinel-2 ocupados pela área de módulos, comparados à
+instalação mediana de geração distribuída, em escala logarítmica, com área de
+módulos estimada a 5,12 m\textsuperscript{2}/kWp.
+\textbf{e}, Taxa de corte contra capacidade renovável variável num raio de
+100 km, para os conjuntos com apuração completa na janela de referência da
+frota, com os dois alvos em destaque.}
+\label{fig:caso}
+\end{figure*}
+
+A taxa de corte é de 26,8\% contra 8,8\%. A energia cortada equivale a cerca de
+R\$ 64 milhões contra pouco mais de R\$ 1 milhão, valorada ao Custo Marginal de
+Operação. Nos dois ativos o CMO ponderado durante o corte é menor que durante a
+geração, o que é consistente com restrição de razão energética. O
+capítulo~\ref{cap:despacho} examina esse ponto no despacho.
+
+\campo{Uma correção de atribuição} O campo \texttt{nom\_\allowbreak agenteproprietario} do
+ONS identifica o agente representante, e não o proprietário. Ele não sustenta a
+leitura de que Três Marias 3 seja ativo estatal. O SIGA registra sete
+proprietários privados sob regime de autoprodução. Não há usina solar estatal no
+parque despachado, e o eixo público contra privado não é testável nesta amostra.
+
+\conclusao{Nenhuma das cinco covariáveis locais reproduz a diferença do par na
+frota: nem carga do ponto de conexão, nem número de conjuntos, nem densidade
+regional de renovável, nem tensão, nem capacidade própria.}
+
+Duas explicações locais eram plausíveis à vista do par: barramento compartilhado
+e densidade regional de renovável. Nenhuma sobrevive ao teste na frota. Uma
+explicação consistente com um par de ativos não se generaliza a mecanismo sem
+esse teste.
+
+\begin{objecao}
+Dois ativos não são amostra, e o par foi escolhido por contraste. As cinco
+covariáveis foram testadas sem correção de multiplicidade; como nenhuma
+resultou significativa, a correção só tornaria a conclusão mais conservadora. O
+CMO é proxy de valor sistêmico, e não preço de liquidação nem prejuízo líquido.
+\end{objecao}
+
+\campo{O que estava em dado aberto e foi afirmado em falta} A versão anterior
+desta análise concluía que a topologia de transmissão não está publicada. Ela
+está. O SIGET publica o grafo linha a linha, com 1.166 linhas e 619 subestações
+com código ONS, tensão e comprimento, e o pacote \texttt{fator-\allowbreak capacidade-2}
+traz a coordenada do ponto de conexão de cada usina. O join cobre 168 dos 229
+conjuntos despachados. O limite de transferência também está publicado, no
+pacote \texttt{linha-\allowbreak transmissao}, com capacidade operativa em MVA e variantes
+sazonais, além de resistência e reatância. Permanece indisponível apenas qual
+restrição está ativa em cada intervalo. As cinco covariáveis testadas são locais
+ao ponto e não usam a estrutura da rede, de modo que o resultado nulo não se
+estende a ela. O capítulo~\ref{cap:rede} a testa.
+
+\section{Cronologia do corte e da energização do entorno}
+\label{sec:fig4}
+
+\begin{ficha}
+  \item[Janela]      2023 a julho de 2026; entorno desde 2021
+  \item[Amostra]     43 e 24 meses, por ativo
+  \item[Unidade]     conjunto por mês
+  \item[Fonte]       ONS, fator de capacidade e \textit{constrained-off}
+  \item[Teste]       nenhum teste formal
+\end{ficha}
+
+A apuração de corte começa em abril de 2024, e a onda de construção em Jaíba vai
+de 2021 a 2024. A série de corte não cobre o período em que a hipótese de
+saturação do entorno se manifestaria. O fator de capacidade existe desde a
+entrada em operação e cai quando a geração é limitada:
+
+\[ FC_{\text{verificado}}(t)=\frac{E_{\text{gerada}}(t)}{P_{\text{inst}}\cdot\Delta t} \]
+
+A partir de abril de 2024 a apuração permite recompor o potencial:
+
+\[ FC_{\text{potencial}} = FC_{\text{verificado}} + FC_{\text{cortado}} \]
+
+Se a queda for de restrição de rede, o potencial recomposto permanece estável
+enquanto o verificado cai. Se for recurso solar ou degradação, os dois caem
+juntos.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig4_cronologia.pdf}
+\caption{\textbf{A queda do fator de capacidade de Sol do Cerrado acompanha a
+energização do entorno; o controle não mostra o mesmo.}
+\textbf{a}, Jaíba, Minas Gerais. Em área cinza a capacidade fotovoltaica
+acumulada em operação num raio de 100 km, no eixo esquerdo; em linha o fator de
+capacidade mensal verificado de Sol do Cerrado, no eixo direito; em faixa
+vermelha a parcela cortada apurada pelo ONS, disponível a partir de abril de
+2024.
+\textbf{b}, São Gonçalo do Abaeté, Minas Gerais, com a mesma construção para
+Três Marias 3.
+\textbf{c}, Fator de capacidade mensal de Sol do Cerrado em 2023 e 2025, mês
+contra mês, para separar restrição de sazonalidade.
+\textbf{d}, Potência acumulada de geração distribuída nos dois municípios. Os
+20,4 MW de Jaíba equivalem a 3,0\% da capacidade de Sol do Cerrado.}
+\label{fig:cronologia}
+\end{figure*}
+
+\begin{objecao}
+A decomposição separa restrição de degradação, e não separa restrição de
+variação climática. Se 2025 tiver sido menos ensolarado que 2023, a queda não
+informa sobre a rede. O fator de capacidade responde a várias causas ao mesmo
+tempo, e a decomposição só vale onde a apuração existe. A comparação é pareada e
+sem aleatorização, como na seção~\ref{sec:fig3}.
+\end{objecao}
+
+O capítulo~\ref{cap:calibracao} fecha essa lacuna, medindo a irradiância
+diretamente sobre cada usina.
+
+\campo{Por que o desenho não estima efeito de tratamento} Cada vizinho energiza
+em data distinta, o que caracteriza adoção escalonada. Callaway e Sant'Anna
+\cite{callaway2021} mostram que o estimador de diferenças em diferenças com
+efeitos fixos duplos fica enviesado nesse caso, por ponderar comparações entre
+unidades já tratadas. A leitura é descritiva e pareada contra um único
+controle, o que evita o problema e também não estima efeito. Estimá-lo exigiria
+o estimador por grupo e período daqueles autores, e uma definição de tratamento
+exógena que a seção~\ref{sec:fig2} mostra não existir do lado da geração
+distribuída.
