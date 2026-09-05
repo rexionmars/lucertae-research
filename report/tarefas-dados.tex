@@ -1,0 +1,146 @@
+% =====================================================================
+% tarefas-dados.tex -- documento avulso, uma pagina deitada
+%
+% Cruza duas coisas que nao costumam aparecer juntas: a familia de
+% tarefa como a literatura de energia a define, e a fonte brasileira
+% aberta que serve de insumo ou de verdade de campo para ela.
+%
+% A coluna de cobertura traz numero medido na consulta de 05/09/2026 --
+% `count(*)` no PostGIS, arquivo baixado e aberto, contagem de recurso
+% pela API CKAN do ONS -- e nao a descricao que o catalogo declara.
+%
+% Nao entra no `reporte.tex`. Compila sozinho, e usa a folha de estilo
+% do diretorio so pela identidade visual:
+%   latexmk -pdf tarefas-dados.tex
+% =====================================================================
+
+% A folha de estilo pressupoe `book`: usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`. Em `article` ela nao carrega.
+\documentclass[10pt,a4paper,oneside]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,top=1.9cm,bottom=1.9cm,left=2.0cm,right=2.2cm]{geometry}
+\usepackage{estilo-reporte}
+
+\pagestyle{empty}
+
+\begin{document}
+\begin{landscape}
+
+{\sffamily\bfseries\LARGE Tarefas de energia e o dado brasileiro\par}
+\vspace{0.3em}
+{\sffamily\fontsize{8}{10}\selectfont\color{tinta2}%
+Levantamento de 5 de setembro de 2026\par}
+\vspace{1.2em}
+
+\begin{promancha}
+As oito famílias abaixo são as que a literatura de energia trata como tarefas
+distintas, cada uma com objetivo, método e métrica próprios. Para cada uma, a
+fonte nacional aberta que serve de insumo ou de verdade de campo. A coluna de
+cobertura traz o que foi medido na consulta ao catálogo do ONS e aos arquivos já
+em disco; onde não houve verificação, está dito. O ONS publica 83 conjuntos, dos
+quais o trabalho desta linha consome oito.
+\end{promancha}
+
+\tabfont
+\begin{longtable}{@{}
+    >{\rag\arraybackslash}p{0.7cm}
+    >{\rag\arraybackslash}p{3.2cm}
+    >{\rag\arraybackslash}p{4.1cm}
+    >{\rag\arraybackslash}p{5.8cm}
+    >{\rag\arraybackslash}p{5.2cm}
+    >{\rag\arraybackslash}p{3.7cm}@{}}
+\toprule
+\cab{\#} & \cab{Família de tarefa} & \cab{Objetivo declarado} &
+\cab{Fonte nacional aberta} & \cab{Cobertura verificada} & \cab{No repositório} \\
+\midrule
+\endfirsthead
+\toprule
+\cab{\#} & \cab{Família de tarefa} & \cab{Objetivo declarado} &
+\cab{Fonte nacional aberta} & \cab{Cobertura verificada} & \cab{No repositório} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+1 & Avaliação de recurso &
+Medir irradiância e vento disponíveis; validar produto de satélite contra medida de superfície &
+ONS \texttt{restricao\_coff\_fotovoltaica\_detail} (irradiância no plano do arranjo); Rede SONDA, INPE; Atlas Brasileiro de Energia Solar, LABREN; NASA POWER &
+\num{19088880} registros de POA, 560 usinas, 10 UFs, passo de 30 min, abr/2024 a set/2026, com 16,9\% marcados suspeitos. Atlas: \num{72272} registros de média mensal e anual &
+POA no PostGIS e POWER horário para 90 células; SONDA e Atlas não baixados \\
+\addlinespace[.5ex]
+
+2 & Previsão de geração e carga &
+Prever solar, eólica e carga. Hoje avaliada como banco de prova de modelo de fundação para série temporal &
+ONS \texttt{programacao\_x\_previsao}; \texttt{carga-energia-programada}; \texttt{curva-carga}; \texttt{demanda\_maxima\_di} &
+\num{2075} recursos diários. O arquivo de 15/08/2026 traz \num{28656} linhas: previsão e programado lado a lado, por usina, em 48 patamares &
+Só a curva de carga \\
+\addlinespace[.5ex]
+
+3 & Inventário e detecção de ativo &
+Localizar e datar usina e instalação distribuída por imagem de satélite &
+ANEEL SIGA; ANEEL MMGD; ONS \texttt{linha-transmissao} e \texttt{subestacao}; EPE; Sentinel-2 &
+SIGA: \num{25133} empreendimentos com coordenada, potência e data de entrada em operação. MMGD: \num{4678147} conexões, com coordenada da subestação e não da instalação. Rede: \num{2208} linhas e \num{1677} subestações &
+Completo. É a única família sem lacuna de insumo \\
+\addlinespace[.5ex]
+
+4 & Monitoramento de operação por satélite &
+Estimar geração e emissão de planta sem telemetria, calibrando assinatura de pluma ou térmica contra geração reportada &
+ONS \texttt{geracao-usina-2}; \texttt{geracao-termica-despacho-2}; \texttt{cvu-usitermica}; \texttt{balanco\_dessem\_detalhe} &
+Despacho térmico por motivo em 29 arquivos mensais. CVU em 22 arquivos anuais desde 2020. DESSEM: \num{1399} recursos, 192 linhas por dia, quatro subsistemas por 48 patamares &
+Só o despacho térmico. O CVU define a ordem de mérito e não foi baixado \\
+\addlinespace[.5ex]
+
+5 & Reservatório e hidrelétrica &
+Estimar área, nível e volume armazenado por satélite, contra o reportado pelo operador &
+ONS: \texttt{ear-diario-por-reservatorio}, \texttt{ena-diario-por-reservatorio}, \texttt{ear-diario-por-bacia}, \texttt{ear-diario-por-ree}, \texttt{reservatorio}, \texttt{dados-hidrologicos-res}, \texttt{grandezas\_fluviometricas}, \texttt{res\_volumeespera}, \texttt{energia-vertida-turbinavel}, \texttt{precipitacao-estacao}, \texttt{bacia\_contorno} &
+Onze conjuntos. EAR por reservatório em 83 recursos, ENA por reservatório em 62, vazão fluviométrica em 30, contorno das bacias em arquivo vetorial &
+Só a EAR agregada por subsistema. É a família com mais dado publicado e nenhum uso \\
+\addlinespace[.5ex]
+
+6 & Desempenho e degradação de planta &
+Medir razão de desempenho, sujidade e indisponibilidade ao longo da vida do ativo &
+ONS \texttt{restricao\_coff\_fotovoltaica\_detail} (POA, geração verificada e estimada); \texttt{disponibilidade\_usina}; \texttt{taxa\_teif\_teip} &
+Disponibilidade em 332 recursos. Taxas de indisponibilidade forçada e programada em 5 recursos &
+Só o \texttt{detail}, de onde já sai \texttt{pr\_limpo.csv} \\
+\addlinespace[.5ex]
+
+7 & Locação e conflito de uso do solo &
+Escolher sítio e medir concorrência com a agricultura, incluindo arranjo agrivoltaico &
+MapBiomas; IBGE; ANEEL SIGA; contorno de bacia do ONS &
+Não verificada nesta consulta &
+Fora do estoque atual \\
+\addlinespace[.5ex]
+
+8 & Acesso à energia e demanda &
+Estimar eletrificação e demanda onde não há medição, por luzes noturnas e registro administrativo &
+ANEEL MMGD por município; ONS \texttt{curva-carga}; VIIRS &
+MMGD traz código IBGE de município nas \num{4678147} conexões. Cobertura de VIIRS não verificada &
+Parcial, pelo lado do registro \\
+
+\end{longtable}
+
+\begin{promancha}
+\vspace{0.6em}
+Duas leituras saem da tabela. A primeira é que nenhuma das oito famílias esbarra
+em ausência de dado nacional: onde há lacuna, ela é de aquisição, e não de
+publicação. A segunda é que o insumo mais denso já está em disco e serve a três
+famílias ao mesmo tempo. A irradiância no plano do arranjo de 560 usinas, a cada
+meia hora, é entrada de avaliação de recurso, verdade de campo de previsão e
+insumo de razão de desempenho, e não existe equivalente público no país: a Rede
+SONDA mede na horizontal, em rede de dezenas de estações, e o Atlas do LABREN é
+produto modelado em média mensal.
+\end{promancha}
+
+\begin{objecao}
+A cobertura declarada aqui é de catálogo e de cabeçalho de arquivo, não de
+conteúdo. Dos conjuntos listados como ausentes, apenas dois foram abertos e
+lidos linha a linha; para os demais, o número de recursos não garante série
+contínua nem coluna preenchida. O precedente do \texttt{val\_irradianciaverificado}
+mostra que o nome da coluna e a grandeza que ela carrega podem divergir, e que
+descobrir isso custa uma etapa de validação inteira.
+\end{objecao}
+
+\end{landscape}
+\end{document}
