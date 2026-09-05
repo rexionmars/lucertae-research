@@ -1,0 +1,179 @@
+% =====================================================================
+% execucao-desempenho.tex -- registro de execucao
+%
+% Segundo experimento, familia 6. Mede a razao de desempenho da frota e
+% separa o que e decisao de despacho do que e do ativo.
+%
+% E o primeiro uso da classificacao de montagem validada no experimento
+% anterior: a POA vai no denominador, e ela depende do plano do arranjo.
+%
+% Como o registro anterior, guarda o que nao fechou. Aqui foram tres
+% limites, e dois deles so apareceram ao tentar fechar a conta.
+%
+% Nao entra no `reporte.tex`. Compila sozinho:
+%   latexmk -pdf execucao-desempenho.tex
+% =====================================================================
+
+% A folha de estilo pressupoe `book`: usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`. Em `article` ela nao carrega.
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+% Mancha e medianiz do `reporte.tex`: 17,2 cm em duas colunas de 8,25 cm.
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+\raggedbottom
+\pagestyle{plain}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+\twocolumn[{%
+  \vspace*{-0.4em}
+  {\sffamily\bfseries\LARGE Razão de desempenho: despacho ou ativo\par}
+  \vspace{0.4em}
+  {\sffamily\fontsize{9}{11}\selectfont\color{tinta2}%
+  Registro de execução · 5 de setembro de 2026 ·
+  \texttt{notebooks/br/\_desempenho.py}\par}
+  \vspace{1.4em}
+}]
+
+\section*{O que se quis medir}
+
+A razão de desempenho é energia entregue sobre energia que a irradiância medida
+no plano permitiria: $\mathrm{PR} = (E/P_{\mathrm{nom}})/(\mathrm{POA}/1000)$.
+Os dois termos saem em horas e a razão é adimensional.
+
+O cálculo só fica certo com a geometria de montagem conhecida --- é a POA que
+vai no denominador, e ela depende do plano do arranjo. A classificação validada
+no experimento anterior entra aqui, e esta é a primeira aplicação dela.
+
+A pergunta: do déficit de desempenho da frota, quanto é decisão de despacho e
+quanto é do ativo.
+
+\section*{Desenho}
+
+Três quantidades, e a diferença entre elas é o resultado.
+
+\begin{ficha}
+  \item[Realizado]  com a geração verificada. O que o ativo entregou.
+  \item[Potencial]  com a geração estimada pelo ONS. O que ele teria entregue
+                    sem restrição, segundo o modelo do operador.
+  \item[Sem corte]  realizado, restrito aos dias sem intervalo restrito no
+                    conjunto. O realizado limpo da decisão de despacho.
+\end{ficha}
+
+Potencial menos realizado é corte mais indisponibilidade. Potencial menos
+sem-corte isola o que sobra.
+
+\campo{O desenho encolheu de três vias para duas} A separação pedia
+indisponibilidade declarada por usina, e ela não existe para fotovoltaica.
+\texttt{taxa\_teif\_teip} tem \num{29794} linhas e cobre hidrelétrica,
+térmica e nuclear. \texttt{disponibilidade\_usina} devolve \textbf{zero linhas
+UFV} --- só UHE, UTE e UTN. A única disponibilidade de fotovoltaica publicada
+está dentro do próprio constrained-off, por conjunto e não por usina.
+
+\begin{objecao}
+Sem esse dado, o resíduo depois de tirar o corte mistura subdesempenho do ativo
+com indisponibilidade não declarada, e as duas não se separam. O número que
+sobra é um teto para o subdesempenho, não uma medida dele.
+\end{objecao}
+
+\section*{Dado}
+
+Janela de 2025. \num{74863} dias-usina em 270 usinas com geometria
+classificada, das quais 269 têm 60 dias ou mais. A geração e a POA saem do
+\texttt{br.pv\_detail}, por usina; o corte sai do \texttt{br.pv\_curtail}, por
+conjunto, e liga por nome normalizado --- 96\% dos conjuntos casam.
+
+\section*{Resultado}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.4cm}rrr@{}}
+\toprule
+\cab{Razão de desempenho} & \cab{p10} & \cab{Mediana} & \cab{p90} \\
+\midrule
+Realizado           & 0,544 & \textbf{0,828} & 0,961 \\
+Potencial (ONS)     & 0,851 & 1,013 & 1,198 \\
+Sem dia restrito    & 0,828 & 0,990 & 1,125 \\
+\bottomrule
+\end{tabular}
+\notas{Mediana entre 269 usinas, cada uma mediana dos seus dias de 2025.}
+
+\vspace{0.7em}
+A lacuna potencial menos realizado é \textbf{0,221}. Tirando os dias com
+restrição no conjunto, sobram \textbf{0,031}. Cerca de 86\% do déficit de
+desempenho da frota é decisão de despacho, e não do ativo. Dias com alguma
+restrição no conjunto são 80,4\% do total.
+
+\section*{Dois limites do número}
+
+\campo{Não é PR de norma} Está referenciado à potência fiscalizada, que é
+corrente alternada; a potência de corrente contínua dos módulos não é publicada
+pela ANEEL. Um arranjo é sobredimensionado em CC contra o inversor, e por isso o
+índice passa de~1. Comparar com PR de norma sem dizer isto seria erro.
+
+\campo{A contabilidade de energia por conjunto não fecha} Somando as usinas do
+\texttt{detail} contra o constrained-off do conjunto, a razão é 0,72. Restringir
+aos 21 conjuntos com cobertura completa melhora pouco, 0,84, e aí o corte passa a
+``explicar'' 120\% da lacuna, que é impossível. Os dois conjuntos de dados do ONS
+não reconciliam entre si.
+
+\begin{objecao}
+O teste de cobertura era circular: media as usinas usadas contra as que existem
+no próprio \texttt{pv\_detail}, que pode não ter todas as do conjunto. Os
+resultados por usina não dependem disto --- são normalizados dentro da própria
+usina, e não somam nada entre usinas.
+\end{objecao}
+
+\section*{Um sinal, e por que não é achado}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.5cm}rrr@{}}
+\toprule
+\cab{Geometria} & \cab{$n$} & \cab{Realiz.} & \cab{Potenc.} \\
+\midrule
+Fixo        &  91 & 0,901 & 1,155 \\
+Rastreador  & 178 & 0,788 & 0,973 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.6em}
+O \texttt{gen\_estimated} do ONS parece cego à montagem: o PR potencial mediano
+é 1,155 nas fixas contra 0,973 nas rastreadoras. É o que se espera de um modelo
+que supõe arranjo fixo --- a POA medida sobe com o rastreador e a estimativa não
+acompanha.
+
+\begin{objecao}
+Razão CC/CA menor em usina com rastreador prevê exatamente o mesmo sinal, e a
+potência CC não é publicada. As duas explicações não se separam com o dado
+disponível, então isto fica registrado como sinal e não como achado.
+\end{objecao}
+
+\section*{Sete usinas fora da distribuição}
+
+O platô diurno mediano da frota é 0,906. Sete usinas ficam abaixo de 0,75, e
+duas delas --- Santa Luzia~1 e Santa Luzia~V --- em 0,39 e 0,40. Um arranjo
+fotovoltaico em ordem não tem irradiância de meio-dia em 39\% do pico. As quatro
+ETESA São João do Piauí ficam entre 0,59 e 0,74.
+
+Não muda nada do que está acima: são 7 de 270 e os resultados se mantêm sem
+elas. Ficam como candidatas de sensor com defeito, sombreamento pesado ou
+sujidade severa --- que é exatamente o objeto desta família.
+
+\section*{Artefatos}
+
+\begin{ficha}
+  \item[Código] \texttt{notebooks/br/\_desempenho.py}.
+  \item[Saída]  \texttt{data/processed/desempenho\_por\_usina.csv},
+                269 usinas.
+  \item[Insumo] \texttt{data/interim/pr\_dia\_2025.csv} e
+                \texttt{corte\_conj\_2025.csv}, extraídos do PostGIS.
+\end{ficha}
+
+\end{document}
