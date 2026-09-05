@@ -1,0 +1,242 @@
+% =====================================================================
+% execucao-poa.tex -- registro de execucao
+%
+% Primeiro experimento da familia "avaliacao de recurso": medir o erro
+% do NASA POWER contra a irradiancia no plano do arranjo que o ONS
+% publica em `restricao_coff_fotovoltaica_detail`.
+%
+% E um registro de EXECUCAO, nao um capitulo de resultado. Guarda o que
+% deu errado no caminho e como se descobriu, porque tres dos quatro
+% achados sao defeitos de dado que nenhuma leitura do codigo pegaria --
+% so apareceram ao medir.
+%
+% Nao entra no `reporte.tex`. Compila sozinho, e em lualatex, nao em
+% pdflatex: a sem serifa aqui e a Urbanist, que vive como TTF em
+% `fontes/urbanist/` e so `fontspec` alcanca. Rode de dentro de
+% `report/`, que e onde o `Path` do `fontspec` esta ancorado:
+%   latexmk -lualatex execucao-poa.tex
+% Em pdflatex o documento ainda compila -- a folha de estilo cai de volta
+% na IBM Plex Sans -- mas nao e a saida pretendida.
+% =====================================================================
+
+% A folha de estilo pressupoe `book`: usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`. Em `article` ela nao carrega.
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[brazilian]{babel}
+% Mancha e medianiz do `reporte.tex`: 17,2 cm de mancha em duas colunas
+% de 8,25 cm. Duas colunas resolvem a exigencia de aproveitar a folha sem
+% alongar a linha -- em coluna unica a mesma mancha daria 73 caracteres.
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+% A pagina termina onde o texto termina.
+\raggedbottom
+\pagestyle{plain}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+\autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
+
+\begin{document}
+
+\abertura{Erro do NASA POWER contra a POA medida}
+         {Registro de execução · 5 de setembro de 2026 ·
+          \texttt{notebooks/br/\_poa\_erro.py}}
+
+\section*{O que se quis medir}
+
+A etapa~0 estabeleceu que \texttt{val\_irradianciaverificado} é medida no plano
+do arranjo, e não na horizontal, e mediu que o NASA POWER fica abaixo dela.
+Faltava fechar a conta: transpor o GHI do POWER para o plano e ver o que sobra.
+
+O interesse não é acadêmico. Trocar NASA POWER por NSRDB está listado como
+trabalho seguinte, e o argumento escrito é sobre resolução --- a célula passa de
+cerca de 50\,km para 2\,km. Resolução não é erro. Sem medir o erro atual não há
+como dizer se a troca compensa.
+
+\section*{Desenho}
+
+Quatro geometrias sobre a mesma série, e a diferença entre elas é o resultado.
+
+\begin{ficha}
+  \item[0°]          controle: a transposição tem de devolver o próprio GHI.
+  \item[$|$lat$|$]   a regra a priori para arranjo fixo, sem olhar o medido.
+  \item[Ajustada]    a inclinação fixa que minimiza o erro da própria usina.
+  \item[Rastreador]  eixo único horizontal norte-sul, faixa de 60°, com
+                     \emph{backtracking} e GCR de 0,35.
+\end{ficha}
+
+O erro em $|$lat$|$ é o que um usuário do POWER teria sem verdade de campo. O
+erro na ajustada é o piso do arranjo fixo. A distância entre os dois é o custo
+de não conhecer a inclinação. O rastreador entrou depois, como hipótese que a
+própria distância obrigou a testar.
+
+\section*{Dado}
+
+Janela de 2025, que é o que o cache horário cobre. O pareamento é interno ao
+banco: \texttt{br.pv\_detail} casa com \texttt{br.plant} por \texttt{ceg\_core}
+em 560 de 560 usinas, e 558 têm geometria. Sem casamento de nome e sem cadastro
+externo.
+
+\begin{ficha}
+  \item[QC noturno]  554 de 560 usinas com mediana de irradiância $\le$ 5 W/m²
+                     entre 22\,h e 3\,h.
+  \item[Dia válido]  ao menos 44 dos 48 intervalos, e mais de 1 kWh/m².
+  \item[Usina]       ao menos 60 dias válidos no ano.
+  \item[Resultado]   \num{77972} dias-usina em 413 usinas; \num{74682} dias em
+                     271 usinas depois do corte de 60 dias.
+  \item[Células]     66 pontos do POWER, todos presentes no cache.
+\end{ficha}
+
+\notas{Os 141 descartes por cobertura não são falha de método: 98 dessas usinas
+têm 30 dias ou menos de série limpa em 2025. Entre as 271 retidas, a mediana é
+de 208 dias e 199 passam de 240.}
+
+\section*{Três defeitos, todos encontrados medindo}
+
+\campo{Cache com fuso misturado} A primeira rodada deu 29\% de subestimação,
+contra os 14,8\% que a etapa~0 tinha medido \emph{sem} transposição. Transpor
+para o plano não pode piorar. Rastreando: nove das 90 células do cache têm
+\texttt{time\_standard=\textquotesingle LST\textquotesingle} no cabeçalho, hora
+solar local, e todo leitor do diretório assume UTC. Nessas células até 14,2\% do
+GHI anual caía em intervalo com o sol abaixo do horizonte.
+
+A causa é uma linha: \texttt{\_power\_h.py} não passa
+\texttt{\&time-standard=UTC}, e a API do POWER responde em LST por omissão. O
+\texttt{\_power\_h\_todas.py}, que faz certo, pulou os nove arquivos porque
+testava apenas \texttt{os.path.exists}. Os dois foram corrigidos, e o segundo
+agora valida o cabeçalho em vez da existência.
+
+\campo{Componentes que não fecham} \texttt{DNI$\cdot$cos(z) + DHI} do POWER não
+reproduz o GHI publicado. Entregá-las ao pvlib perde a diferença antes de
+qualquer inclinação: a 0°, onde a transposição deveria devolver o GHI, saía 8\%
+baixa. Reescalar as componentes para fechar não resolve --- o fator satura no
+teto em 27,7\% dos intervalos com sol. A saída foi descartar DNI e DHI
+publicados e decompor o GHI por Erbs, que fecha por construção. O fechamento das
+componentes publicadas ficou registrado como diagnóstico: mediana 0,9566, com
+p10 de 0,9548 e p90 de 0,9590.
+
+\notas{A dispersão que se via antes --- fechamento de 0,75 a 0,95 conforme a
+célula --- era o próprio defeito de fuso. Corrigido o fuso, a falta de
+fechamento é uniforme, e é característica do produto.}
+
+\campo{Carimbo da hora} O valor horário do POWER é média da hora, e a posição
+solar precisa ser calculada no meio dela. Calculada no instante do carimbo, o
+\texttt{airmass} sai NaN em 29,1\% dos intervalos com sol.
+
+\conclusao{Nenhum dos três apareceria em revisão de código. Os três apareceram
+porque um número não fechou com outro que já existia.}
+
+\section*{Resultado}
+
+Controle aprovado nas 271 usinas: \texttt{poa(0°)/GHI} entre 0,9999 e 1,0000.
+
+\vspace{0.4em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.3cm}rrr@{}}
+\toprule
+\cab{Modelo} & \cab{Viés} & \cab{MAE} & \cab{Razão} \\
+\midrule
+GHI horizontal            & $-1{,}032$ & 1,301 & 1,246 \\
+Fixo em $|$lat$|$         & $-0{,}860$ & 1,205 & 1,173 \\
+Fixo no melhor ângulo     & $-0{,}907$ & 1,185 & 1,153 \\
+Rastreador de eixo único  & $+0{,}258$ & 0,962 & 1,007 \\
+\addlinespace[.4ex]
+Escolha por usina         & ---        & \textbf{0,725} & 1,018 \\
+\bottomrule
+\end{tabular}
+\notas{Viés e MAE em kWh/m²/dia; razão é medido sobre modelo, mediana entre
+usinas. \num{271} usinas, \num{74682} dias-usina, 2025.}
+
+\vspace{0.6em}
+A pergunta era o erro do POWER, e a resposta é que quase todo ele era geometria
+não modelada. A transposição para plano fixo cobre um terço da lacuna; o
+rastreador cobre o resto. O viés vai de $-1{,}03$ a $+0{,}26$ kWh/m²/dia, e
+escolher a geometria por usina derruba o MAE em 44\%.
+
+\section*{Duas validações}
+
+\campo{Coerência por conjunto} Usinas do mesmo conjunto compartilham tecnologia.
+Em 32 conjuntos com duas ou mais usinas medidas, cobrindo 263 usinas, 81\%
+recebem rótulo unânime --- contra 13\% esperados se o rótulo fosse sorteio com a
+mesma proporção. A margem também é larga: mediana de 110\% de diferença de MAE
+entre as duas geometrias, e apenas 2\% das usinas ficam em empate abaixo de 5\%.
+
+\campo{Janaúba} A etapa~0 usou Janaúba como controle interno: lê razão 1,00
+enquanto as outras leem cerca de 1,24, e concluiu diferença de montagem do
+sensor. Chegando por outro caminho --- ajuste da forma diurna, e não da razão
+anual --- a classificação põe 18 das 27 usinas de Janaúba como fixas, invertendo
+a proporção da frota. As razões remedidas são 1,023 em Janaúba contra 1,250 nas
+demais, reproduzindo a etapa~0.
+
+\section*{O que não se pode afirmar}
+
+\begin{objecao}
+Que 66\% da frota usa rastreador. A classificação é nítida e coerente por
+conjunto, mas não acompanha a safra de entrada em operação: a fração classificada
+como rastreador por ano vai 1,00 · 1,00 · 0,91 · 0,38 · 0,83 · 0,45 · 0,93, sem
+tendência, e 100\% de rastreador em 2017 é implausível. O porte mediano mal
+difere entre os grupos, 39,5 contra 33,5 MW. A geometria de rastreador captura
+algo real e por usina --- a coerência de conjunto prova isso ---, mas o rótulo
+pode estar absorvendo outras diferenças de sítio junto com a montagem. Lê-lo como
+inventário de tecnologia exige confronto com cadastro de tipo de montagem, que
+não se procurou ainda.
+\end{objecao}
+
+\section*{O que isto obrigou a remedir}
+
+\texttt{\_transpor.py}, \texttt{\_otimo.py} e \texttt{\_tilt\_pareado.py} leem o
+mesmo cache assumindo UTC, e sustentam as afirmações sobre inclinação ajustada e
+ótima. A amostra de 25 usinas do \texttt{\_power\_h.py} é exatamente a que gerou
+as nove células deslocadas, então a contaminação ali era alta. Os três foram
+refeitos, com as saídas anteriores guardadas em
+\texttt{data/processed/\_antes\_correcao\_lst/}.
+
+\vspace{0.4em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.6cm}rr@{}}
+\toprule
+\cab{Grandeza} & \cab{Antes} & \cab{Depois} \\
+\midrule
+Inclinação ajustada, 25 usinas   & 20,0°  & 17,5° \\
+Ajustado $-$ ótimo, 25 usinas    & $+5{,}0$° & $+0{,}0$° \\
+Ajustado $-$ ótimo, 174 pareadas & $+2{,}5$° & $+0{,}0$° \\
+Em ou abaixo do ótimo            & 45\%   & 53\% \\
+Janaúba, $p$ de Mann-Whitney     & 0,015  & 0,056 \\
+\bottomrule
+\end{tabular}
+\notas{Inclinação ajustada mudou em 24 das 25 usinas de conveniência e em 49
+das 174 pareadas. O desenho pareado absorveu melhor o defeito, como se espera
+dele.}
+
+\vspace{0.6em}
+Duas conclusões se mexem. A de que os projetos reais inclinam acima do ótimo
+calculado cai: a mediana da diferença passa a ser exatamente zero, pelos dois
+caminhos. E a previsão sobre Janaúba deixa de ser significativa ao limiar
+convencional --- as medianas não mudam, mas o $p$ cruza 0,05.
+
+\campo{Cadastro de montagem} Procurado e não encontrado. ANEEL SIGA, MMGD e
+\texttt{mmgd\_pv\_tec}, RALIE de usina e de unidade geradora, ONS
+\texttt{coff\_fv\_detail}, \texttt{coff\_fotovoltaica} e
+\texttt{modalidade\_usina}: nenhum traz o tipo de montagem. O
+\texttt{mmgd\_pv\_tec} chega mais perto, com área de arranjo e contagem de
+módulos, mas cobre micro e minigeração, não a frota centralizada. A classificação
+fixo contra rastreador segue sem validação externa.
+
+\section*{Artefatos}
+
+\begin{ficha}
+  \item[Código]   \texttt{notebooks/br/\_poa\_erro.py}; correções em
+                  \texttt{\_power\_h.py} e \texttt{\_power\_h\_todas.py}.
+  \item[Saídas]   \texttt{data/processed/poa\_erro\_por\_usina.csv}
+                  (271 × 27) e
+                  \texttt{poa\_erro\_pareado.parquet} (\num{74682} × 11).
+  \item[Dado]     nove células rebaixadas em UTC; as originais em LST estão em
+                  \texttt{data/raw/power\_hourly\_lst\_backup/}.
+\end{ficha}
+
+\end{document}
