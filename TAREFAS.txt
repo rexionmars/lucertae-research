@@ -35,19 +35,19 @@ REGRA
 ================================================================================
 
 [x] F1 · Erro do NASA POWER contra a POA medida
-    271 usinas, 74.682 dias-usina, 2025. Transposição fixa cobre 1/3 da lacuna;
-    rastreador cobre o resto. Razão medido/modelo 1,246 -> 1,007. MAE 1,301 ->
-    0,725 escolhendo geometria por usina.
+    237 usinas, 66.917 dias-usina, 2025. Transposição fixa cobre 1/3 da lacuna;
+    rastreador cobre o resto. Razão medido/modelo 1,229 -> 1,000. MAE 1,228 ->
+    0,705 escolhendo geometria por usina.
     -> notebooks/br/_poa_medida.py, _poa_erro.py
     -> data/processed/poa_erro_{por_usina.csv,pareado.parquet}
     -> report/execucao-poa.tex
 
 [!] F1b · Validar a classificação fixo/rastreador
     Quatro evidências, três independentes do ajuste que gerou o rótulo:
-      ajuste ....... MAE 1,301 -> 0,725
-      conjunto ..... 81% de rótulo unânime contra 13% ao acaso
+      ajuste ....... MAE 1,228 -> 0,705
+      conjunto ..... 86% de rótulo unânime contra 13% ao acaso
       forma diurna . distribuições DISJUNTAS, p90 fixo 7,50 h < p10 rast 9,00 h
-      concordância . 94,4% entre as duas classificações, estável nos 12 meses
+      concordância . 96,6% entre as duas classificações, estável nos 12 meses
     Cruza com Janaúba, que veio da etapa 0 por outro caminho.
     -> notebooks/br/_forma_diurna.py, data/processed/forma_diurna.csv
 
@@ -58,44 +58,43 @@ REGRA
     CONSEQUÊNCIA: escrever "duas assinaturas independentes concordam em 94,4%",
     nunca "66% da frota usa rastreador, conforme cadastro".
 
-[~] F6 · Desempenho de planta
-    269 usinas, 2025, primeira aplicação da geometria validada na F1b.
+[x] F6 · Desempenho de planta
+    235 usinas, 2025, primeira aplicação da geometria validada na F1b.
 
-      PR realizado ......... 0,828   (geração verificada)
-      PR potencial (ONS) ... 1,013   (gen_estimated do operador)
-      PR sem dia restrito .. 0,990
+      PR realizado ......... 0,838   (geração verificada)
+      PR potencial (ONS) ... 1,023   (gen_estimated do operador)
+      PR sem dia restrito .. 0,998
 
-    Lacuna potencial-realizado 0,221; tirando os dias com restrição no conjunto
+    Lacuna potencial-realizado 0,227; tirando os dias com restrição no conjunto
     sobram 0,031. ~86% do déficit é decisão de despacho, não do ativo.
     -> notebooks/br/_desempenho.py, data/processed/desempenho_por_usina.csv
     -> report/execucao-desempenho.tex
 
+    [!] Contabilidade de energia FECHA. A razão de 0,77 entre detail e
+        constrained-off não era divergência entre os dois conjuntos de dados:
+        no nível de intervalo eles coincidem (Pirapora 2, 15/06 12h00: 101,27 MW
+        nos dois). Era o filtro de dias — usina com menos de 44 dos 48
+        intervalos sai da soma, e a linha do conjunto continua completa.
+        Restringindo aos conjunto-dias completos, 5.626 dias em 46 conjuntos:
+        corte medido 3.610,7 GWh contra lacuna de 3.594,8 GWh = 100%.
+
+    [!] As anômalas de platô baixo eram artefato, não defeito de arranjo.
+        Das sete originais, cinco eram deslocamento noturno do piranômetro
+        somado ao integral do dia. Sobram três abaixo de 0,75, duas com
+        diagnóstico: Guaimbé 1 com depressão ao meio-dia entre dois máximos
+        (sombreamento parcial), Santa Luzia 4 com o dia truncado às 13h00.
+
     [-] Indisponibilidade declarada de fotovoltaica NÃO EXISTE.
         taxa_teif_teip cobre UHE/UTE/UTN. disponibilidade_usina idem: 0 linhas
-        UFV. A única disponibilidade de UFV publicada está dentro do próprio
-        constrained-off, por CONJUNTO, não por usina.
-        CONSEQUÊNCIA: a separação de três vias vira de duas — corte contra
-        resto. O resto mistura subdesempenho e indisponibilidade.
+        UFV. A separação de três vias vira de duas — corte contra resto, e o
+        resto mistura subdesempenho com indisponibilidade.
 
-    [ ] PR aqui é referenciado à potência FISCALIZADA (CA), não à potência CC
-        dos módulos, que a ANEEL não publica. Por isso passa de 1. Não comparar
-        com PR de norma sem dizer isso.
+    [ ] PR é referenciado à potência FISCALIZADA (CA), não à potência CC dos
+        módulos, que a ANEEL não publica. Por isso passa de 1. Não comparar com
+        PR de norma sem dizer isso.
 
-    [ ] A contabilidade de energia por conjunto NÃO FECHA.
-        Somando as usinas do detail contra o constrained-off do conjunto, a
-        razão é 0,84 mesmo restringindo aos 21 conjuntos ditos completos, e o
-        corte "explica" 120% da lacuna. Os dois conjuntos de dados do ONS não
-        reconciliam entre si. O teste de cobertura era circular: media contra
-        o próprio pv_detail, que pode não ter todas as usinas do conjunto.
-        Os resultados por usina não dependem disso — são normalizados dentro
-        da própria usina.
-
-    [ ] Investigar as 7 anômalas: platô < 0,75 contra mediana 0,906 da frota.
-        Santa Luzia 1 e V em 0,39/0,40, fisicamente impossível para arranjo são.
-        Quatro ETESA São João do Piauí entre 0,59 e 0,74.
-
-    [ ] O gen_estimated do ONS parece cego à montagem: PR potencial mediano de
-        1,155 nas fixas contra 0,973 nas rastreadoras. Consistente com modelo
+    [ ] gen_estimated do ONS não distingue a montagem: PR potencial mediano de
+        1,154 nas fixas contra 0,971 nas rastreadoras. Consistente com modelo
         que supõe arranjo fixo — MAS razão CC/CA menor em usina com rastreador
         prevê o mesmo sinal. Não separável com o dado disponível.
 
@@ -216,6 +215,16 @@ REGRA
     o limiar convencional. Saídas antigas em data/processed/_antes_correcao_lst/.
     Texto corrigido em notebooks/br/README.md.
 
+[x] Controle de qualidade da POA: janela errada e exclusão por limiar
+    O QC rodava a mediana noturna sobre o período inteiro do banco, e a análise
+    é de 2025: Santa Luzia 1 e V passavam com 2,8 W/m2 porque o sensor estava
+    são em 2024 e 2026 e deslocado em 323,8 durante todo o 2025 — ~3,9
+    kWh/m2/dia de artefato no denominador. Agora o QC corre na mesma janela.
+    E a exclusão por limiar virou subtração da linha de base noturna por
+    usina-mês: a média noturna da frota é contínua (mediana 4,6, p75 15,5,
+    p90 69,1) e qualquer limiar custaria de 25% a 47% das usinas.
+    Efeito: todos os resultados do F1/F1b/F6 refeitos, nenhuma conclusão mudou.
+
 [x] Recuperar a cadeia de ML do transcript da sessão morta
     _juntar.py e _exportar.py existiam só como heredoc. SP agora é data/interim/,
     não scratchpad de sessão. Ver notebooks/ml/README.md.
@@ -224,11 +233,15 @@ REGRA
     Os três restringem à base com covariável de rede antes de ajustar. _modelos.py
     reporta M1 e M2 também no painel inteiro, para a perda de amostra ficar visível.
 
-[ ] Refazer as saídas de ML sobre o código corrigido
-    data/processed/ml_{modelos.csv,auc_por_hora.csv,bootstrap.parquet} ainda
-    carregam os números da versão com defeito — a razão de 92,4% inclusive.
-    NÃO CITAR até refazer. Custo: reprocessar ~1,7 GB de CSV no _painel.py, mais
-    três LightGBM e 4.000 reamostras. Tempo de CPU, não trabalho novo.
+[x] Refazer as saídas de ML sobre o código corrigido
+    Cadeia rodada de ponta a ponta em 05/09/2026. O resultado principal mudou
+    de direção: a fração que as covariáveis de rede recuperam do ganho da
+    identidade vai de 92,4% para 98,7%, IC95% [97,1%; 100,2%]. O 92,4% era
+    artefato do M3 rodar com NaN em oito colunas para um terço do painel.
+    No global, fora da hora, o M3 passa o M2: 0,9028 contra 0,8958.
+    Custo medido: ~20 min num M-series de 11 núcleos. Preparo é 3 min; o resto
+    é LightGBM. Sem caminho por GPU — o wheel não tem suporte, e os back-ends
+    do LightGBM são OpenCL/CUDA/ROCm, não Metal. MPS é caminho de PyTorch.
 
 [ ] Estágio Sentinel-2 ausente do repo
     data/raw/s2 (37 MB, 5 .npy) não é lido por código nenhum. Dez intermediários
