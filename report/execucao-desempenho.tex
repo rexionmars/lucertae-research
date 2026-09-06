@@ -49,7 +49,7 @@ Os dois termos saem em horas e a razão é adimensional.
 
 O cálculo só fica certo com a geometria de montagem conhecida --- é a POA que
 vai no denominador, e ela depende do plano do arranjo. A classificação validada
-no experimento anterior entra aqui, e esta é a primeira aplicação dela.
+no experimento anterior entra no denominador, e esta é a primeira aplicação dela.
 
 A pergunta: do déficit de desempenho da frota, quanto é decisão de despacho e
 quanto é do ativo.
@@ -63,13 +63,13 @@ Três quantidades, e a diferença entre elas é o resultado.
   \item[Potencial]  com a geração estimada pelo ONS. O que ele teria entregue
                     sem restrição, segundo o modelo do operador.
   \item[Sem corte]  realizado, restrito aos dias sem intervalo restrito no
-                    conjunto. O realizado limpo da decisão de despacho.
+                    conjunto. O realizado sem a decisão de despacho.
 \end{ficha}
 
 Potencial menos realizado é corte mais indisponibilidade. Potencial menos
 sem-corte isola o que sobra.
 
-\campo{O desenho encolheu de três vias para duas} A separação pedia
+\campo{A separação de três vias reduz-se a duas} O desenho pedia
 indisponibilidade declarada por usina, e ela não existe para fotovoltaica.
 \texttt{taxa\_teif\_teip} tem \num{29794} linhas e cobre hidrelétrica,
 térmica e nuclear. \texttt{disponibilidade\_usina} devolve \textbf{zero linhas
@@ -84,8 +84,8 @@ sobra é um teto para o subdesempenho, não uma medida dele.
 
 \section*{Dado}
 
-Janela de 2025. \num{74863} dias-usina em 270 usinas com geometria
-classificada, das quais 269 têm 60 dias ou mais. A geração e a POA saem do
+Janela de 2025. \num{69297} dias-usina em 236 usinas com geometria
+classificada, das quais 235 têm 60 dias ou mais. A geração e a POA saem do
 \texttt{br.pv\_detail}, por usina; o corte sai do \texttt{br.pv\_curtail}, por
 conjunto, e liga por nome normalizado --- 96\% dos conjuntos casam.
 
@@ -97,38 +97,54 @@ conjunto, e liga por nome normalizado --- 96\% dos conjuntos casam.
 \toprule
 \cab{Razão de desempenho} & \cab{p10} & \cab{Mediana} & \cab{p90} \\
 \midrule
-Realizado           & 0,544 & \textbf{0,828} & 0,961 \\
-Potencial (ONS)     & 0,851 & 1,013 & 1,198 \\
-Sem dia restrito    & 0,828 & 0,990 & 1,125 \\
+Realizado           & 0,551 & \textbf{0,838} & 0,961 \\
+Potencial (ONS)     & 0,864 & 1,023 & 1,208 \\
+Sem dia restrito    & 0,858 & 0,998 & 1,131 \\
 \bottomrule
 \end{tabular}
-\notas{Mediana entre 269 usinas, cada uma mediana dos seus dias de 2025.}
+\notas{Mediana entre 235 usinas, cada uma mediana dos seus dias de 2025.}
 
 \vspace{0.7em}
-A lacuna potencial menos realizado é \textbf{0,221}. Tirando os dias com
+A lacuna potencial menos realizado é \textbf{0,227}. Tirando os dias com
 restrição no conjunto, sobram \textbf{0,031}. Cerca de 86\% do déficit de
 desempenho da frota é decisão de despacho, e não do ativo. Dias com alguma
-restrição no conjunto são 80,4\% do total.
+restrição no conjunto são 80,7\% do total.
 
-\section*{Dois limites do número}
+\section*{Dois limites da medida}
 
 \campo{Não é PR de norma} Está referenciado à potência fiscalizada, que é
 corrente alternada; a potência de corrente contínua dos módulos não é publicada
 pela ANEEL. Um arranjo é sobredimensionado em CC contra o inversor, e por isso o
 índice passa de~1. Comparar com PR de norma sem dizer isto seria erro.
 
-\campo{A contabilidade de energia por conjunto não fecha} Somando as usinas do
-\texttt{detail} contra o constrained-off do conjunto, a razão é 0,72. Restringir
-aos 21 conjuntos com cobertura completa melhora pouco, 0,84, e aí o corte passa a
-``explicar'' 120\% da lacuna, que é impossível. Os dois conjuntos de dados do ONS
-não reconciliam entre si.
+\campo{A contabilidade de energia fecha, sob uma condição} Somando as usinas do
+\texttt{detail} contra o constrained-off do mesmo conjunto, a razão é 0,77.
+Cobertura de capacidade não explica: permanece em 0,77 nos conjuntos que cobrem
+mais de 90\% da potência. No nível de intervalo os dois conjuntos de dados
+coincidem --- o Conj.\ Pirapora~2 em 15/06/2025 às 12h00 registra 101,27 MW nos
+dois, e \num{1019.9} MWh no dia.
 
-\begin{objecao}
-O teste de cobertura era circular: media as usinas usadas contra as que existem
-no próprio \texttt{pv\_detail}, que pode não ter todas as do conjunto. Os
-resultados por usina não dependem disto --- são normalizados dentro da própria
-usina, e não somam nada entre usinas.
-\end{objecao}
+A diferença vem do filtro de dias: uma usina com menos de 44 dos 48 intervalos
+sai da soma daquele dia, enquanto a linha do conjunto permanece completa.
+Restringindo aos conjunto-dias em que todas as usinas estão presentes, 5626 dias
+em 46 conjuntos:
+
+\vspace{0.3em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{4.4cm}r@{}}
+\toprule
+\cab{Energia, 2025} & \cab{GWh} \\
+\midrule
+Estimada pelo ONS       & \num{11610.9} \\
+Verificada              &  \num{8016.0} \\
+Lacuna                  &  \num{3594.8} \\
+Corte medido            &  \num{3610.7} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+O corte medido responde por 100\% da lacuna entre a geração estimada e a
+verificada. Estimativa e medida de corte se sustentam uma contra a outra.
 
 \section*{Um sinal, e por que não é achado}
 
@@ -138,16 +154,16 @@ usina, e não somam nada entre usinas.
 \toprule
 \cab{Geometria} & \cab{$n$} & \cab{Realiz.} & \cab{Potenc.} \\
 \midrule
-Fixo        &  91 & 0,901 & 1,155 \\
-Rastreador  & 178 & 0,788 & 0,973 \\
+Fixo        &  93 & 0,901 & 1,154 \\
+Rastreador  & 142 & 0,795 & 0,971 \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.6em}
-O \texttt{gen\_estimated} do ONS parece cego à montagem: o PR potencial mediano
-é 1,155 nas fixas contra 0,973 nas rastreadoras. É o que se espera de um modelo
-que supõe arranjo fixo --- a POA medida sobe com o rastreador e a estimativa não
-acompanha.
+O \texttt{gen\_estimated} do ONS não distingue a montagem: o PR potencial mediano
+é 1,154 nas fixas contra 0,971 nas rastreadoras. É o resultado esperado de um
+modelo que supõe arranjo fixo, porque a POA medida sobe com o rastreador e a
+estimativa não.
 
 \begin{objecao}
 Razão CC/CA menor em usina com rastreador prevê exatamente o mesmo sinal, e a
@@ -155,23 +171,33 @@ potência CC não é publicada. As duas explicações não se separam com o dado
 disponível, então isto fica registrado como sinal e não como achado.
 \end{objecao}
 
-\section*{Sete usinas fora da distribuição}
+\section*{Três perfis fora da distribuição}
 
-O platô diurno mediano da frota é 0,906. Sete usinas ficam abaixo de 0,75, e
-duas delas --- Santa Luzia~1 e Santa Luzia~V --- em 0,39 e 0,40. Um arranjo
-fotovoltaico em ordem não tem irradiância de meio-dia em 39\% do pico. As quatro
-ETESA São João do Piauí ficam entre 0,59 e 0,74.
+O platô diurno mediano da frota é 0,903. Três usinas ficam abaixo de 0,75, e as
+duas mais afastadas têm defeito identificado no perfil de meia em meia hora.
 
-Não muda nada do que está acima: são 7 de 270 e os resultados se mantêm sem
-elas. Ficam como candidatas de sensor com defeito, sombreamento pesado ou
-sujidade severa --- que é exatamente o objeto desta família.
+\begin{ficha}
+  \item[Guaimbé~1]      platô 0,60. Depressão no meio do dia entre dois máximos,
+                        às 10h00 e às 13h00. Compatível com sombreamento parcial
+                        sobre o sensor perto do meio-dia solar.
+  \item[Santa Luzia~4]  platô 0,63, largura a meia altura de 4,50 h contra 7,25 h
+                        das demais fixas. A leitura zera às 13h00 e não retorna:
+                        o dia está truncado.
+\end{ficha}
+
+\vspace{0.4em}
+Uma primeira versão contava sete usinas nesta faixa, entre elas Santa Luzia~1
+e~V com platô de 0,39 e 0,40. Aquilo era deslocamento noturno do piranômetro
+somado ao integral do dia, e não defeito de arranjo; a subtração da linha de
+base descrita no registro anterior o removeu. Os dois casos remanescentes são de
+sensor, que é o objeto desta família.
 
 \section*{Artefatos}
 
 \begin{ficha}
   \item[Código] \texttt{notebooks/br/\_desempenho.py}.
   \item[Saída]  \texttt{data/processed/desempenho\_por\_usina.csv},
-                269 usinas.
+                235 usinas.
   \item[Insumo] \texttt{data/interim/pr\_dia\_2025.csv} e
                 \texttt{corte\_conj\_2025.csv}, extraídos do PostGIS.
 \end{ficha}
