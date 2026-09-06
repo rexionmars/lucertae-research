@@ -87,16 +87,16 @@ externo.
                      entre 22\,h e 3\,h.
   \item[Dia válido]  ao menos 44 dos 48 intervalos, e mais de 1 kWh/m².
   \item[Usina]       ao menos 60 dias válidos no ano.
-  \item[Resultado]   \num{77972} dias-usina em 413 usinas; \num{74682} dias em
-                     271 usinas depois do corte de 60 dias.
+  \item[Resultado]   \num{69550} dias-usina em 338 usinas; \num{66917} dias em
+                     237 usinas depois do corte de 60 dias.
   \item[Células]     66 pontos do POWER, todos presentes no cache.
 \end{ficha}
 
-\notas{Os 141 descartes por cobertura não são falha de método: 98 dessas usinas
-têm 30 dias ou menos de série limpa em 2025. Entre as 271 retidas, a mediana é
-de 208 dias e 199 passam de 240.}
+\notas{Os 101 descartes por cobertura não são falha de método: 66 dessas usinas
+têm 30 dias ou menos de série limpa em 2025. Entre as 237 retidas, a mediana é
+de 321 dias e 183 passam de 240.}
 
-\section*{Três defeitos, todos encontrados medindo}
+\section*{Quatro defeitos, todos encontrados medindo}
 
 \campo{Cache com fuso misturado} A primeira rodada deu 29\% de subestimação,
 contra os 14,8\% que a etapa~0 tinha medido \emph{sem} transposição. Transpor
@@ -117,23 +117,40 @@ qualquer inclinação: a 0°, onde a transposição deveria devolver o GHI, saí
 baixa. Reescalar as componentes para fechar não resolve --- o fator satura no
 teto em 27,7\% dos intervalos com sol. A saída foi descartar DNI e DHI
 publicados e decompor o GHI por Erbs, que fecha por construção. O fechamento das
-componentes publicadas ficou registrado como diagnóstico: mediana 0,9566, com
-p10 de 0,9548 e p90 de 0,9590.
+componentes publicadas ficou registrado como diagnóstico: mediana 0,9565, com
+p10 de 0,9547 e p90 de 0,9590.
 
 \notas{A dispersão que se via antes --- fechamento de 0,75 a 0,95 conforme a
-célula --- era o próprio defeito de fuso. Corrigido o fuso, a falta de
+célula --- era o defeito de fuso. Corrigido o fuso, a falta de
 fechamento é uniforme, e é característica do produto.}
 
 \campo{Carimbo da hora} O valor horário do POWER é média da hora, e a posição
 solar precisa ser calculada no meio dela. Calculada no instante do carimbo, o
 \texttt{airmass} sai NaN em 29,1\% dos intervalos com sol.
 
-\conclusao{Nenhum dos três apareceria em revisão de código. Os três apareceram
-porque um número não fechou com outro que já existia.}
+\campo{Deslocamento noturno do piranômetro, e um controle na janela errada}
+Achado depois, ao investigar sete usinas de forma diurna anômala. O controle de
+qualidade rodava a mediana noturna sobre o período inteiro do banco, e a análise
+é de 2025: Santa Luzia~1 e~V passavam com 2,8 W/m², porque o sensor estava são
+em 2024 e 2026 e deslocado em 323,8 durante todo o~2025 --- cerca de
+3,9 kWh/m²/dia de artefato somados ao denominador. O controle agora corre na
+mesma janela da análise.
+
+E a exclusão por limiar foi trocada por subtração. A média noturna da frota é
+contínua --- mediana 4,6 W/m², p75 15,5, p90 69,1 --- e não tem vale onde
+cortar; qualquer limiar custaria de um quarto a metade das usinas. Subtrai-se a
+mediana noturna da própria usina naquele mês, o que cobre o caso de sensor que
+degrada no meio do ano, e exclui-se apenas quando o resíduo depois da subtração passa de
+20 W/m², que é falha intermitente e não deslocamento.
+
+\conclusao{Nenhum dos quatro apareceria em revisão de código. Os quatro
+apareceram porque um número divergiu de outro já estabelecido. Dois são do
+dado --- o cache em fuso local e as componentes que não fecham --- e dois são
+de tratamento: a posição solar no carimbo e a janela do controle.}
 
 \section*{Resultado}
 
-Controle aprovado nas 271 usinas: \texttt{poa(0°)/GHI} entre 0,9999 e 1,0000.
+Controle aprovado nas 237 usinas: \texttt{poa(0°)/GHI} entre 0,9999 e 1,0000.
 
 \vspace{0.4em}
 \tabfont
@@ -141,27 +158,27 @@ Controle aprovado nas 271 usinas: \texttt{poa(0°)/GHI} entre 0,9999 e 1,0000.
 \toprule
 \cab{Modelo} & \cab{Viés} & \cab{MAE} & \cab{Razão} \\
 \midrule
-GHI horizontal            & $-1{,}032$ & 1,301 & 1,246 \\
-Fixo em $|$lat$|$         & $-0{,}860$ & 1,205 & 1,173 \\
-Fixo no melhor ângulo     & $-0{,}907$ & 1,185 & 1,153 \\
-Rastreador de eixo único  & $+0{,}258$ & 0,962 & 1,007 \\
+GHI horizontal            & $-0{,}831$ & 1,228 & 1,229 \\
+Fixo em $|$lat$|$         & $-0{,}660$ & 1,150 & 1,159 \\
+Fixo no melhor ângulo     & $-0{,}721$ & 1,126 & 1,142 \\
+Rastreador de eixo único  & $+0{,}459$ & 0,998 & 1,000 \\
 \addlinespace[.4ex]
-Escolha por usina         & ---        & \textbf{0,725} & 1,018 \\
+Escolha por usina         & ---        & \textbf{0,705} & 1,014 \\
 \bottomrule
 \end{tabular}
 \notas{Viés e MAE em kWh/m²/dia; razão é medido sobre modelo, mediana entre
-usinas. \num{271} usinas, \num{74682} dias-usina, 2025.}
+usinas. \num{237} usinas, \num{66917} dias-usina, 2025.}
 
 \vspace{0.6em}
 A pergunta era o erro do POWER, e a resposta é que quase todo ele era geometria
 não modelada. A transposição para plano fixo cobre um terço da lacuna; o
-rastreador cobre o resto. O viés vai de $-1{,}03$ a $+0{,}26$ kWh/m²/dia, e
-escolher a geometria por usina derruba o MAE em 44\%.
+rastreador cobre o resto. O viés vai de $-0{,}83$ a $+0{,}46$ kWh/m²/dia, e
+escolher a geometria por usina derruba o MAE em 43\%.
 
 \section*{Duas validações}
 
 \campo{Coerência por conjunto} Usinas do mesmo conjunto compartilham tecnologia.
-Em 32 conjuntos com duas ou mais usinas medidas, cobrindo 263 usinas, 81\%
+Em 28 conjuntos com duas ou mais usinas medidas, cobrindo 229 usinas, 86\%
 recebem rótulo unânime --- contra 13\% esperados se o rótulo fosse sorteio com a
 mesma proporção. A margem também é larga: mediana de 110\% de diferença de MAE
 entre as duas geometrias, e apenas 2\% das usinas ficam em empate abaixo de 5\%.
@@ -170,24 +187,25 @@ entre as duas geometrias, e apenas 2\% das usinas ficam em empate abaixo de 5\%.
 enquanto as outras leem cerca de 1,24, e concluiu diferença de montagem do
 sensor. Chegando por outro caminho --- ajuste da forma diurna, e não da razão
 anual --- a classificação põe 18 das 27 usinas de Janaúba como fixas, invertendo
-a proporção da frota. As razões remedidas são 1,023 em Janaúba contra 1,250 nas
+a proporção da frota. As razões remedidas são 1,023 em Janaúba contra 1,240 nas
 demais, reproduzindo a etapa~0.
 
 \section*{O que não se pode afirmar}
 
 \begin{objecao}
-Que 66\% da frota usa rastreador. A classificação é nítida e coerente por
-conjunto, mas não acompanha a safra de entrada em operação: a fração classificada
+Que 66\% da frota usa rastreador. A classificação separa as duas classes com
+margem mediana de 110\% em MAE e é coerente dentro do conjunto, mas não
+acompanha a safra de entrada em operação: a fração classificada
 como rastreador por ano vai 1,00 · 1,00 · 0,91 · 0,38 · 0,83 · 0,45 · 0,93, sem
 tendência, e 100\% de rastreador em 2017 é implausível. O porte mediano mal
 difere entre os grupos, 39,5 contra 33,5 MW. A geometria de rastreador captura
-algo real e por usina --- a coerência de conjunto prova isso ---, mas o rótulo
+uma propriedade da usina e por usina --- a coerência de conjunto sustenta isso ---, mas o rótulo
 pode estar absorvendo outras diferenças de sítio junto com a montagem. Lê-lo como
 inventário de tecnologia exige confronto com cadastro de tipo de montagem, que
 não se procurou ainda.
 \end{objecao}
 
-\section*{O que isto obrigou a remedir}
+\section*{Remedição das saídas da etapa 0}
 
 \texttt{\_transpor.py}, \texttt{\_otimo.py} e \texttt{\_tilt\_pareado.py} leem o
 mesmo cache assumindo UTC, e sustentam as afirmações sobre inclinação ajustada e
@@ -214,8 +232,8 @@ das 174 pareadas. O desenho pareado absorveu melhor o defeito, como se espera
 dele.}
 
 \vspace{0.6em}
-Duas conclusões se mexem. A de que os projetos reais inclinam acima do ótimo
-calculado cai: a mediana da diferença passa a ser exatamente zero, pelos dois
+Duas conclusões mudam. A de que os projetos reais inclinam acima do ótimo
+calculado não se sustenta: a mediana da diferença passa a ser exatamente zero, pelos dois
 caminhos. E a previsão sobre Janaúba deixa de ser significativa ao limiar
 convencional --- as medianas não mudam, mas o $p$ cruza 0,05.
 
@@ -233,8 +251,8 @@ fixo contra rastreador segue sem validação externa.
   \item[Código]   \texttt{notebooks/br/\_poa\_erro.py}; correções em
                   \texttt{\_power\_h.py} e \texttt{\_power\_h\_todas.py}.
   \item[Saídas]   \texttt{data/processed/poa\_erro\_por\_usina.csv}
-                  (271 × 27) e
-                  \texttt{poa\_erro\_pareado.parquet} (\num{74682} × 11).
+                  (237 × 28) e
+                  \texttt{poa\_erro\_pareado.parquet} (\num{66917} × 12).
   \item[Dado]     nove células rebaixadas em UTC; as originais em LST estão em
                   \texttt{data/raw/power\_hourly\_lst\_backup/}.
 \end{ficha}
