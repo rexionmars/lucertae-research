@@ -1,0 +1,30 @@
+{
+  "classification": {
+    "lag1d_is_curtailed": 0.3359,
+    "sin_vre_share_forecast": 0.1884,
+    "lag7d_is_curtailed": 0.0613,
+    "plan_cut_mw": 0.0492,
+    "plan_cut_frac": 0.0276,
+    "lag1d_sys_curtailed_frac": 0.027,
+    "sin_net_load_forecast": 0.0247,
+    "doy": 0.0239,
+    "dow": 0.0232,
+    "plan_sub_solar_cut_frac": 0.0229,
+    "id_ons": 0.0183,
+    "hour": 0.0182
+  },
+  "regression": {
+    "lag1d_curtailed_frac": 0.2386,
+    "plan_sub_solar_cut_frac": 0.1661,
+    "plan_cut_frac": 0.1246,
+    "id_ons": 0.0605,
+    "lag7d_curtailed_frac": 0.0426,
+    "roll7d_curtailed_frac": 0.0415,
+    "sin_net_load_forecast": 0.028,
+    "hour": 0.0271,
+    "dow": 0.0257,
+    "lag1d_is_curtailed": 0.0199,
+    "sin_vre_share_forecast": 0.0192,
+    "plan_sin_wind_cut_frac": 0.0191
+  }
+}
