@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Dados, modelos e saídas geradas (recriáveis pelos passos do README)
+data/
+models/
+logs/
+.ipynb_checkpoints/
+
+# Ambiente local
+.env
+.DS_Store
+.temp/

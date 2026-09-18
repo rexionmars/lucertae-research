@@ -1,0 +1,28 @@
+[project]
+name = "terra-energy-research"
+version = "0.1.0"
+description = "Previsão da restrição (curtailment) de geração solar e eólica no SIN com dados abertos do ONS"
+readme = "README.md"
+authors = [
+    { name = "rexionmars", email = "opensource.leonardi@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "geopandas>=1.1.4",
+    "holidays>=0.104",
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "lightgbm>=4.7.0",
+    "matplotlib>=3.11.2",
+    "nbconvert>=7.17.1",
+    "pandas>=3.0.5",
+    "psycopg[binary]>=3.3.5",
+    "pyarrow>=25.0.1",
+    "scikit-learn>=1.9.1",
+    "shapely>=2.1.2",
+    "sqlalchemy>=2.0.54",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
