@@ -27,6 +27,7 @@ figures/
 *.toc
 *.synctex.gz
 report/*.pdf
+docs/produto/*.pdf
 
 # Ambiente local
 .env

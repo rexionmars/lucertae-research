@@ -1,0 +1,516 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Pacotes
+% ---------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.25}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\definecolor{prodcolor}{RGB}{28,86,140}
+\definecolor{notecolor}{RGB}{110,110,110}
+\definecolor{markcolor}{RGB}{214,36,110}
+
+\newtcolorbox{nota}{
+  enhanced, breakable,
+  colback=notecolor!6, colframe=notecolor!60,
+  left=6pt, right=6pt, top=4pt, bottom=4pt
+}
+\newtcolorbox{requisito}{
+  enhanced, breakable,
+  colback=prodcolor!4, colframe=prodcolor,
+  left=8pt, right=8pt, top=6pt, bottom=6pt
+}
+
+\newcommand{\marca}[1]{\tikz[baseline=-0.6ex]{\node[circle,fill=markcolor,text=white,inner sep=1.2pt,font=\scriptsize\bfseries]{#1};}}
+
+\graphicspath{{diagramas/}{mockup/}}
+
+\title{Plataforma preditiva baseada em mapa\\[4pt]
+\large Requisitos, modelo de interação, engine de análise e arquitetura}
+\author{Mapeamento Energético}
+\date{Setembro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento especifica a plataforma que resulta das visões de produto de
+\emph{Aprendizado de Máquina e Aprendizado Profundo no Setor Energético}
+(\texttt{ml-setor-energetico.tex}) quando se impõem dois requisitos: a
+plataforma é \textbf{baseada em mapa} e produz \textbf{insights} como saída,
+por meio de uma engine de análise. O documento define o que esses requisitos
+significam na prática, como o usuário interage com a plataforma para obter
+uma saída, o que a engine de análise calcula e como os componentes se
+organizam. Os exemplos usam uma distribuidora como cliente, que é a hipótese
+de trabalho; a escolha do cliente continua em aberto
+(seção~\ref{sec:abertas}).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{O que ``baseado em mapa'' significa}
+% ===========================================================================
+
+Um mapa que mostra o que está \emph{cadastrado} (usinas, linhas, consumidores,
+limites administrativos) é um censo com boa apresentação. Ele informa, mas
+não decide nada. A plataforma especificada aqui é outra coisa:
+
+\begin{enumerate}
+  \item \textbf{Cada camada do mapa é a saída de um modelo}: perda estimada,
+    carregamento previsto, geração prevista, risco de falha. O cadastro é o
+    suporte geométrico, não o conteúdo.
+  \item \textbf{A decisão do usuário acontece no mapa}: escolher onde
+    inspecionar, onde reforçar a rede, que ativo priorizar.
+  \item \textbf{A plataforma produz insights}: além das camadas, uma engine de
+    análise encontra o que merece atenção, explica por quê e sugere a ação.
+\end{enumerate}
+
+O teste que decide se uma tela pertence à plataforma é simples: a pergunta que
+ela responde contém um ``onde?''. Se não contém, é um painel com um mapa de
+fundo, e o mapa é decorativo.
+
+\begin{nota}
+\textbf{Relação com o documento de visões.} As quatro visões de produto de
+\texttt{ml-setor-energetico.tex} continuam valendo como catálogo de problemas e
+técnicas. Aplicado o critério acima, as que se encaixam melhor são
+\emph{inteligência de perdas e de rede} e \emph{saúde de ativos}, cujas
+perguntas centrais são espaciais. A \emph{previsão} entra como camada (carga e
+MMGD previstas por alimentador) e o \emph{copiloto de operação} fica para o
+fim, porque o operador raciocina sobre o grafo elétrico, não sobre a geografia.
+\end{nota}
+
+% ===========================================================================
+\section{Requisitos}
+% ===========================================================================
+
+\begin{requisito}
+\begin{description}[leftmargin=2.2em,labelwidth=2em,font=\bfseries\color{prodcolor}]
+  \item[R1] O mapa é a superfície principal de navegação e de decisão.
+  \item[R2] Toda camada de conteúdo é saída de modelo e carrega sua incerteza
+    (quantis P10/P50/P90), a versão do modelo e a data de referência.
+  \item[R3] O ``onde'' do usuário é sempre uma entidade (ou conjunto de
+    entidades) de uma camada. \textbf{Não há desenho livre de áreas.}
+  \item[R4] As ações de decisão acontecem sobre a seleção no mapa: gerar
+    plano, aprovar alvos, aceitar ou rejeitar uma recomendação.
+  \item[R5] A engine de análise produz insights ancorados em entidades,
+    quantificados, comparados, explicados e acionáveis, ranqueados por valor
+    (seção~\ref{sec:engine}).
+  \item[R6] Todo insight é rastreável até a camada, o modelo e os dados que o
+    produziram, com a data em que cada dado era conhecido.
+  \item[R7] O retorno do usuário (resultado de inspeção, insight útil ou
+    falso) volta como rótulo para modelos e detectores.
+  \item[R8] Dados de consumidores são exibidos agregados por padrão (LGPD); o
+    nível individual só aparece como alvo dentro de um plano de ação.
+\end{description}
+\end{requisito}
+
+% ===========================================================================
+\section{Modelo de interação}
+% ===========================================================================
+
+\subsection{O input do usuário}
+
+Tudo o que o usuário faz para obter uma saída responde, explicitamente ou por
+padrão, a quatro perguntas:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l l L}
+\toprule
+\textbf{Parte} & \textbf{Pergunta} & \textbf{Como o usuário informa} \\
+\midrule
+Onde & sobre que entidade? & navega na hierarquia, busca por nome ou
+  código, filtra por atributo, ou não escolhe nada (toda a área) \\
+O quê & que análise? & escolhe a camada de modelo: perda, carregamento,
+  MMGD, risco \\
+Quando & que período ou horizonte? & controle de tempo: histórico, agora,
+  horizonte de previsão \\
+Restrição & o que posso fazer? & orçamento de inspeções, equipes, janela,
+  limiares \\
+\bottomrule
+\end{tabularx}
+\caption{As quatro partes do input.}
+\end{table}
+
+A saída depende de quantas partes foram informadas:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l L}
+\toprule
+\textbf{O usuário informou} & \textbf{A plataforma devolve} \\
+\midrule
+nada & \textbf{feed de insights}: o que a engine encontrou de mais
+  importante em toda a área \\
+onde & \textbf{diagnóstico da entidade}: métricas, comparação com vizinhos,
+  tendência, insights locais \\
+onde + o quê + quando & \textbf{análise}: por exemplo, carregamento previsto
+  de uma subestação nos próximos 12 meses \\
+as quatro partes & \textbf{plano de ação}: alvos e rotas que respeitam a
+  restrição \\
+\bottomrule
+\end{tabularx}
+\caption{Da quantidade de input ao tipo de saída.}
+\end{table}
+
+\subsection{O ``onde'': seleção por camadas}
+
+Desenho livre de áreas foi descartado: ele permite selecionar qualquer ponto
+do globo, inclusive onde não há dado nem modelo, e a saída ou sai vazia ou sai
+inventada. Em vez disso, o ``onde'' é sempre uma entidade que já existe em uma
+camada, organizada numa hierarquia (figura~\ref{fig:hierarquia}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\textwidth]{hierarquia-camadas.png}
+\caption{Hierarquia de camadas. A hierarquia elétrica é onde vivem os dados e
+os modelos; os recortes administrativos servem para cruzar informação.}
+\label{fig:hierarquia}
+\end{figure}
+
+Essa escolha tem três consequências:
+\begin{itemize}
+  \item \textbf{nenhuma seleção é inválida}: tudo o que pode ser escolhido tem
+    dado e modelo por trás;
+  \item \textbf{tela e engine falam a mesma língua}: os níveis da hierarquia
+    são os mesmos que a engine usa para consolidar insights (muitos
+    transformadores viram um insight no alimentador);
+  \item \textbf{o ponto de partida depende do cliente}: numa distribuidora o
+    mapa abre na área de concessão; num gerador, na carteira de parques.
+\end{itemize}
+
+\paragraph{Gestos de seleção.}
+\begin{enumerate}
+  \item \textbf{Clicar} numa entidade de uma camada.
+  \item \textbf{Descer ou subir} na hierarquia, com trilha de navegação
+    (\emph{Distribuidora › SE Centro › AL-04 › T-1183}).
+  \item \textbf{Buscar} por nome ou código.
+  \item \textbf{Filtrar por atributo}: ``alimentadores com perda estimada
+    acima de 15\%''. O conjunto resultante vira a seleção. É o substituto do
+    desenho livre: seleciona-se muita coisa de uma vez por critério, não por
+    traço.
+  \item \textbf{Selecionar várias} entidades para comparar ou incluir num
+    plano.
+\end{enumerate}
+
+\subsection{Gestos de saída}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{c l L c}
+\toprule
+& \textbf{Gesto} & \textbf{Saída} & \textbf{Fase} \\
+\midrule
+1 & abrir a plataforma & feed de insights da área, sem nenhum input & MVP \\
+2 & clicar num insight & mapa vai à entidade e liga as camadas que sustentam
+  o achado & MVP \\
+3 & selecionar uma entidade & diagnóstico no painel da entidade & MVP \\
+4 & perguntar em texto livre & resposta desenhada no mapa & V2 \\
+5 & pedir uma decisão & plano de ação (alvos, rotas, valor esperado) sob a
+  restrição informada & MVP \\
+6 & simular cenário & ``e se a MMGD crescer 30\%?'': alimentadores que
+  saturam & V2 \\
+7 & registrar resultado & rótulo para o próximo ciclo; insight passa a
+  resolvido & MVP \\
+\bottomrule
+\end{tabularx}
+\caption{Gestos de saída. Os gestos 1, 2, 3, 5 e 7 fecham o ciclo completo de
+valor e formam o MVP.}
+\end{table}
+
+A pergunta em texto livre fica para depois de propósito. Ela impressiona em
+demonstração, mas o valor diário vem do feed e do plano, e ela depende de uma
+engine madura para não se tornar um chat que inventa respostas.
+
+% ===========================================================================
+\section{A tela}
+% ===========================================================================
+
+A figura~\ref{fig:mockup} mostra a tela principal no estado de diagnóstico,
+depois de o usuário seguir um insight do feed. Os dados são fictícios.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{mockup-diagnostico.png}
+\caption{Tela principal, estado de diagnóstico de um alimentador.}
+\label{fig:mockup}
+\end{figure}
+
+\begin{description}[leftmargin=2em,labelwidth=1.6em]
+  \item[\marca{1}] \textbf{Camadas.} Entidades em hierarquia (com contagem),
+    a camada de modelo ativa (uma por vez, para que a cor tenha um só
+    significado), a exibição da faixa de incerteza e os recortes
+    administrativos. Unidades consumidoras aparecem sempre agregadas (R8).
+  \item[\marca{2}] \textbf{Trilha.} Onde o usuário está na hierarquia; cada
+    nível é clicável para subir.
+  \item[\marca{3}] \textbf{Busca} por nome ou código de qualquer entidade.
+  \item[\marca{4}] \textbf{Filtro por atributo.} Monta a condição sobre a
+    camada e transforma o resultado em seleção.
+  \item[\marca{5}] \textbf{Tempo.} Histórico, agora ou horizonte de previsão;
+    a parte hachurada é previsão.
+  \item[\marca{6}] \textbf{Mapa.} Alimentadores coloridos pela camada ativa
+    (P50), a seleção destacada, os transformadores da seleção e o rótulo do
+    transformador que mais pesa no diagnóstico. A legenda informa o modelo, a
+    versão e a data de referência (R2).
+  \item[\marca{7}] \textbf{Feed de insights}, restrito ao escopo da seleção e
+    ranqueado por valor. O insight aberto fica marcado.
+  \item[\marca{8}] \textbf{Painel da entidade.} Valor com faixa P10--P90,
+    comparação com vizinhos e com o passado, série de 12 meses, variáveis que
+    mais pesaram e atalho para descer na hierarquia.
+  \item[\marca{9}] \textbf{Ação.} Gerar plano de inspeção, exportar e avaliar
+    o insight (útil ou falso).
+\end{description}
+
+Ao pedir o plano, o painel da entidade dá lugar ao plano
+(figura~\ref{fig:plano}): o usuário informa a restrição e a plataforma devolve
+os alvos, as rotas por equipe, o valor esperado com faixa e a comparação com o
+método atual. Parte dos alvos é reservada para exploração, para corrigir o
+viés de seleção discutido no documento de visões.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{mockup-plano.png}
+\caption{Estado de plano: alvos priorizados e exploratórios, rotas por equipe,
+restrição informada e valor esperado.}
+\label{fig:plano}
+\end{figure}
+
+% ===========================================================================
+\section{Engine de análise}
+\label{sec:engine}
+% ===========================================================================
+
+\subsection{O que é um insight}
+
+Um insight é um achado \emph{calculado} a partir das camadas. Para ser
+publicado, precisa ter todos os campos abaixo; sem comparação e sem ação, é
+apenas a legenda de uma camada.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l L}
+\toprule
+\textbf{Campo} & \textbf{Exemplo} \\
+\midrule
+Onde (entidade) & alimentador AL-04 \\
+O quê (métrica e magnitude) & perda estimada de 18\% \\
+Comparado com & vizinhos: 6\%; o próprio AL-04 há 3 meses: 7\% \\
+Incerteza & P10--P90: 14--22\% \\
+Por quê & queda de consumo em 40 unidades; balanço negativo em 5
+  transformadores \\
+Ação sugerida & plano de inspeção sobre os alvos do topo \\
+Valor & cerca de R\$~85 mil por mês recuperáveis \\
+\bottomrule
+\end{tabularx}
+\caption{Campos obrigatórios de um insight.}
+\end{table}
+
+\subsection{Detectores}
+
+\begin{enumerate}
+  \item \textbf{Anomalia espacial}: entidade muito diferente das vizinhas
+    (estatística espacial local, como LISA ou Getis--Ord).
+  \item \textbf{Tendência e limiar}: trajetória prevista cruza um limite
+    (``passa de 90\% de carregamento até dez/2027'').
+  \item \textbf{Mudança entre ciclos}: o que mudou desde a rodada anterior.
+  \item \textbf{Concentração}: aglomerados de perda ou de risco.
+  \item \textbf{Divergência modelo × registro}: dado cadastrado que a física
+    ou o modelo tornam implausível.
+  \item \textbf{Desempenho do próprio modelo}: onde o modelo tem errado. É o
+    insight que sustenta a confiança nos demais.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{engine-insights.png}
+\caption{Pipeline da engine em um ciclo.}
+\label{fig:engine}
+\end{figure}
+
+\subsection{Regras de desenho}
+
+\begin{itemize}
+  \item \textbf{Todo insight é clicável no mapa.} Abrir um insight leva à
+    entidade com as camadas que o sustentam ligadas; feed e mapa são uma
+    interface só.
+  \item \textbf{Números vêm só da engine.} Se houver um modelo de linguagem,
+    ele redige o texto a partir dos números calculados; nunca calcula,
+    ranqueia ou compara.
+  \item \textbf{Consolidar é obrigatório.} Achados semelhantes em entidades
+    irmãs viram um insight no nível pai. A fadiga de alertas, já apontada
+    como risco na visão de saúde de ativos, vale igualmente para insights.
+  \item \textbf{Significância antes de pontuação.} Um achado que não se
+    distingue da incerteza do modelo não é publicado.
+\end{itemize}
+
+\subsection{Ciclo de vida}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{ciclo-insight.png}
+\caption{Ciclo de vida de um insight. Resolvidos e descartados viram rótulos.}
+\label{fig:ciclo}
+\end{figure}
+
+% ===========================================================================
+\section{Arquitetura}
+% ===========================================================================
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{arquitetura-mapa.png}
+\caption{Arquitetura: das fontes ao mapa e ao feed. Tracejado indica roadmap
+e o retorno que vira rótulo de treino.}
+\label{fig:arquitetura}
+\end{figure}
+
+\subsection{Modelo canônico}
+
+Qualquer que seja a origem, a ingestão converte os dados para quatro formas:
+
+\begin{enumerate}
+  \item \textbf{Entidade com geometria} e posição na hierarquia: a chave de
+    tudo.
+  \item \textbf{Série temporal} de uma entidade, com data de referência e
+    data em que o dado ficou conhecido (bitemporal, para evitar vazamento).
+  \item \textbf{Evento}: inspeção, falha, manutenção, curtailment.
+  \item \textbf{Rótulo}: o resultado de um evento.
+\end{enumerate}
+
+Integrar um cliente novo é escrever o mapeamento dos arquivos dele para essas
+quatro formas: configuração, não código.
+
+\subsection{Entrada de dados por níveis}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{c L L}
+\toprule
+\textbf{Nível} & \textbf{Entrada} & \textbf{O que habilita} \\
+\midrule
+0 & só dados públicos (BDGD, ONS, ANEEL, IBGE, previsão do tempo) & mapa da
+  rede e camadas estimadas; demonstração e piloto sem dado do cliente \\
+1 & arquivos mensais do cliente (faturamento, cadastro, inspeções) & modelo
+  de perdas por transformador e unidade; planos de inspeção (\textbf{MVP}) \\
+2 & conector agendado (banco, SFTP, API) & atualização sem trabalho manual \\
+3 & medição contínua (transformadores, medição inteligente) & balanço quase
+  em tempo real; previsão intradiária \\
+\bottomrule
+\end{tabularx}
+\caption{Níveis de entrada de dados. O ciclo de faturamento é mensal, então
+o MVP não precisa de streaming.}
+\end{table}
+
+\begin{nota}
+\textbf{Atalho parcial.} A BDGD é gerada pela própria distribuidora a partir
+dos seus sistemas. Nos arquivos abertos, os códigos de alimentador,
+transformador e pontos de conexão parecem operacionais, então o dado do
+cliente tende a se ligar ao mapa \emph{pela rede} sem geocodificação. Já a
+unidade consumidora vem anonimizada (hash): ligar \emph{por unidade} exige a
+tabela de correspondência da distribuidora. A BDGD pública também chega com 8
+a 20 meses de defasagem, então serve para montar a rede e o piloto, e o dado
+mensal vem do cliente (nível 1). Detalhes em \texttt{features-energia.tex}.
+\end{nota}
+
+% ===========================================================================
+\section{Casos de uso e sessão típica}
+% ===========================================================================
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{casos-de-uso-mapa.png}
+\caption{Casos de uso agrupados por parte do input e por tipo de saída.}
+\label{fig:casos}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{sessao-usuario.png}
+\caption{Sessão típica de um gerente de recuperação de energia: do feed ao
+plano e ao resultado em campo.}
+\label{fig:sessao}
+\end{figure}
+
+% ===========================================================================
+\section{Escopo do MVP e evolução}
+% ===========================================================================
+
+\paragraph{MVP.}
+\begin{itemize}
+  \item Hierarquia elétrica a partir da BDGD da distribuidora cliente.
+  \item Camadas: perda estimada por transformador e alimentador.
+  \item Engine com os detectores de anomalia espacial, mudança entre ciclos e
+    desempenho do modelo.
+  \item Gestos 1, 2, 3, 5 e 7: feed, abrir insight, diagnóstico, plano de
+    inspeção e registro de resultado.
+  \item Entrada de dados de nível 1 (arquivos mensais).
+\end{itemize}
+
+\paragraph{Evolução.}
+\begin{itemize}
+  \item \textbf{V2}: camadas de carregamento e MMGD previstos por alimentador;
+    detectores de tendência e concentração; pergunta em texto livre e
+    simulação de cenário; conector agendado.
+  \item \textbf{V3}: risco de ativos; medição contínua; detector de
+    divergência modelo × registro.
+  \item \textbf{V4}: pontos quentes de operação (copiloto), se validado.
+\end{itemize}
+
+% ===========================================================================
+\section{Riscos}
+% ===========================================================================
+
+\begin{itemize}
+  \item \textbf{Fadiga de insights}: feed longo e medíocre faz o usuário
+    parar de olhar. Mitigação: significância, consolidação e corte por valor.
+  \item \textbf{Texto que inventa números}: mitigado pela regra de que números
+    vêm só da engine.
+  \item \textbf{Viés de seleção nos rótulos}: inspeções passadas não são
+    aleatórias. Mitigação: fração exploratória em todo plano.
+  \item \textbf{LGPD e sensibilidade social}: indicação de irregularidade não
+    é prova; exibição agregada por padrão e monitoramento de viés geográfico.
+  \item \textbf{Qualidade dos dados públicos}: na BDGD, a energia da MMGD
+    se comporta como injeção, não geração, a potência instalada mistura kW e
+    W, e a mesma coluna vem em kWh numa distribuidora e em MWh em outra. A
+    perda não técnica da BDGD é rateio contábil. Toda camada derivada precisa
+    declarar a normalização usada.
+\end{itemize}
+
+% ===========================================================================
+\section{Questões em aberto}
+\label{sec:abertas}
+% ===========================================================================
+
+\begin{enumerate}
+  \item \textbf{Cliente-alvo.} Distribuidora (hipótese deste documento) ou
+    gerador e comercializadora. Muda a hierarquia de camadas, os modelos do
+    MVP e a métrica de valor; a engine e o modelo de interação permanecem.
+  \item \textbf{Códigos da BDGD × códigos internos.} Confirmar com um cliente
+    que os códigos de rede coincidem e se ele fornece a correspondência do
+    código anonimizado das unidades.
+  \item \textbf{Corte de publicação.} Quantos insights por ciclo o usuário
+    aceita ler; define o limiar de pontuação.
+  \item \textbf{Nome do produto.} ``Mapa preditivo'' é nome de trabalho.
+\end{enumerate}
+
+\end{document}

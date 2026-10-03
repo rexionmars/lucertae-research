@@ -1,0 +1,370 @@
+' Plataforma de previsão para renováveis e carga
+' Diagramas da visão de produto (seção 2 de ml-setor-energetico.tex)
+'
+' Renderizar: plantuml -charset UTF-8 -tsvg plataforma-previsao.puml
+
+' ===========================================================================
+' 1. Arquitetura: componentes e fluxo de dados
+' ===========================================================================
+@startuml arquitetura
+title Plataforma de previsão — arquitetura e fluxo de dados
+
+left to right direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam component {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+}
+skinparam database {
+  BackgroundColor #EAF1F8
+  BorderColor #1C568C
+}
+skinparam rectangle {
+  BorderColor #1C568C
+}
+
+actor "Analista de operação\ncomercial (gerador)" as analista
+actor "Trader\n(comercializadora)" as trader
+actor "Planejador\n(distribuidora)" as planejador
+
+package "Fontes externas" {
+  component "Provedores NWP\n(múltiplas rodadas/dia)" as nwp
+  component "Satélite GOES-East" as sat <<V2>>
+  component "Dados abertos\nONS / CCEE" as abertos
+  component "Calendário e feriados" as cal
+}
+
+package "Cliente" {
+  component "SCADA / telemetria\ndos parques" as scada
+  component "Medição de carga" as medcarga
+}
+
+package "Ingestão e qualidade" {
+  component "Conectores" as conect
+  component "Validação\n(faltantes, outliers)" as valid
+  component "Marcação de curtailment\ne indisponibilidade" as curt
+}
+
+database "Feature store bitemporal\n(o que se sabia em cada instante)" as fstore
+
+package "Treino e seleção" {
+  component "Backtesting\n(origem móvel)" as backtest
+  component "Modelos por ativo / globais\n(GBM, Transformers)" as modelos
+  component "Foundation model\nzero-shot (onboarding)" as fm
+  component "Nowcasting por satélite" as nowcast <<V2>>
+  database "Registro de modelos\n(campeão / desafiante)" as registro
+}
+
+package "Inferência" {
+  component "Orquestrador\n(dispara a cada rodada NWP)" as orq
+  component "Serviço de previsão\nquantis P10 / P50 / P90" as infer
+  database "Previsões emitidas" as prevs
+}
+
+package "Entrega" {
+  component "API REST" as api
+  component "Painel\n(previsto x realizado,\nskill score)" as painel
+}
+
+package "Monitoramento" {
+  component "Erro em produção\n(nMAE, CRPS, skill)" as erro
+  component "Deriva de dados\ne alertas" as deriva
+}
+
+' --- ingestão
+nwp --> conect
+sat ..> conect
+abertos --> conect
+cal --> conect
+scada --> conect
+medcarga --> conect
+conect --> valid
+valid --> curt
+curt --> fstore
+
+' --- treino
+fstore --> backtest
+backtest --> modelos
+backtest --> fm
+backtest ..> nowcast
+modelos --> registro
+fm --> registro
+nowcast ..> registro
+
+' --- inferência
+fstore --> orq
+orq --> infer
+registro --> infer
+infer --> prevs
+
+' --- entrega
+prevs --> api
+prevs --> painel
+api --> analista
+api --> trader
+painel --> analista
+painel --> planejador
+
+' --- monitoramento e retreino
+prevs --> erro
+fstore --> erro
+fstore --> deriva
+erro --> backtest : gatilho de\nretreino
+deriva --> backtest : gatilho de\nretreino
+
+legend right
+  Seta tracejada / <<V2>>: previsto no roadmap
+end legend
+@enduml
+
+' ===========================================================================
+' 2. Operação: ciclo de uma rodada de previsão e ciclo de melhoria
+' ===========================================================================
+@startuml operacao
+title Plataforma de previsão — ciclo de operação
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceMessageAlign left
+skinparam ParticipantBorderColor #1C568C
+skinparam ParticipantBackgroundColor #F4F8FC
+skinparam DatabaseBorderColor #1C568C
+skinparam DatabaseBackgroundColor #EAF1F8
+skinparam SequenceGroupBorderColor #1C568C
+skinparam NoteBackgroundColor #FFF8E6
+
+participant "Provedor NWP" as nwp
+participant "Ingestão" as ing
+database "Feature store" as fs
+participant "Orquestrador" as orq
+database "Registro de\nmodelos" as reg
+participant "Serviço de\nprevisão" as inf
+participant "API / Painel" as api
+actor "Cliente" as cli
+participant "SCADA\n(cliente)" as scada
+participant "Monitoramento" as mon
+participant "Treino" as tr
+
+== Rodada de previsão (a cada nova rodada NWP) ==
+
+nwp -> ing : publica rodada
+ing -> ing : valida (faltantes, consistência)
+ing -> fs : grava features com\nhorário de emissão
+fs -> orq : nova rodada disponível
+orq -> inf : dispara previsão para\ntodos os ativos
+
+loop para cada ativo
+  inf -> reg : busca modelo ativo
+  alt ativo novo, sem histórico
+    reg --> inf : foundation model zero-shot
+  else histórico suficiente
+    reg --> inf : modelo ajustado (campeão)
+  end
+  inf -> fs : lê features disponíveis\nno instante de emissão
+  inf -> inf : gera quantis P10 / P50 / P90
+end
+
+inf -> api : publica previsões
+api -> cli : entrega via API / webhook
+cli -> api : consulta painel
+
+== Acompanhamento contínuo ==
+
+loop durante a operação
+  scada -> ing : medições realizadas
+  ing -> ing : marca curtailment e\nindisponibilidade
+  ing -> fs : grava observações
+  fs -> mon : previsto x realizado
+  mon -> mon : calcula nMAE, CRPS,\nskill vs. persistência
+  mon -> api : atualiza métricas no painel
+end
+
+== Ciclo de melhoria ==
+
+alt erro acima do limite ou deriva detectada
+  mon -> tr : alerta e gatilho de retreino
+else ativo acumulou histórico suficiente
+  mon -> tr : gatilho de primeiro\nmodelo dedicado
+end
+
+tr -> fs : lê histórico (sem vazamento)
+tr -> tr : backtesting com origem móvel
+alt desafiante supera o campeão
+  tr -> reg : promove novo modelo
+  note right of reg
+    A próxima rodada NWP
+    já usa o novo modelo
+  end note
+else não supera
+  tr -> reg : mantém campeão e\nregistra resultado
+end
+@enduml
+
+' ===========================================================================
+' 3. Casos de uso
+' ===========================================================================
+@startuml casos-de-uso
+title Plataforma de previsão — casos de uso
+
+left to right direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+  BackgroundColor<<V2>> #FFFFFF
+  BorderColor<<V2>> #8AA9C7
+  BackgroundColor<<V3>> #FFFFFF
+  BorderColor<<V3>> #8AA9C7
+  BackgroundColor<<V4>> #FFFFFF
+  BorderColor<<V4>> #8AA9C7
+}
+skinparam rectangle {
+  BorderColor #1C568C
+}
+
+' --- atores humanos (lado esquerdo)
+actor "Usuário de negócio" as usuario
+actor "Analista de operação\ncomercial (gerador)" as analista
+actor "Trader\n(comercializadora)" as trader
+actor "Planejador\n(distribuidora)" as planejador
+actor "Cientista de dados\n(equipe da plataforma)" as cientista
+
+analista -|> usuario
+trader -|> usuario
+planejador -|> usuario
+
+' --- atores de sistema (lado direito)
+actor "Provedor NWP" as nwp <<sistema>>
+actor "SCADA do cliente" as scada <<sistema>>
+actor "Sistema do cliente\n(integração via API)" as sistcli <<sistema>>
+actor "Agendador" as agenda <<sistema>>
+
+rectangle "Plataforma de previsão" {
+
+  ' gestão de ativos
+  usecase "Cadastrar ativo\n(parque ou ponto de carga)" as UC_cad
+  usecase "Conectar telemetria" as UC_tel
+  usecase "Gerar previsão inicial\nzero-shot" as UC_zs
+  usecase "Informar indisponibilidade\nou curtailment programado" as UC_indisp
+
+  ' consumo das previsões
+  usecase "Consultar previsão\nde geração" as UC_ger
+  usecase "Consultar previsão\nde carga" as UC_carga
+  usecase "Consultar previsão\nde PLD" as UC_pld <<V3>>
+  usecase "Consultar nowcasting\n(0 a 6 h, satélite)" as UC_now <<V2>>
+  usecase "Visualizar quantis\n(P10 / P50 / P90)" as UC_quant
+  usecase "Consumir previsões via API" as UC_api
+  usecase "Configurar alertas\n(rampas, desvios)" as UC_alert
+
+  ' desempenho
+  usecase "Comparar previsto\nx realizado" as UC_comp
+  usecase "Executar piloto\nem modo sombra" as UC_sombra
+  usecase "Exportar relatório\nde desempenho" as UC_rel
+
+  ' evolução (roadmap)
+  usecase "Gerar cenários conjuntos\n(geração, carga, preço)" as UC_cen <<V3>>
+  usecase "Otimizar ofertas e\ndespacho de baterias" as UC_otim <<V4>>
+
+  ' operação interna
+  usecase "Ingerir rodada NWP" as UC_ingnwp
+  usecase "Receber medições\nrealizadas" as UC_med
+  usecase "Gerar previsões\nagendadas" as UC_prev
+  usecase "Monitorar desempenho\ne deriva dos modelos" as UC_mon
+  usecase "Retreinar e promover\nmodelo (campeão/desafiante)" as UC_retr
+}
+
+' --- usuário de negócio
+usuario --> UC_ger
+usuario --> UC_carga
+usuario --> UC_pld
+usuario --> UC_now
+usuario --> UC_comp
+usuario --> UC_alert
+usuario --> UC_cen
+analista --> UC_cad
+analista --> UC_indisp
+analista --> UC_sombra
+trader --> UC_otim
+
+' --- cientista de dados
+cientista --> UC_mon
+cientista --> UC_retr
+cientista --> UC_cad
+
+' --- relações entre casos de uso
+UC_cad ..> UC_tel : <<include>>
+UC_cad ..> UC_zs : <<include>>
+UC_ger ..> UC_quant : <<include>>
+UC_carga ..> UC_quant : <<include>>
+UC_pld ..> UC_quant : <<include>>
+UC_now ..> UC_quant : <<include>>
+UC_sombra ..> UC_comp : <<include>>
+UC_rel ..> UC_comp : <<extend>>
+UC_otim ..> UC_cen : <<include>>
+UC_retr ..> UC_mon : <<extend>>
+
+' --- atores de sistema
+UC_api <-- sistcli
+UC_ingnwp <-- nwp
+UC_med <-- scada
+UC_prev <-- agenda
+UC_prev ..> UC_ingnwp : <<include>>
+UC_mon ..> UC_med : <<include>>
+
+legend right
+  Casos com <<V2>>/<<V3>>/<<V4>>: previstos no roadmap
+  include: sempre executado junto
+  extend: comportamento opcional
+end legend
+@enduml
+
+' ===========================================================================
+' 4. Máquina de estados: ciclo de vida de um ativo na plataforma
+' ===========================================================================
+@startuml maquina-de-estados
+title Plataforma de previsão — ciclo de vida de um ativo
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam nodesep 70
+skinparam ranksep 70
+skinparam roundcorner 12
+skinparam ArrowColor #333333
+skinparam state {
+  BackgroundColor #FFE066
+  BorderColor #333333
+  StartColor #111111
+  EndColor #111111
+}
+hide empty description
+
+state "Cadastrado" as Cadastrado
+state "Aguardando\nTelemetria" as Aguardando
+state "Prevendo com\nZero-shot" as ZeroShot
+state "Treinando\nModelo Dedicado" as Treinando
+state "Prevendo com\nModelo Dedicado" as Dedicado
+state "Retreinando" as Retreino
+state "Descomissionado" as Descom
+
+[*] --> Cadastrado
+Cadastrado --> Aguardando : Telemetria\nConectada
+Aguardando --> Cadastrado : Falha na\nConexão
+Aguardando --> ZeroShot : Telemetria Validada
+ZeroShot --> Treinando : Histórico\nSuficiente
+Treinando --> ZeroShot : Modelo\nReprovado
+Treinando --> Dedicado : Modelo Aprovado
+Dedicado --> Retreino : Erro Alto\nou Deriva
+Retreino --> Dedicado : Retreino\nConcluído
+ZeroShot --> Descom : Ativo Removido
+Dedicado --> Descom : Ativo Removido
+Descom --> [*]
+@enduml

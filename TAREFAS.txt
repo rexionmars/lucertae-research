@@ -624,6 +624,11 @@ REGRA
                      `lucertae.corte`; comando `tee-engine` -> `lucertae`;
                      TEE_INTERIM/TEE_PSQL/TEE_DB -> LUCERTAE_*
       README ....... o do terra-energy-research foi para docs/corte.md
+      produto ...... ../mapeamento-energetico/docs inteiro em docs/produto/:
+                     cópia idêntica; gerar.py regenera os mesmos arquivos; os
+                     três .tex compilam com o mesmo número de páginas e sem
+                     arquivo ou referência faltando. PDF fora do git, como
+                     em report/.
 
     A MIGRAÇÃO É PROVADAMENTE NEUTRA no que tem controle:
       `lucertae tabela` sai byte a byte idêntica a `tee-engine tabela`

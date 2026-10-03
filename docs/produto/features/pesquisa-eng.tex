@@ -1,0 +1,326 @@
+% Fichas de pesquisa: MER, CLI, DRE, ENG
+% Conferido na web em 23/09/2026. "(a confirmar)" marca o que não foi verificado em fonte.
+
+\section{Mercado, clima, resposta da demanda e engine}
+
+% ---------------------------------------------------------------------------
+\subsection{MER \textperiodcentered{} Mercado e preço}
+
+\begin{nota}
+\textbf{Trilha condicional.} As três features deste módulo, com CAR-08 e
+GER-08, estão fora do roadmap faseado: entram apenas se a questão de
+cliente-alvo for resolvida a favor de gerador e comercializadora. A pesquisa
+fica registrada para que a decisão, quando vier, não recomece do zero.
+\end{nota}
+
+\begin{nota}
+\textbf{Correção sobre a CCEE.} O portal Dados Abertos da CCEE tem um bloqueio
+de segurança (firewall de aplicação) que barra clientes fora da política de
+acesso e orienta a abrir chamado com o código do erro e o IP [1,2]. A própria
+CCEE divulga tutoriais de automação por API, e o download de um endpoint
+CKAN (\texttt{/datastore/dump/<id>}) funcionou sem bloqueio. Coleta
+automatizada é viável com boas práticas: poucas requisições, user-agent
+identificável, cache local e download dos CSVs anuais em vez de raspagem.
+\end{nota}
+
+\begin{ficha}{MER-01 \textperiodcentered{} PLD previsto por submercado (quantis)}{V3}
+\campo{Dados} \emph{PLD\_HORARIO} da CCEE: um CSV por ano, horário de 2021 a
+2026 e semanal de 2001 a 2020, licença CC-BY 4.0, atualização diária [3].
+Limites regulatórios de 2026: piso R\$~57,31/MWh, teto estrutural
+R\$~785,27/MWh e teto horário R\$~1.611,04/MWh (Despacho ANEEL 3.850/2025)
+[5]. Decks NEWAVE/DECOMP/DESSEM no Acervo CCEE, inclusive decks sombra [6];
+decks do DESSEM também no ONS [7]. ONS Dados Abertos: carga semi-horária,
+geração por usina e CMO semi-horário [8].
+\campo{Abordagens} Linha de base: ingênuo sazonal e LEAR (autorregressivo
+com LASSO), referência da literatura, implementado no \emph{epftoolbox} [10].
+Recomendada: gradient boosting com perda quantílica sobre CMO, carga e
+renováveis previstas, armazenamento dos reservatórios e deck vigente, com
+calibração conformal (a confirmar). Estado da arte: emulação do DESSEM por
+modelo substituto e redes que preveem distribuições paramétricas [10].
+\campo{Métricas} Pinball e CRPS, cobertura e largura dos intervalos, MAE
+relativo ao ingênuo, teste de Diebold--Mariano.
+\campo{Armadilhas} Quebra estrutural em 01/01/2021 (PLD passou a horário,
+calculado pelo DESSEM) [4]; nova função de custo futuro em 12/10/2025 [6];
+distribuição censurada no piso e no teto; séries do ONS revisadas depois de
+publicadas, o que exige guardar o que era conhecido em cada data [8]. O
+Projeto Meta II propõe preço por oferta e dois PLDs (ex-ante e ex-post), com
+implantação prevista para junho de 2028 [9]: deriva estrutural garantida.
+\end{ficha}
+
+\begin{ficha}{MER-02 \textperiodcentered{} Cenários conjuntos de geração, carga e preço}{V3}
+\campo{Dados} Saídas probabilísticas de GER-01, CAR-08 e MER-01; histórico
+conjunto do ONS e da CCEE [3,8].
+\campo{Abordagens} Linha de base: cenários independentes ou bootstrap de
+blocos históricos. Recomendada: cópula gaussiana sobre as marginais
+preditivas (Pinson et al.\ 2009) [11]; alternativa com a ordem dos membros do
+ensemble meteorológico (ECC e dual-ECC) [12]. Estado da arte: cópulas vine e
+geradores profundos (a confirmar).
+\campo{Métricas} Energy score e variogram score, histogramas de posto
+multivariados, CRPS por marginal (biblioteca \emph{scoringrules}) [13].
+\campo{Armadilhas} A dependência muda com o regime hidrológico, e uma cópula
+estacionária subestima eventos conjuntos extremos (seca com pico de carga).
+\end{ficha}
+
+\begin{ficha}{MER-03 \textperiodcentered{} Otimização de oferta e despacho de baterias}{V4}
+\campo{Dados} Cenários de MER-02, PLD horário e parâmetros técnicos da
+bateria. Contexto: Portaria MME 136/2026 define o primeiro leilão de reserva
+de capacidade em baterias (dezembro de 2026, contratos de 15 anos a partir
+de agosto de 2028), com receita de disponibilidade e não de arbitragem livre
+[14].
+\campo{Abordagens} Linha de base: otimização determinística sobre a previsão
+pontual. Recomendada: programação estocástica em dois estágios ou CVaR,
+em janela móvel. Estado da arte: aprendizado focado na decisão; minimizar o
+CRPS não garante a melhor oferta [15].
+\campo{Métricas} Receita contra o ótimo com informação perfeita (regret),
+CVaR da receita, custo de degradação.
+\campo{Armadilhas} Hoje o PLD vem de modelo de custo, não de ofertas; ``oferta''
+só faz sentido com o modelo híbrido (2028 em diante) [9]. Degradação
+simplificada superestima receita. Baixo encaixe com o mapa.
+\end{ficha}
+
+% ---------------------------------------------------------------------------
+\subsection{CLI \textperiodcentered{} Contexto climático}
+
+\begin{ficha}{CLI-01 \textperiodcentered{} Tempo previsto}{V2}
+\campo{Dados} ECMWF Open Data: IFS e AIFS (determinístico e ensemble), grade
+de 0,25°, quatro rodadas por dia, licença CC-BY 4.0 com uso comercial
+permitido e atribuição obrigatória; o portal guarda só as rodadas dos
+últimos 2 a 3 dias, com espelhos em nuvem [16,17]. NOAA GFS 0,25° no AWS,
+aberto, com histórico longo no NCAR [18]. CPTEC/INPE: BAM, WRF, Eta e BRAMS,
+com citação exigida [19]. INMET: estações automáticas horárias (portal com
+90 dias) e BDMEP para o histórico, com defasagem de 1 a 3 meses [20].
+\campo{Abordagens} Linha de base: previsão bruta interpolada para as
+entidades. Recomendada: pós-processamento estatístico por entidade (MOS,
+EMOS, regressão quantílica) com downscaling. Estado da arte: modelos globais
+de ML (AIFS, GraphCast-GFS) [16,18]. Ferramentas: \emph{herbie},
+\emph{xarray}/\emph{cfgrib}, \emph{xskillscore} [17].
+\campo{Métricas} RMSE e MAE por variável e horizonte, CRPS do ensemble,
+diagrama de confiabilidade, skill contra climatologia e persistência.
+\campo{Armadilhas} \textbf{Arquivar cada rodada desde o primeiro dia}: sem
+isso, não há histórico de previsões para treinar sem vazamento. Mudanças de
+versão dos modelos quebram o pós-processamento. A atribuição do ECMWF precisa
+aparecer no mapa.
+\end{ficha}
+
+\begin{ficha}{CLI-02 \textperiodcentered{} Satélite e radar observados}{V2}
+\campo{Dados} GOES-East é o \textbf{GOES-19} desde abril de 2025 (75,2°W),
+com ABI e GLM no AWS Open Data em NetCDF4; houve interrupções (ABI restaurado
+em julho de 2026) [21]. Radar REDEMET/DECEA por API com chave, mas em imagem
+PNG, útil para exibir e não para modelar [22]. CEMADEN: pluviômetros e radares
+de dupla polarização, com dados volumétricos sob solicitação (a confirmar)
+[23].
+\campo{Abordagens} Linha de base: exibir mosaicos. Recomendada: nowcasting de
+precipitação de 0 a 6 h com \emph{pysteps} (fluxo óptico e ensembles
+estocásticos) [24]. Estado da arte: nowcasting profundo (ConvGRU, difusão).
+\campo{Métricas} CSI, POD e FAR por limiar; FSS; CRPS [24].
+\campo{Armadilhas} Cobertura de radar desigual no território; lacunas e
+latência do GOES.
+\end{ficha}
+
+\begin{ficha}{CLI-03 \textperiodcentered{} Raios e eventos severos}{V3}
+\campo{Dados} BrasilDAT (ELAT/INPE): detecta descargas nuvem-solo e
+intranuvem; acesso por contato com o ELAT, \textbf{não é aberta} [25].
+Alternativa aberta: GLM do GOES-19, detecção óptica de raios totais com
+eficiência uniforme sobre o Brasil [21,26].
+\campo{Abordagens} Densidade de descargas por célula e janela; cruzamento
+espaço-temporal de raios com desligamentos de alimentadores (alimenta
+CON-03).
+\campo{Métricas} POD e FAR dos alertas contra desligamentos; antecedência.
+\campo{Armadilhas} O GLM registra flashes ópticos, não pontos de impacto, com
+localização da ordem de quilômetros (a confirmar): não serve para associar
+descarga a vão de linha.
+\end{ficha}
+
+% ---------------------------------------------------------------------------
+\subsection{DRE \textperiodcentered{} Resposta da demanda e consumidor}
+
+\begin{ficha}{DRE-01 \textperiodcentered{} Alvos de resposta da demanda por alimentador}{V4}
+\campo{Dados} Regulação: REN ANEEL 1.040/2022 (programa estrutural) e sandbox
+do ONS para o produto disponibilidade, com primeiro mecanismo competitivo em
+outubro de 2024 (até 4 acionamentos mensais de 4 h, entre 18 h e 22 h)
+[27,28]. Resultados na CCEE [28]. O programa do ONS mira grandes consumidores
+do SIN; resposta da demanda por alimentador é caso da distribuidora e depende
+de medição própria (a confirmar).
+\campo{Abordagens} Linha de base de medição: regras ``X de Y dias'' (a
+confirmar). Recomendada: baseline contrafactual por ML, avaliada como
+contrafactual porque define pagamento; estado da arte: controle sintético
+generalizado e baselines probabilísticos [29]. Alvos: alimentadores com
+carregamento previsto acima do limite (CAR-01, RED-01), ordenados por alívio
+esperado por custo.
+\campo{Métricas} Viés da baseline em dias sem evento; precisão no topo dos
+alimentadores escolhidos; MW reduzidos contra contratados.
+\campo{Armadilhas} Baseline enviesada paga indevidamente ou incentiva inflar
+a carga antes do evento; efeito rebote; poucos eventos para validar.
+\end{ficha}
+
+\begin{ficha}{DRE-02 \textperiodcentered{} Desagregação de consumo (NILM)}{fora}
+\campo{Dados} Medição agregada de alta frequência por unidade; bases públicas
+REDD e UK-DALE; nenhuma base brasileira encontrada [30].
+\campo{Abordagens} FHMM (NILMTK) como linha de base; seq2point (Zhang et
+al.\ 2018) como recomendada [30].
+\campo{Por que fica fora} Exige dado individual de alta frequência que não
+existe em escala, o parque de aparelhos brasileiro (chuveiro elétrico) difere
+das bases de treino, e a saída é por unidade consumidora, não espacial.
+\end{ficha}
+
+\begin{ficha}{DRE-03 \textperiodcentered{} Recomendação tarifária e de eficiência}{fora}
+\campo{Dados} Tarifa Branca desde 2018, adesão de cerca de 69 mil unidades em
+75 milhões aptas [31,32]; proposta da área técnica da ANEEL (novembro de 2025)
+de Tarifa Branca automática para consumo acima de 1 MWh/mês, levada a consulta
+pública, desfecho não verificado [32]. Tarifas homologadas por distribuidora
+nos dados abertos da ANEEL [33].
+\campo{Por que fica fora} Sem curva horária medida a recomendação é
+especulativa, e a decisão é da unidade consumidora, não de uma entidade do
+mapa. Se a Tarifa Branca automática vingar, a versão agregada (quantas
+unidades de um alimentador seriam afetadas) pode voltar como insight.
+\end{ficha}
+
+% ---------------------------------------------------------------------------
+\subsection{ENG \textperiodcentered{} Engine de análise e modelos}
+
+\begin{ficha}{ENG-01 \textperiodcentered{} Feed de insights consolidado}{MVP}
+\campo{Dados} Todas as camadas com a hierarquia, uma matriz de vizinhança
+(geográfica ou por topologia elétrica) e o histórico por ciclo.
+\campo{Abordagens} \emph{Pontuação}: adotar o esquema de Top-K Insights
+(SIGMOD 2017) e QuickInsights (SIGMOD 2019, base do recurso do Power BI):
+tipo de insight, subespaço e pontuação por impacto × significância [34].
+\emph{Anomalia espacial}: Moran local (LISA) e Getis--Ord $G_i^*$ em
+PySAL/\emph{esda}, com pseudo-p por permutação [35], sempre com controle de
+FDR para testes múltiplos e dependentes [36]. \emph{Mudança e tendência}:
+pontos de mudança offline com \emph{ruptures} e online com BOCPD [37];
+excedência de quantil da previsão para limiares. \emph{Consolidação}: o
+insight do pai absorve os dos filhos quando explica a maior parte do efeito;
+a reconciliação MinT garante números coerentes entre níveis [38].
+\campo{Métricas} Precisão no topo do feed (insights marcados úteis ou
+acionados), taxa de falsos positivos sob dados embaralhados, insights por
+evento real.
+\campo{Armadilhas} Explosão de testes (entidades × camadas × detectores);
+MAUP (o resultado muda com a escala de agregação); vizinhança geográfica não
+é conectividade elétrica; fadiga de alertas.
+\end{ficha}
+
+\begin{ficha}{ENG-02 \textperiodcentered{} Explicação por entidade}{MVP}
+\campo{Abordagens} TreeSHAP para modelos de árvore [39]; TimeSHAP para
+modelos de séries [40]; GeoShapley para modelos espaciais, que trata a
+localização como um jogador conjunto [41].
+\campo{Métricas} Fidelidade (remoção e inserção), estabilidade entre
+execuções, consistência com a física (sinal esperado da temperatura sobre a
+carga).
+\campo{Armadilhas} Variáveis climáticas correlacionadas dão atribuições
+diferentes conforme a variante de SHAP [39]; explicação não é causa e não
+deve alimentar a simulação de cenário como se fosse efeito.
+\end{ficha}
+
+\begin{ficha}{ENG-03 \textperiodcentered{} Erro dos modelos por entidade}{MVP}
+\campo{Dados} Pares previsto × realizado, versionados por data de emissão,
+horizonte e versão do modelo; realizados revisados pelo ONS e pela CCEE
+exigem guardar a versão conhecida em cada data [8].
+\campo{Métricas} nMAE com normalização explícita; CRPS (regra estritamente
+própria) [42]; pinball; calibração (PIT, cobertura, confiabilidade) e
+nitidez; precisão no topo para rankings. Bibliotecas: \emph{scoringrules}
+(ativa, univariada e multivariada) e \emph{xskillscore}; a
+\emph{properscoring} está pouco mantida [42].
+\campo{Armadilhas} nMAE explode em entidades de carga baixa; métricas
+agregadas escondem a cauda; poucas amostras por entidade pedem intervalo por
+bootstrap antes de emitir o insight de desempenho.
+\end{ficha}
+
+\begin{ficha}{ENG-04 \textperiodcentered{} Deriva de dados por região}{V2}
+\campo{Abordagens} Testes univariados (KS, PSI, Wasserstein) como no
+\emph{Evidently} [43]; MMD para deriva multivariada; estimativa de desempenho
+sem rótulo com NannyML [45]; testes de duas amostras sobre representações
+reduzidas funcionam melhor segundo Rabanser et al.\ (2019) [46]. Aplicar o
+teste por região e procurar agrupamentos de deriva com LISA (proposta, a
+confirmar como prática).
+\campo{Armadilhas} \textbf{Licença}: o \emph{alibi-detect} mudou de Apache 2.0
+para Business Source License 1.1 em janeiro de 2024, com restrição a uso
+comercial em produção [44]. Com amostras grandes tudo ``deriva'': usar
+tamanho de efeito e FDR; comparar com a mesma estação do ano.
+\end{ficha}
+
+\begin{ficha}{ENG-05 \textperiodcentered{} Simulação de cenário}{V2}
+\campo{Abordagens} Perturbar entradas e reexecutar os modelos, alterando de
+forma coerente variáveis correlacionadas e sinalizando extrapolação fora do
+domínio de treino. Onde houver cenários conjuntos (MER-02, na trilha
+condicional), propagar a incerteza sobre eles; sem eles, perturbar as
+marginais e declarar que a dependência não está modelada.
+Estado da arte: modelos causais estruturais (a confirmar: DoWhy, EconML).
+\campo{Métricas} Backtest em choques históricos conhecidos; cobertura dos
+intervalos.
+\campo{Armadilhas} Modelos preditivos não são causais; o usuário pode ler o
+cenário como previsão.
+\end{ficha}
+
+\begin{ficha}{ENG-06 \textperiodcentered{} Pergunta em texto livre}{V2}
+\campo{Estado da técnica} Em text-to-SQL sobre bancos reais (BIRD), o melhor
+sistema chega a cerca de 82\% de acurácia de execução contra 93\% de humanos
+[47]. Em tarefas geoespaciais, agentes frequentemente ``alucinam'' relações
+espaciais em vez de computá-las [48]. No DataGemma, mesmo com recuperação de
+dados, parte relevante das estatísticas citadas saiu errada [49]: o modelo de
+linguagem não pode ser fonte de número.
+\campo{Arquitetura recomendada} (1) o modelo escolhe ferramentas de uma API
+semântica restrita (métricas, entidades, filtros); SQL livre só como recurso
+de exceção, em leitura e com limites; (2) a engine executa e devolve números
+com identificadores; (3) o texto é redigido com marcadores preenchidos pela
+engine; (4) um verificador rejeita a resposta se algum número não vier do
+resultado; (5) a resposta cita os insights e consultas e admite ``não sei''.
+\campo{Métricas} Acurácia de execução num conjunto próprio de perguntas do
+setor; taxa de números sem fonte (meta: zero); taxa de recusa correta.
+\campo{Armadilhas} Unidade errada (MW e MWh); nomes de subestação repetidos;
+injeção de instruções vinda de texto nos dados; acesso a dados de unidades
+consumidoras (controle por papel na camada de ferramentas).
+\end{ficha}
+
+\subsection*{Referências desta seção}
+{\small
+\begin{enumerate}[label={[\arabic*]},leftmargin=2.2em,itemsep=1pt]
+\item CCEE Dados Abertos, mensagem de bloqueio: \url{https://dadosabertos.ccee.org.br/}
+\item CCEE Dados Abertos, sobre e contatos: \url{https://dadosabertos.ccee.org.br/about}
+\item CCEE, PLD\_HORARIO: \url{https://dadosabertos.ccee.org.br/dataset/pld_horario}
+\item CCEE, conceitos de preços: \url{https://www.ccee.org.br/precos/conceitos-precos}
+\item ANEEL, PLD 2026: \url{https://www.gov.br/aneel/pt-br/assuntos/noticias/2025/aneel-define-tarifas-de-energia-de-otimizacao-de-servicos-ancilares-e-pld-para-2026}
+\item CCEE, Acervo e novas funções de custo futuro: \url{https://www.ccee.org.br/acervo-ccee}
+\item ONS, decks do DESSEM: \url{https://www.ons.org.br/}
+\item ONS Dados Abertos: \url{https://dados.ons.org.br/}
+\item CCEE, Projeto Meta II: \url{https://www.ccee.org.br/en/web/guest/-/ccee-apresenta-primeiros-resultados-do-projeto-meta-ii-sobre-formacao-de-preco-no-brasil}
+\item Lago et al.\ (2021), \emph{Applied Energy} 293:116983; \url{https://github.com/jeslago/epftoolbox}
+\item Pinson et al.\ (2009), \emph{Wind Energy} 12:51--62, doi:10.1002/we.284
+\item Ben Bouallègue et al.\ (2016), dual-ECC, \emph{Monthly Weather Review} 144(12)
+\item scoringrules: \url{https://scoringrules.readthedocs.io/}
+\item MME, diretrizes do leilão de baterias: \url{https://www.gov.br/mme/}
+\item Decision-focused predict-then-bid: \url{https://arxiv.org/abs/2505.01551}; CRPS e decisão: \url{https://arxiv.org/abs/2308.15443}
+\item ECMWF Open Data: \url{https://www.ecmwf.int/en/forecasts/datasets/open-data}
+\item Herbie: \url{https://herbie.readthedocs.io/}
+\item GFS no AWS: \url{https://registry.opendata.aws/noaa-gfs-pds/}; NCAR d084001
+\item CPTEC/INPE: \url{https://previsaonumerica.cptec.inpe.br/}
+\item INMET BDMEP: \url{https://bdmep.inmet.gov.br/}
+\item GOES no AWS: \url{https://registry.opendata.aws/noaa-goes/}; NCEI ABI/GLM
+\item API REDEMET, radar: \url{https://ajuda.decea.mil.br/base-de-conhecimento/api-redemet-produtos-radar/}
+\item CEMADEN, mapa interativo: \url{https://mapainterativo.cemaden.gov.br/}
+\item Pulkkinen et al.\ (2019), pysteps, \emph{GMD} 12:4185
+\item ELAT/INPE, BrasilDAT: \url{https://www.gov.br/inpe/}
+\item GLM, eficiência de detecção: \url{https://ntrs.nasa.gov/citations/20180000609}
+\item REN ANEEL 1.040/2022: \url{https://www2.aneel.gov.br/cedoc/ren20221040.html}
+\item CCEE e ONS, sandbox de resposta da demanda: \url{https://www.ccee.org.br/resposta-demanda}
+\item Controle sintético para baseline de RD: \url{https://arxiv.org/abs/2604.18469}
+\item Zhang et al.\ (2018), seq2point, AAAI-18; \url{https://github.com/nilmtk/nilmtk-contrib}
+\item ANEEL, Tarifa Branca: \url{https://www.gov.br/aneel/pt-br/assuntos/tarifas/tarifa-branca}
+\item Agência iNFRA, Tarifa Branca automática (2025)
+\item ANEEL, tarifas homologadas: \url{https://dadosabertos.aneel.gov.br/dataset/tarifas-distribuidoras-energia-eletrica}
+\item Tang et al.\ (2017), Top-K Insights, SIGMOD; Ding et al.\ (2019), QuickInsights, SIGMOD, doi:10.1145/3299869.3314037
+\item PySAL esda: \url{https://pysal.org/esda/}
+\item Caldas de Castro e Singer (2006), FDR em LISA, \emph{Geographical Analysis}
+\item Truong et al.\ (2020), ruptures, \emph{Signal Processing}; Adams e MacKay (2007), BOCPD
+\item Wickramasuriya, Athanasopoulos e Hyndman (2019), MinT, \emph{JASA} 114(526)
+\item Lundberg et al.\ (2020), TreeSHAP, \emph{Nature Machine Intelligence} 2:56--67
+\item Bento et al.\ (2021), TimeSHAP, KDD
+\item Li (2024), GeoShapley, \emph{Annals of the AAG} 114(7)
+\item Gneiting e Raftery (2007), \emph{JASA}; properscoring; xskillscore
+\item Evidently: \url{https://github.com/evidentlyai/evidently}
+\item alibi-detect, licença: \url{https://github.com/SeldonIO/alibi-detect/blob/master/LICENSE}
+\item NannyML: \url{https://nannyml.readthedocs.io/}
+\item Rabanser, Günnemann e Lipton (2019), Failing Loudly, NeurIPS
+\item BIRD e Agentar-Scale-SQL: \url{https://arxiv.org/abs/2509.24403}
+\item GeoBenchX: \url{https://arxiv.org/abs/2503.18129}
+\item DataGemma: \url{https://arxiv.org/abs/2409.13741}
+\end{enumerate}}

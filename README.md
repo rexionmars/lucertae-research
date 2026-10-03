@@ -24,6 +24,7 @@ eólico por cluster). Os dois históricos estão preservados.
 | `src/lucertae/` | o que os experimentos partilham |
 | `src/lucertae/corte/` | previsão do corte por cluster × 30 min, com `sql/`, `reports/` e `docs/corte.md` |
 | `docs/postgis.md` | como montar o banco `terra_br` |
+| `docs/produto/` | especificação do produto em mapa para distribuidora (ex-mapeamento-energetico): visões de ML, plataforma, catálogo de 66 features, diagramas e mockup |
 
 ## O pacote `lucertae`
 

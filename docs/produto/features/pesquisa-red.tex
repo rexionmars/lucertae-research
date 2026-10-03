@@ -1,0 +1,305 @@
+% Fichas de pesquisa: RED, CON
+% Conferido na web em 23/09/2026. "(a confirmar)" marca o que não foi verificado em fonte.
+
+\section{Operação da rede e continuidade}
+
+\subsection*{Bases comuns}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{P{3.6cm} L P{3.6cm}}
+\toprule
+\textbf{Fonte} & \textbf{O que traz} & \textbf{Armadilhas} \\
+\midrule
+ANEEL, Indicadores Coletivos de Continuidade [1] & DEC e FEC apurados e limites por conjunto e mês, parcelas, compensações pagas, atributos dos conjuntos; desde 2000 & limites mudam a cada revisão tarifária; conjuntos são reconfigurados \\
+ANEEL, Interrupções nas Redes de Distribuição [2] & cada interrupção desde 2017, com \textbf{código do alimentador e da subestação da BDGD}, conjunto, início e fim, causa, motivo de expurgo, consumidores afetados; ODbL & causa informada pela distribuidora; não inclui permissionárias. \textbf{É o rótulo mais valioso do nível 0} \\
+ANEEL, BDGD [6] e conversão para OpenDSS [7,8] & a ANEEL calcula perdas técnicas montando a rede da BDGD no OpenDSS; \emph{bdgd2opendss} (MIT) replica a metodologia; alternativas validadas em TCC (erro de 4,1\% na potência ativa total) & modelo estático; \textbf{não modela a geração líquida do consumidor}, o que limita estudos de fluxo reverso \\
+ONS, constrained-off de eólicas e fotovoltaicas por usina [10] & semi-horário desde 2021, com geração, geração limitada, referência, razão da restrição (REL, CNF, ENE, PAR), origem (local ou sistêmica), ponto de conexão; CC-BY & geração de referência é estimativa; dados reprocessados \\
+ONS, linhas e disponibilidade da transmissão [12] & cadastro de linhas acima de 230 kV; disponibilidade de funções de transmissão por mês & cadastro sem histórico \\
+EPE, casos de fluxo de potência [13] & casos ANAREDE do PDE e do PAR/PEL & formato do CEPEL; conversão trabalhosa \\
+Raios [16,17] & RINDAT e BrasilDAT (acesso por convênio ou contrato); GLM do GOES, gratuito & GLM não separa nuvem-solo de intranuvem \\
+\bottomrule
+\end{tabularx}
+\caption{Fontes compartilhadas pelos módulos RED e CON.}
+\end{table}
+
+\paragraph{Regras do PRODIST Módulo 8 (REN 956/2021) que viram parâmetro [4].}
+\begin{itemize}
+  \item Tensão de 2,3 a 69~kV: adequada entre 0,93 e 1,05~pu; precária entre
+    0,90 e 0,93; crítica abaixo de 0,90 ou acima de 1,05. Baixa tensão
+    220/127~V: adequada de 202 a 231~V e de 117 a 133~V.
+  \item DRP e DRC sobre 1.008 leituras de 10 minutos, limites de 3\% e 0,5\%,
+    com compensação proporcional ao excesso.
+  \item Compensação por DIC, FIC e DMIC calculada com o VRC (TUSD fio B) e
+    fatores por nível de tensão; teto de 18 vezes o VRC; em violação
+    simultânea paga-se só a maior; DICRI à parte.
+  \item Expurgos do DEC e FEC incluem interrupções em situação de emergência
+    e Dia Crítico, definido como o dia em que as ocorrências emergenciais do
+    conjunto superam a média mais três desvios-padrão dos 24 meses anteriores
+    [5].
+\end{itemize}
+Conferir a versão vigente do módulo antes de codificar as regras [4].
+
+% ---------------------------------------------------------------------------
+\subsection{RED \textperiodcentered{} Operação e planejamento da rede}
+
+\begin{ficha}{RED-01 \textperiodcentered{} Pontos quentes de carregamento previstos}{V2}
+\campo{Dados} Nível 0: potência de transformadores e subestações, energia
+mensal por unidade e curvas típicas da BDGD, convertidas para o OpenDSS [6,7].
+Nível 1: faturamento do cliente; nível 3: medição dos transformadores.
+Sobrecarga admissível pelo modelo térmico de ponto quente (IEEE C57.91) [38].
+\campo{Abordagens} Linha de base: pico estimado por energia × curva típica
+sobre a potência nominal, projetado com o crescimento de carga. Recomendada:
+quantis do pico por transformador e alimentador, agregados pela topologia,
+com saída em probabilidade de exceder o limite e fluxo confirmado no
+OpenDSS. Estado da arte: classificadores de alarme de sobrecarga com medição
+inteligente [38].
+\campo{Métricas} Precisão e recall no topo contra trocas por queima ou
+medição; Brier e calibração da probabilidade de sobrecarga; pinball do pico.
+\campo{Armadilhas} Energia mensal × curva típica suaviza o pico; o rótulo de
+sobrecarga só existe onde já houve problema; placa desatualizada; remanejamentos
+fora do modelo estático.
+\end{ficha}
+
+\begin{ficha}{RED-02 \textperiodcentered{} Violação de tensão prevista}{V3}
+\campo{Dados} Modelo elétrico da BDGD pelo \emph{bdgd2opendss} [7,8]; carga
+e MMGD previstas; limites do Módulo 8 [4]; rótulos gerados por simulação
+temporal no OpenDSS sobre cenários; validação com reclamações e medições
+amostrais de DRP e DRC do cliente.
+\campo{Abordagens} Linha de base: OpenDSS completo por alimentador nos
+cenários de ponta e de MMGD máxima com carga mínima, viável em lote.
+Recomendada: surrogate em GNN treinado nas simulações da própria rede,
+ranqueando barras e trechos, com \textbf{todo alerta confirmado pelo OpenDSS}.
+Estado da arte: PowerFlowNet [26]; PowerFlowMultiNet para redes trifásicas
+desequilibradas, cerca de 100 vezes mais rápido [27]; vieses físicos para
+tensão em distribuição [28]; benchmark de generalização PF$\Delta$ [29].
+\campo{Métricas} Erro de tensão em pu; \textbf{recall de violações} acima da
+precisão; fração de alertas confirmados; desempenho em alimentadores não
+vistos no treino.
+\campo{Armadilhas} Sem modelagem da geração líquida, a sobretensão por MMGD
+precisa de modelo próprio [7]; ajustes de reguladores e capacitores podem
+faltar; GNN degrada fora das topologias de treino [29].
+\end{ficha}
+
+\begin{ficha}{RED-03 \textperiodcentered{} Priorização de obras de reforço}{V3}
+\campo{Dados} Riscos de RED-01, CAR-06 e MMG-06; custos de obra do cliente;
+taxonomia do Plano de Desenvolvimento da Distribuição (expansão, melhoria,
+renovação) [15]; benefícios de continuidade em reais (CON-01, CON-02).
+\campo{Abordagens} Linha de base: ranking guloso por risco evitado por real.
+Recomendada: programação inteira plurianual (mochila) com dependências,
+alternativas exclusivas, limite anual e cenários de carga e MMGD, com
+benefício de cada obra avaliado no OpenDSS. Estado da arte: planejamento
+estocástico ou robusto em dois estágios [39].
+\campo{Métricas} Risco reduzido por real; regret em backtest; estabilidade do
+ranking entre rodadas.
+\campo{Armadilhas} Benefício depende de previsões muito incertas (MMGD);
+reconhecimento regulatório do investimento não modelado (a confirmar).
+\end{ficha}
+
+\begin{ficha}{RED-04 \textperiodcentered{} Restrição e curtailment por região}{V3}
+\campo{Dados} Constrained-off por usina do ONS, semi-horário, com razão,
+origem e ponto de conexão [10], apurado pela rotina RO-AO.BR.13 [11]. Para o
+mapa, georreferenciar o ponto de conexão pelo cadastro de linhas e
+subestações [12].
+\campo{Abordagens} Linha de base: agregação da geração não realizada por
+ponto de conexão, razão e origem, com tendência mensal. Recomendada: modelo
+de probabilidade de restrição e energia esperada por região, separando a
+restrição energética (sistêmica) das elétricas (locais). Estado da arte:
+rede reduzida (PTDF) sobre os casos da EPE, calibrada com o histórico, para
+estimar o curtailment marginal de nova geração (a confirmar).
+\campo{Armadilhas} Geração de referência é estimativa do ONS; só a razão REL
+segue para ressarcimento na CCEE; não cobre MMGD.
+\end{ficha}
+
+\begin{ficha}{RED-05 \textperiodcentered{} Recomendação de reconfiguração}{V4}
+\campo{Dados} Modelo OpenDSS da BDGD com chaves e estado normal; chaves
+telecomandadas do cliente; carga prevista; restrições de radialidade, tensão,
+limite térmico e proteção.
+\campo{Abordagens} Linha de base: troca de ramos de Baran e Wu (1989) [33].
+Recomendada: otimização cônica inteira sobre DistFlow gera poucas
+configurações, cada uma verificada no OpenDSS e apresentada como sugestão.
+Estado da arte: aprendizado por reforço sobre grafos para restauração em
+tempo real, testado em redes IEEE [34].
+\campo{Armadilhas} Coordenação de proteção fora do modelo; estado das chaves
+na BDGD pode não refletir a operação; lacuna entre redes de teste e reais.
+Só em modo sombra.
+\end{ficha}
+
+\begin{ficha}{RED-06 \textperiodcentered{} Triagem de contingências N-1 (transmissão)}{V4}
+\campo{Dados} Modelo da rede do cliente ou casos ANAREDE da EPE [13];
+indisponibilidades de funções de transmissão [12]; impacto financeiro pela
+Parcela Variável por Indisponibilidade (REN 729/2016) [14].
+\campo{Abordagens} Linha de base: fatores de distribuição (PTDF, LODF) e AC
+completo nas mais severas. Recomendada: GNN calibrada para recall próximo de
+100\%, com AC completo em tudo acima de um limiar baixo. Estado da arte: PINN
+com GNN para N-1 a N-3, cerca de 400 vezes mais rápido, testado até 118 barras
+[31]; redes input-convex com garantia de confiabilidade [32].
+\campo{Armadilhas} Falso negativo é inaceitável: o modelo só ordena. A
+literatura vai até 118 barras, muito menor que o SIN; a avaliação oficial de
+segurança é do ONS.
+\end{ficha}
+
+% ---------------------------------------------------------------------------
+\subsection{CON \textperiodcentered{} Continuidade e qualidade}
+
+\begin{ficha}{CON-01 \textperiodcentered{} DEC e FEC previstos por conjunto}{V2}
+\campo{Dados} DEC e FEC com limites [1]; interrupções por evento ligadas ao
+alimentador desde 2017 [2]; ocorrências emergenciais [3]; clima (INMET,
+reanálise) e raios.
+\campo{Abordagens} Linha de base: sazonal ingênuo e ETS por conjunto.
+Recomendada: modelo global mensal por conjunto sobre as parcelas reguladas,
+com os expurgos modelados à parte; saída em quantis e probabilidade de
+exceder o limite anual. Estado da arte: frequência × duração por alimentador
+em Monte Carlo sobre cenários climáticos, reconciliada até o conjunto (a
+confirmar). No Brasil: redes neurais para indicadores [41] e ML na definição
+de limites de conjuntos [40].
+\campo{Métricas} MAE e pinball do DEC e FEC; Brier da probabilidade de
+violação; acerto do ranking de conjuntos em risco.
+\campo{Armadilhas} O Dia Crítico usa limiar móvel de 24 meses e torna o
+expurgo dependente do clima [5]; reconfiguração de conjuntos quebra séries.
+\end{ficha}
+
+\begin{ficha}{CON-02 \textperiodcentered{} Risco de violação de DIC e FIC (compensação)}{V2}
+\campo{Dados} Fórmulas e fatores do Módulo 8 [4]; compensações agregadas por
+conjunto nos dados abertos [1]. \textbf{DIC e FIC mensais por unidade estão
+na BDGD}, nas tabelas UCBT e UCMT, verificado nos arquivos: dimensionar a
+exposição é \textbf{nível 0}. Ressalva: a BDGD tem 8 a 20 meses de defasagem e
+a unidade é anonimizada por hash, então o dado público serve para dimensionar
+e validar o método, não para acompanhar o trimestre corrente --- para isso é
+nível 1, com a correspondência de códigos da distribuidora.
+\campo{Abordagens} Linha de base: taxa histórica de violação e compensação
+média por alimentador. Recomendada: simular DIC, FIC e DMIC por unidade a
+partir de um modelo de eventos por trecho, aplicar as regras de compensação
+(máximo, teto) e agregar o valor esperado por alimentador ou transformador.
+\campo{Métricas} Erro da compensação em reais por alimentador e trimestre;
+precisão no topo do ranking.
+\campo{Armadilhas} Limites mensais, trimestrais e anuais ao mesmo tempo;
+regras não lineares; LGPD nos dados por unidade.
+\end{ficha}
+
+\begin{ficha}{CON-03 \textperiodcentered{} Risco de interrupção por evento climático}{V3}
+\campo{Dados} Rótulos: interrupções com causa e expurgo e eventos de
+emergência [2]. Previsão do tempo (CLI-01), densidade de descargas de
+CLI-03 [16,17], vulnerabilidade (vegetação de ATV-03, idade e tipo de rede da
+BDGD).
+\campo{Abordagens} Linha de base: regressão de contagem (Poisson ou binomial
+negativa) por célula e dia sobre rajada, chuva e raios. Recomendada: o
+padrão do modelo da UConn, em operação desde 2015: ensemble de árvores por
+evento em grade de 2~km, com variáveis meteorológicas, de vegetação e de
+infraestrutura e módulos por tipo de tempo [19--21]. Estado da arte:
+tempestades como objetos rastreados [20]; dois estágios com dados abertos
+[24]; GNN com risco de árvores por lidar [25].
+\campo{Métricas} Erro do total de interrupções por evento; POD, FAR e CSI
+espaciais; skill por antecedência. \textbf{Validação por evento deixado de
+fora e por região deixada de fora.}
+\campo{Armadilhas} Divisões aleatórias inflam o desempenho: com validação
+espacial e temporal, muitos modelos não superam a linha de base [23]. Erro da
+previsão do tempo se propaga. Transferência de modelos de clima temperado
+para convecção tropical não está comprovada.
+\end{ficha}
+
+\begin{ficha}{CON-04 \textperiodcentered{} Localização provável de falta}{V4}
+\campo{Dados} Eventos de religadores e relés (sequência de eventos, corrente,
+oscilografia), último sinal dos medidores inteligentes, chamadas de clientes,
+topologia do OpenDSS. Exige nível 3 para uso em tempo real.
+\campo{Abordagens} Linha de base: inferência topológica (ancestral comum das
+unidades sem energia, a jusante do dispositivo que atuou) combinada com o
+método de impedância no OpenDSS. Recomendada: candidatos físicos ranqueados
+por classificador com priores de causa (vegetação, raios, histórico).
+Estado da arte: GNN espaço-temporal em redes parcialmente observadas [36];
+gêmeo digital com medidores em baixa tensão [37].
+\campo{Métricas} Acerto do trecho no top-1 e top-3; erro em km; redução dos
+quilômetros patrulhados.
+\campo{Armadilhas} Rótulos reais escassos; faltas múltiplas em tempestade; GD
+distorce o método de impedância.
+\end{ficha}
+
+\subsection*{Diagramas do módulo CON}
+\addcontentsline{toc}{subsection}{Diagramas do módulo CON}
+
+O módulo tem dois ritmos: o \textbf{regulatório}, mensal, sobre conjuntos e
+alimentadores (CON-01, CON-02), e o de \textbf{evento}, de horas a dias,
+disparado por cada rodada de previsão do tempo (CON-03). Os diagramas mostram
+em que entidades cada camada é desenhada, quem usa o quê, os estados dos dois
+objetos centrais (o evento climático e o conjunto no ano regulatório) e o
+fluxo que liga dados, modelos e decisões. Fonte:
+\texttt{diagramas/con.puml}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{con-camadas.png}
+\caption{CON: camadas por entidade e dados que as alimentam. Tudo em nível 0,
+exceto CON-04.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{con-casos-de-uso.png}
+\caption{CON: casos de uso, separados pelos dois ritmos do módulo.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.40\textwidth}\centering
+\includegraphics[width=\linewidth]{con-estados-evento.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.56\textwidth}\centering
+\includegraphics[width=\linewidth]{con-estados-conjunto.png}
+\end{minipage}
+\caption{CON: máquinas de estados do evento climático (esquerda) e do conjunto
+elétrico no ano regulatório (direita). Eventos rotulados, inclusive falsos
+alarmes, voltam como rótulos de treino.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{con-fluxo.png}
+\caption{CON: fluxo do ciclo mensal, do ciclo de evento e do fechamento, com a
+validação por evento e por região deixados de fora.}
+\end{figure}
+
+\subsection*{Referências desta seção}
+{\small
+\begin{enumerate}[label={[\arabic*]},leftmargin=2.2em,itemsep=1pt]
+\item ANEEL, Indicadores Coletivos de Continuidade: \url{https://dadosabertos.aneel.gov.br/dataset/indicadores-coletivos-de-continuidade-dec-e-fec}
+\item ANEEL, Interrupções nas Redes de Distribuição: \url{https://dadosabertos.aneel.gov.br/dataset/interrupcoes-de-energia-eletrica-nas-redes-de-distribuicao}
+\item ANEEL, Ocorrências Emergenciais: \url{https://dadosabertos.aneel.gov.br/dataset/ocorrencias-emergenciais-nas-redes-de-distribuicao}
+\item ANEEL, PRODIST Módulo 8 (REN 956/2021): \url{https://www.gov.br/aneel/pt-br/centrais-de-conteudos/procedimentos-regulatorios/prodist}
+\item REN ANEEL 956/2021, PRODIST Módulo 1 (Dia Crítico)
+\item ANEEL, BDGD: \url{https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd}
+\item Radatz, bdgd2opendss: \url{https://github.com/PauloRadatz/bdgd2opendss}
+\item Aderaldo (2023), BDGD-Tools, UFC: \url{https://repositorio.ufc.br/handle/riufc/75567}
+\item[] \refstepcounter{enumi}
+\item ONS, constrained-off por usina: \url{https://dados.ons.org.br/dataset/restricao_coff_eolica_detail}
+\item ONS, RO-AO.BR.13, apuração de constrained-off
+\item ONS Dados Abertos, linhas e disponibilidade: \url{https://dados.ons.org.br/dataset/linha-transmissao}
+\item EPE, bases de dados de transmissão: \url{https://www.epe.gov.br/pt/leiloes-de-energia/leiloes-de-transmissao/bases-de-dados}
+\item ANEEL, REN 729/2016 (Parcela Variável)
+\item ANEEL, Plano de Desenvolvimento da Distribuição: \url{https://www.gov.br/aneel/pt-br/assuntos/distribuicao/plano-de-desenvolvimento-da-distribuicao}
+\item INPE/ELAT, RINDAT e BrasilDAT: \url{http://www.inpe.br/webelat/rindat/}
+\item NASA Earthdata, GLM: \url{https://www.earthdata.nasa.gov/data/instruments/glm}
+\item INMET, BDMEP: \url{https://bdmep.inmet.gov.br/}
+\item Wanik et al.\ (2015), \emph{Natural Hazards} 79, doi:10.1007/s11069-015-1908-2
+\item Cerrai et al.\ (2019), \emph{IEEE Access} 7
+\item UConn Outage Prediction Model, AGU (2021)
+\item Extratropical storms outages, \emph{NHESS} 21 (2021)
+\item Essus, Vatsavai e Rachunok (2026), vazamento em modelos de interrupção: \url{https://arxiv.org/abs/2608.24665}
+\item Stanishevska e Guikema (2025): \url{https://arxiv.org/abs/2510.03959}
+\item GNN e risco de árvores por lidar, \emph{RESS} (2025)
+\item Lin et al.\ (2023), PowerFlowNet: \url{https://arxiv.org/abs/2311.03415}
+\item Ghamizi et al.\ (2024), PowerFlowMultiNet: \url{https://arxiv.org/abs/2403.00892}
+\item Okoyomon, Yaniv e Goebel (2025): \url{https://arxiv.org/abs/2509.25158}
+\item PF$\Delta$ (2025): \url{https://arxiv.org/abs/2510.22048}
+\item SafePowerGraph (2024): \url{https://arxiv.org/abs/2407.12421}
+\item Nakiganda e Chatzivasileiadis, GNN para contingências: \url{https://arxiv.org/abs/2310.04213}
+\item N-k com redes input-convex (2024): \url{https://arxiv.org/abs/2410.00796}
+\item Baran e Wu (1989), \emph{IEEE Trans.\ Power Delivery} 4(2)
+\item Jacob et al.\ (2024), \emph{Nature Communications}
+\item PI-GNN para reconfiguração (2023): \url{https://arxiv.org/abs/2310.00728}
+\item Karabulut, Manna e Develder (2026): \url{https://arxiv.org/abs/2604.20403}
+\item Localização de faltas em BT com gêmeo digital, \emph{Energies} 16 (2023), doi:10.3390/en16237850
+\item Alarme de sobrecarga em transformadores de distribuição (2024)
+\item Investimento em redes de distribuição com correlação entre projetos, \emph{Frontiers in Energy Research} (2021)
+\item Limites de interrupção no Brasil com IA, \emph{Energies} 16 (2023), doi:10.3390/en16197012
+\item Predição de indicadores de qualidade com redes neurais, SBSE
+\end{enumerate}}
