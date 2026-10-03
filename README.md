@@ -18,7 +18,6 @@ April 2024 to August 2026.
 - [The `lucertae` package](#the-lucertae-package)
 - [Repository layout](#repository-layout)
 - [Data and database](#data-and-database)
-- [Status](#status)
 
 ## Method
 
@@ -201,15 +200,3 @@ and the loading order.
 | [Open-Meteo Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api) | archived ECMWF IFS 0.25° forecasts at the solar and wind clusters; free for non-commercial use |
 | [NASA POWER](https://power.larc.nasa.gov/) | hourly irradiance for the validation of measured irradiance |
 | ANEEL plant register | plant location and capacity, through the Solara base tables |
-
-## Status
-
-- The package, the command line and the SQL are in en-US. The experiment
-  scripts and most experiment READMEs are still in pt-BR, as are the report and
-  the product documents without an `-en` version.
-- This repository joins two earlier ones since 2026-10-02: `lucertae` (the
-  curtailment report and the experiments with blocking controls) and
-  `terra-energy-research` (the cluster forecast). Both histories are preserved.
-- The scripts in `experiments/E-cluster-curtailment/` came from the second
-  repository and still import each other through the old package path; they
-  are being adapted to the merged layout.
