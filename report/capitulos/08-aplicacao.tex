@@ -1,0 +1,142 @@
+\chapter{Produção e exposição ao corte de uma área nova}
+\label{cap:aplicacao}
+
+Estimar quanto uma área nova junto a Sol do Cerrado produziria, e quanto dessa
+energia o despacho absorveria, depende de três fatores. Os três já foram
+medidos nos capítulos anteriores, e nenhum deles é suposto.
+
+\section{A cadeia de conversão}
+
+\begin{table}[t]
+\centering
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.3cm}
+                  >{\rag\arraybackslash}p{2.1cm}
+                  >{\rag\arraybackslash}p{1.9cm}@{}}
+\toprule
+\cab{Passo} & \cab{Fator} & \cab{Origem} \\
+\midrule
+terreno para módulo     & dividir por 2,5
+                        & seção~\ref{sec:fig3} \\
+módulo para capacidade  & 5,12 m\textsuperscript{2}/kWp
+                        & seção~\ref{sec:fig2} \\
+capacidade para potencial & fator de 0,229
+                        & seção~\ref{sec:fig6} \\
+\bottomrule
+\end{tabular}
+\caption{Fatores da cadeia e a análise que produz cada um.}
+\label{tab:cadeia}
+\notas{O fator de capacidade potencial vem da razão de desempenho limpa de Sol
+do Cerrado, de 0,931, calibrada em 279 dias sem restrição, e do valor de
+irradiância da NASA POWER sobre Jaíba, de 5,908 kWh/m\textsuperscript{2} por
+dia.}
+\end{table}
+
+Aplicada à usina existente, a cadeia fecha. Os 681,3 MW fiscalizados implicam
+3,49 km\textsuperscript{2} de módulo, e o caminho inverso devolve 681,3 MW. Isso
+não valida a cadeia. É divisão e multiplicação pela mesma constante de
+5,12 m\textsuperscript{2}/kWp, e fecharia com qualquer valor dela. A ida e volta
+confere a aritmética.
+
+O elo não validado é o primeiro. A razão entre área de terreno e área de módulo,
+de 2,5, é típica de projeto e não foi medida nesta usina. Ela entra linearmente
+na capacidade, de modo que um erro de 20\% nela produz 20\% de erro na
+capacidade. Medi-la exigiria delinear o arranjo por segmentação, o passo que a
+seção~\ref{sec:fig7} deixa em aberto.
+
+\section{O que a cadeia estima, e contra o que ela é conferida}
+
+Para 2025 o método prevê fator de capacidade de 0,229 e 1.368 GWh. A usina
+entregou fator de 0,150 e 897 GWh. A diferença é de 34,4\%.
+
+A apuração do ONS dá 32,8\% para a mesma usina e o mesmo ano, por outro
+caminho: curva de desempenho declarada da usina, e apuração operativa de
+\textit{constrained-\allowbreak off}. As duas diferem em 1,6 ponto.
+
+\conclusao{Uma estimativa de perda construída a partir de irradiância e razão de
+desempenho calibrada chega a 1,6 ponto da apuração operativa do operador.}
+
+\campo{A independência é parcial} A cadeia não usa a geração de referência do
+operador, e essa é a parte externa. Ela usa a razão de desempenho limpa de
+0,931, calibrada nos dias que a própria apuração do ONS marca como sem
+restrição. O sinalizador de restrição é compartilhado. O que se testa é a
+estimativa de quanto, e não a de quando.
+
+Não é uma terceira estimativa. A razão $1 - PR_{2025}/PR_{\text{limpo}}$ é o
+mesmo estimador da seção~\ref{sec:fig6}, que dá 33,5\%, e a diferença para os
+34,4\% vem da agregação da irradiância. São duas estimativas, e o que este
+capítulo acrescenta é o passo de área para capacidade, que é o elo não validado.
+
+\section{Cenários para uma área nova}
+
+\begin{table}[t]
+\centering
+\tabfont
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+\cab{AOI} & \cab{capac.} & \cab{potencial} & \cab{a 31\%} & \cab{a 62\%} \\
+km\textsuperscript{2} & MW & GWh/ano & GWh & GWh \\
+\midrule
+ 1 &    78 &   157 &   108 &    60 \\
+ 2 &   156 &   314 &   216 &   119 \\
+ 5 &   391 &   784 &   541 &   298 \\
+10 &   781 & 1.569 & 1.082 &   596 \\
+20 & 1.563 & 3.137 & 2.165 & 1.192 \\
+\bottomrule
+\end{tabular}
+\caption{Produção estimada de uma área nova em Jaíba, sob duas taxas de corte.}
+\label{tab:cenarios}
+\notas{A coluna de 31\% aplica a taxa média medida no ponto. A coluna de 62\%
+aplica a razão entre taxa marginal e taxa média medida por Novan e Wang
+\cite{novan2024}.}
+\end{table}
+
+As duas últimas colunas separam taxa média de taxa marginal. A taxa média não se
+aplica a uma usina nova. Novan e Wang \cite{novan2024} mediram que a taxa
+marginal, que é quanto de uma usina nova é cortado, fica em cerca de duas vezes
+a média.
+
+\section{Exposição ao corte no ponto de conexão}
+
+O barramento de Jaíba tem 1.301 MW em três conjuntos: Sol do Cerrado com 681 MW,
+Jaíba V com 500 MW e Jaíba 138 kV com 120 MW. Todos são cortados entre 24\% e
+31\% na janela de referência.
+
+O corte no ponto é 89,5\% de origem sistêmica, com 61,8\% por razão energética,
+16,2\% por confiabilidade e 11,5\% por indisponibilidade externa. Apenas 10,5\%
+tem origem local. No agregado nacional a distribuição é de 68,5\% energética,
+22,0\% confiabilidade e 9,5\% indisponibilidade externa. A restrição não é de
+saturação do barramento, e sim de oferta excedente no instante do corte.
+
+O resultado é consistente com os capítulos~\ref{cap:despacho}
+e~\ref{cap:rede}: térmica inflexível nas horas de corte, corredor abaixo do seu
+percentil habitual e distância à demanda como preditor. Jaíba está a 605 km de
+rede do centro de carga mais próximo, no terceiro quartil da amostra.
+
+\campo{Uma leitura que os dados não sustentam} A hipótese de que mais capacidade
+no mesmo nó produz mais corte não se sustenta. Na seção~\ref{sec:fig10} a
+capacidade renovável no nó dá $\rho = -0{,}24$ e não sobrevive a Holm, e o mesmo
+vale para o grau, a tensão e o número de usinas. O que sobrevive é a distância.
+A leitura defensável é a de posição na rede, e não a de saturação do ponto. Uma
+usina nova ali herdaria essa posição.
+
+\begin{objecao}
+O cálculo não usa limite de linha. O ONS publica capacidade operativa em MVA,
+com variantes sazonais, em 86,7\% das linhas, e incorporá-la tornaria a
+estimativa de exposição mais precisa. A razão de 2 vezes entre taxa marginal e
+média é medida na Califórnia; não há equivalente brasileiro publicado, e ela
+entra como ordem de grandeza declarada, e não como fator calibrado. A razão
+entre terreno e módulo de 2,5 é o elo não validado da cadeia, e inclinação,
+rastreamento e relevo a deslocam. O fator de capacidade potencial usa o
+desempenho limpo de Sol do Cerrado; uma usina nova com outro módulo ou outro
+rastreamento teria outro.
+\end{objecao}
+
+\campo{Escopo} O resultado é uma estimativa física e operativa: quanto a área
+produziria e quanto o despacho absorveria. Ela cobre dimensionamento, comparação
+de sítios e antecipação de exposição ao corte. Contrato, outorga e parecer de
+acesso não estão em dado aberto e não entram.
+
+{\color{tinta2}\footnotesize Dados-fonte em
+\texttt{data/processed/aplicacao\_*.csv}, gerados por
+\texttt{notebooks/\_aplicacao\_expansao.py}.}

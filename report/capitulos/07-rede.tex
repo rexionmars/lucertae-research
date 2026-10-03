@@ -1,0 +1,280 @@
+\chapter{Topologia da rede e alocação do corte entre usinas}
+\label{cap:rede}
+
+A seção~\ref{sec:fig3} testou cinco covariáveis locais ao ponto de conexão e não
+achou nenhuma. Restam as covariáveis estruturais, que só existem se houver um
+grafo de transmissão montado: distância até a carga, grau do nó, número de
+usinas no ponto e outras cinco.
+
+\section{Oito covariáveis de rede na geração fotovoltaica}
+\label{sec:fig10}
+
+\begin{ficha}
+  \item[Janela]      setembro de 2025 a agosto de 2026
+  \item[Amostra]     59 conjuntos fotovoltaicos
+  \item[Unidade]     conjunto
+  \item[Fonte]       EPE, linhas e subestações em operação; ONS
+  \item[Teste]       Spearman sobre 8 covariáveis, com correção de Holm
+\end{ficha}
+
+A rede da EPE traz 920 subestações e 1.896 linhas resolvidas em aresta, ou 87\%
+do total, com ancoragem mediana de 0,10 km entre a coordenada da usina e o nó
+mais próximo. As oito covariáveis foram pré-declaradas antes do teste, e Holm
+foi aplicado sobre as oito.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig10_topologia_rede.pdf}
+\caption{\textbf{A distância de rede até a demanda está associada à alocação do
+corte que covariáveis locais não explicavam.}
+\textbf{a}, Grafo de transmissão em operação, com subestações e linhas da EPE
+separadas em 500 kV ou mais e abaixo disso, e as usinas fotovoltaicas da amostra
+posicionadas no seu ponto de conexão. A cor codifica a taxa de corte na janela
+de referência e o tamanho, a capacidade instalada. As estrelas marcam as nove
+regiões metropolitanas usadas como centros de carga. A moldura cobre a região
+que contém a amostra; 353 das 1.896 linhas ficam fora dela e não são desenhadas,
+e todas as arestas participam do cálculo dos caminhos mínimos.
+\textbf{b}, Correlação de Spearman entre a taxa de corte e cada uma das oito
+covariáveis de rede pré-declaradas. Em vermelho as que sobrevivem à correção de
+Holm.
+\textbf{c}, Taxa de corte contra a distância de rede ao centro de carga mais
+próximo, por subsistema, com a mediana por quartil de distância.
+\textbf{d}, As duas covariáveis sobreviventes medidas dentro de cada subsistema,
+para separar efeito de rede de efeito de subsistema.}
+\label{fig:rede}
+\end{figure*}
+
+Duas covariáveis sobrevivem a Holm, com magnitude próxima e sinais opostos. A
+distância de rede à carga dá $\rho = +0{,}38$ e a capacidade da usina dá
+$\rho = -0{,}38$, ambas com $p = 0{,}023$ após correção. A soma de tensões no nó
+atinge $p < 0{,}05$ bruto e não sobrevive à correção. As outras cinco não
+atingem.
+
+\conclusao{Quanto maior a distância em quilômetros de linha até o centro de
+carga mais próximo, maior a taxa de corte. A estrutura local do nó não apresenta
+associação.}
+
+O resultado é consistente com a seção~\ref{sec:fig9}, em que o Nordeste é
+cortado com o corredor operando abaixo do seu percentil habitual. As duas
+medidas apontam para a distância até a demanda, e não para a saturação local do
+ponto de conexão.
+
+\campo{Não é apenas efeito de subsistema} A distância mediana à carga é próxima
+nos dois subsistemas, com 497 km no Nordeste e 520 no Sudeste com Centro-Oeste.
+A associação se mantém dentro do Nordeste, com $\rho = +0{,}34$, $p = 0{,}027$ e
+$n = 43$. Ela não se mantém dentro do Sudeste com Centro-Oeste, onde dá
+$\rho = +0{,}31$, $p = 0{,}25$ e $n = 16$. A capacidade da usina se mantém nos
+dois, com $-0{,}41$ e $-0{,}44$, e no Nordeste com $p = 0{,}006$.
+
+\campo{Uma sobrevivente sem hipótese direcional} A capacidade da usina tem sinal
+negativo: as maiores são cortadas menos. A direção não havia sido prevista. As
+explicações plausíveis, como qualidade de conexão e seleção contratual, são
+testáveis e não foram testadas.
+
+\begin{objecao}
+A distância de rede não é elétrica: é caminho ponderado por quilômetro de linha.
+A impedância está em dado aberto, em 100\% das linhas do pacote
+\texttt{linha-transmissao}, com capacidade em MVA em 86,7\% delas. A escolha da
+camada geométrica da EPE impediu o uso da distância elétrica nesta seção. Os
+centros de carga são nove metrópoles, um proxy geográfico declarado. São oito
+hipóteses sobre $n = 59$: Holm foi aplicado, e não há poder para efeitos
+pequenos. O resultado é associação, e não causalidade.
+\end{objecao}
+
+\campo{Posição na literatura} Maji et al. \cite{maji2025} sustentam que o corte é
+fenômeno de nó, e que estimá-lo exige descer ao ponto de conexão. É a hipótese
+que esta seção testa e, na geração fotovoltaica, não confirma. O preditor é a
+distância até a carga, uma grandeza de caminho, e não de nó. Newbery
+\cite{newbery2024} fornece o enquadramento econômico: se a posição na rede
+determina a exposição ao corte e o regime de acesso não a precifica, o sinal de
+investimento aponta para o lugar errado.
+
+\section{Replicação na geração eólica}
+\label{sec:fig11}
+
+\begin{ficha}
+  \item[Janela]      novembro de 2022 a julho de 2025, eólica;
+                     setembro de 2025 a agosto de 2026, solar
+  \item[Amostra]     120 conjuntos eólicos; 59 solares
+  \item[Unidade]     conjunto
+  \item[Fonte]       ONS, \textit{constrained-off} eólico e fotovoltaico; EPE
+  \item[Teste]       as mesmas 8 covariáveis, com Holm por fonte
+\end{ficha}
+
+O ONS apura \textit{constrained-off} eólico desde outubro de 2021, em 199
+conjuntos, contra 87 do lado solar. A replicação usa as mesmas oito covariáveis,
+na mesma ordem, sobre o mesmo grafo, com Holm reaplicado dentro de cada fonte.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig11_replicacao_eolica.pdf}
+\caption{\textbf{O resultado da seção anterior não se replica em eólica, e a
+dissociação acompanha a origem declarada do corte de cada fonte.}
+\textbf{a}, Correlação de Spearman entre a taxa de corte e as oito covariáveis
+de rede pré-declaradas, medidas separadamente em fotovoltaica e eólica. A cor
+cheia marca as que sobrevivem à correção de Holm aplicada dentro de cada fonte.
+\textbf{b}, Energia cortada decomposta por razão e origem da restrição, conforme
+classificação operativa do ONS, para cada fonte.
+\textbf{c}, As duas covariáveis-chave medidas apenas no Nordeste, onde as duas
+amostras coexistem, para separar tecnologia de geografia.
+\textbf{d}, Taxa de corte eólica contra o número de conjuntos no mesmo ponto de
+conexão, com a mediana por valor.}
+\label{fig:eolica}
+\end{figure*}
+
+A distância de rede à carga, que na solar dá $+0{,}38$ e sobrevive a Holm, dá
+$-0{,}07$ em 120 conjuntos eólicos. A amostra eólica é o dobro da solar, de modo
+que a ausência não é falta de poder.
+
+As covariáveis que sobrevivem em eólica são as que não sobreviveram em solar. O
+número de usinas no mesmo nó vai de $+0{,}07$ para $+0{,}47$, e o grau do nó vai
+de $-0{,}17$ para $+0{,}35$. As duas sobrevivem a Holm.
+
+A classificação de origem do ONS, independente de todas as covariáveis testadas,
+registra corte solar 91\% sistêmico e corte eólico 76\%, com 24\% de origem
+local, ou 2,7 vezes a fração do solar. A confiabilidade local responde por 7\%
+do corte solar e por 22\% do eólico.
+
+\conclusao{A covariável que prevê o corte de cada fonte acompanha a origem
+declarada do corte dessa fonte: grandeza sistêmica onde o corte é sistêmico,
+grandeza local onde há corte local.}
+
+\campo{Não é geografia} A amostra eólica é 91\% nordestina, e a solar não é.
+Restringindo as duas ao Nordeste, a solar mantém distância à carga em $+0{,}34$
+e usinas no nó em $+0{,}05$, enquanto a eólica apresenta $-0{,}19$ e $+0{,}36$.
+A dissociação se mantém sob controle de geografia.
+
+\campo{O que muda na seção anterior} A seção~\ref{sec:fig10} enunciou a hipótese
+como sobre posição na rede, independentemente da tecnologia. A replicação
+restringe o enunciado a fonte cujo corte é majoritariamente sistêmico. O
+resultado permanece na geração fotovoltaica, e o que muda é a generalidade.
+
+\campo{Consequência operativa} A exposição solar responde a aproximação da
+demanda, por armazenamento ou deslocamento de carga. A exposição eólica responde
+a reforço local de escoamento. Uma política única erraria em uma das duas.
+
+\begin{objecao}
+As janelas não coincidem: eólica de novembro de 2022 a julho de 2025, solar de
+setembro de 2025 a agosto de 2026. Parte da diferença pode ser de período, e o
+teste restrito ao Nordeste controla geografia, e não tempo. A eólica se aglomera
+mais, com mediana de 4 conjuntos por nó contra 2 no solar, o que facilita
+detectar aglomeração. A distância à carga, porém, tem faixa semelhante nas duas
+fontes, e não prevê o corte eólico. Os regimes diferem nesta amostra, com 8\% de mediana
+em eólica e 26\% em solar, contra 15,9\% e 22,1\% nas frotas completas. Origem é
+classificação do ONS, e não inferência causal.
+\end{objecao}
+
+\campo{Posição na literatura} Bird, Lew e Milligan \cite{bird2016} organizam a
+revisão de onze países pelo eixo entre excesso de oferta sistêmico e restrição
+local. A EirGrid \cite{eirgrid} formaliza a distinção no vocabulário, com
+\textit{curtailment} para razão sistêmica e \textit{constraint} para local, e
+reporta 6,6\% contra 4,7\% no \textit{dispatch-down} eólico de 2025. Não foi
+localizado teste publicado de se a covariável preditiva do corte varia com a
+composição da causa, e a busca não foi sistemática.
+
+\section{Robustez dos quatro resultados}
+\label{sec:fig12}
+
+\begin{ficha}
+  \item[Janela]      as amostras das duas seções anteriores
+  \item[Amostra]     59 conjuntos solares; 120 eólicos
+  \item[Unidade]     conjunto
+  \item[Fonte]       ONS, Rede de Operação por número de barra; EPE
+  \item[Teste]       bootstrap com 4.000 reamostras; $z$ de Fisher
+\end{ficha}
+
+O ONS publica a rede com conectividade por número de barra, impedância em 100\%
+das linhas e capacidade em MVA em 87\%. Isso permite reconstruir o grafo por via
+independente da camada geométrica usada nas duas seções anteriores. Os três
+critérios são o intervalo bootstrap que exclui zero, a estabilidade entre as
+metades de uma partição estrutural e a reprodução no grafo alternativo.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig12_robustez.pdf}
+\caption{\textbf{Dos quatro resultados de rede, um passa nos três critérios e o
+principal da seção~\ref{sec:fig10} passa em um.}
+\textbf{a}, Distribuição bootstrap do coeficiente de Spearman de cada resultado,
+com 4.000 reamostras com reposição. A barra marca o intervalo de 95\% e o ponto,
+o valor da amostra.
+\textbf{b}, Coeficiente calculado separadamente nas duas metades de uma partição
+estrutural, entre usinas cuja barra de conexão consta do cadastro de rede de
+230 kV ou mais do ONS e as demais, com o valor de $p$ do teste $z$ de Fisher
+para a diferença entre metades.
+\textbf{c}, O mesmo coeficiente calculado no grafo da EPE e no grafo do ONS
+construído por número de barra. Abaixo de cada barra, o tamanho da amostra no
+grafo alternativo, ou a marca de que o critério não se aplica.
+\textbf{d}, Quantos dos critérios aplicáveis cada resultado passa. O traço marca
+o critério não aplicável.}
+\label{fig:robustez}
+\end{figure*}
+
+\begin{table}[t]
+\centering
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.4cm}ccc@{}}
+\toprule
+\cab{Resultado} & \cab{IC} & \cab{estável} & \cab{outro grafo} \\
+\midrule
+eólica, grau do nó         & sim & sim & sim \\
+eólica, usinas no nó       & sim & não & sim \\
+solar, capacidade da usina & sim & sim & --- \\
+solar, distância à carga   & sim & não & não \\
+\bottomrule
+\end{tabular}
+\caption{Critérios de robustez aplicados aos quatro resultados que sobreviveram
+a Holm.}
+\label{tab:robustez}
+\notas{O traço indica critério não aplicável: a capacidade da usina não deriva
+do grafo e não tem versão alternativa. Para ela valem dois critérios, e não
+três.}
+\end{table}
+
+Sobreviveram a Holm quatro resultados, e não três. A capacidade da usina em
+solar, com $\rho = -0{,}38$ e $p = 0{,}023$ após correção, tem magnitude igual à
+da distância à carga e não constava do conjunto avaliado antes.
+
+A distância à carga tem intervalo bootstrap de 0,12 a 0,61, uma largura de 0,49,
+cerca do dobro dos demais. Partindo a amostra, o coeficiente cai de 0,62 para
+0,11 conforme a metade, com $p = 0{,}025$, e a metade de maior coeficiente
+contém todas as 16 usinas do Sudeste. Isso reabre o confundimento regional que o
+painel \textbf{d} da seção~\ref{sec:fig10} afastava.
+
+A capacidade da usina passa nos dois critérios aplicáveis, com intervalo de
+$-0{,}60$ a $-0{,}13$ e partição não rejeitada, de $-0{,}18$ contra $-0{,}48$ e
+$p = 0{,}21$.
+
+\conclusao{O grau do nó na geração eólica passa nos três critérios. A distância
+à carga na geração fotovoltaica passa em um dos três, e é o resultado de rede
+menos sustentado.}
+
+Dois critérios não são três, e a diferença entre metades ainda reduz o
+coeficiente da capacidade da usina em dois terços. Passar nos critérios
+aplicáveis é não ser rejeitado, e não é ser confirmado.
+
+\campo{Amostra, e não método} No grafo do ONS a distância dá $-0{,}14$ em
+quilômetros e $-0{,}06$ em reatância. Rodando o grafo da EPE nas mesmas 28
+usinas, ele também não apresenta associação. A diferença é de amostra, o que não
+recupera o resultado e identifica em que subconjunto ele ocorre.
+
+A distância elétrica foi calculada, e a afirmação da seção~\ref{sec:fig10} de
+que ela não estaria disponível é incorreta. A correlação entre a distância
+elétrica e a distância em quilômetros é de 0,53, de modo que a substituição
+constitui teste independente. O resultado não muda.
+
+\campo{Os critérios não dependiam de fonte nova} Os três critérios usam apenas
+dados já disponíveis na seção~\ref{sec:fig10}, e poderiam ter sido aplicados
+ali. Foram executados a partir da troca de grafo.
+
+\begin{objecao}
+A partição não é aleatória, por construção: ela testa dependência a
+característica estrutural, e não variabilidade amostral genérica. O grafo do ONS
+é exato onde cobre, e exclui conexões abaixo de 230 kV; para a amostra solar
+isso remove mais da metade dos conjuntos e elimina um subsistema inteiro. Três
+critérios não esgotam robustez, e faltam validação temporal, análise de
+influência ponto a ponto e sensibilidade à definição de centro de carga. Os
+limiares são convenção declarada, e o critério do intervalo foi corrigido de
+``é positivo'' para ``exclui zero''. Como o grafo é variável derivada de
+sensoriamento, ele propaga erro para o intervalo \cite{proctor2023}, e nenhuma
+imputação foi aplicada.
+\end{objecao}

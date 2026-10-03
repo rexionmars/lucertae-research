@@ -1,0 +1,283 @@
+================================================================================
+ TAREFAS — lucertae
+ Atualizado: 2026-09-05
+================================================================================
+
+ESTADOS
+  [ ]  aberta
+  [~]  em andamento
+  [x]  feita
+  [!]  fechada por evidência suficiente — NÃO reabrir sem fato novo
+  [-]  impossível: o dado ou o objeto de comparação não existe. Vira limite
+       declarado da afirmação, nunca "próximo passo".
+
+REGRA
+  Ausência de perfeição não é pendência. Se o teste seguinte só refatia o mesmo
+  dado com outra estatística, ele não acrescenta e não entra nesta lista.
+
+================================================================================
+ AS OITO FAMÍLIAS DE TAREFA
+================================================================================
+ Como a literatura de energia divide o campo. Cada uma tem objetivo, método e
+ métrica próprios. Detalhe e fonte brasileira de cada: report/tarefas-dados.tex
+
+   F1  Avaliação de recurso ............ irradiância e vento disponíveis
+   F2  Previsão de geração e carga ..... solar, eólica, carga
+   F3  Inventário e detecção de ativo .. localizar e datar usina por imagem
+   F4  Monitoramento de operação ....... geração e emissão sem telemetria
+   F5  Reservatório e hidrelétrica ..... área, nível, volume por satélite
+   F6  Desempenho e degradação ......... razão de desempenho, sujidade
+   F7  Locação e conflito de uso ....... siting, agrivoltaica
+   F8  Acesso à energia e demanda ...... eletrificação, carga por região
+
+================================================================================
+ EXPERIMENTOS
+================================================================================
+
+[x] F1 · Erro do NASA POWER contra a POA medida
+    237 usinas, 66.917 dias-usina, 2025. Transposição fixa cobre 1/3 da lacuna;
+    rastreador cobre o resto. Razão medido/modelo 1,229 -> 1,000. MAE 1,228 ->
+    0,705 escolhendo geometria por usina.
+    -> notebooks/br/_poa_medida.py, _poa_erro.py
+    -> data/processed/poa_erro_{por_usina.csv,pareado.parquet}
+    -> report/execucao-poa.tex
+
+[!] F1b · Validar a classificação fixo/rastreador
+    Quatro evidências, três independentes do ajuste que gerou o rótulo:
+      ajuste ....... MAE 1,228 -> 0,705
+      conjunto ..... 86% de rótulo unânime contra 13% ao acaso
+      forma diurna . distribuições DISJUNTAS, p90 fixo 7,50 h < p10 rast 9,00 h
+      concordância . 96,6% entre as duas classificações, estável nos 12 meses
+    Cruza com Janaúba, que veio da etapa 0 por outro caminho.
+    -> notebooks/br/_forma_diurna.py, data/processed/forma_diurna.csv
+
+[-] F1c · Amarrar o rótulo a cadastro oficial de tipo de montagem
+    Não existe. Verificado em 8 fontes: ANEEL SIGA, MMGD, mmgd_pv_tec, RALIE
+    usina, RALIE unidade geradora, ONS coff_fv_detail, coff_fotovoltaica,
+    modalidade_usina. Nenhuma traz o campo.
+    CONSEQUÊNCIA: escrever "duas assinaturas independentes concordam em 94,4%",
+    nunca "66% da frota usa rastreador, conforme cadastro".
+
+[x] F6 · Desempenho de planta
+    235 usinas, 2025, primeira aplicação da geometria validada na F1b.
+
+      PR realizado ......... 0,838   (geração verificada)
+      PR potencial (ONS) ... 1,023   (gen_estimated do operador)
+      PR sem dia restrito .. 0,998
+
+    Lacuna potencial-realizado 0,227; tirando os dias com restrição no conjunto
+    sobram 0,031. ~86% do déficit é decisão de despacho, não do ativo.
+    -> notebooks/br/_desempenho.py, data/processed/desempenho_por_usina.csv
+    -> report/execucao-desempenho.tex
+
+    [!] Contabilidade de energia FECHA. A razão de 0,77 entre detail e
+        constrained-off não era divergência entre os dois conjuntos de dados:
+        no nível de intervalo eles coincidem (Pirapora 2, 15/06 12h00: 101,27 MW
+        nos dois). Era o filtro de dias — usina com menos de 44 dos 48
+        intervalos sai da soma, e a linha do conjunto continua completa.
+        Restringindo aos conjunto-dias completos, 5.626 dias em 46 conjuntos:
+        corte medido 3.610,7 GWh contra lacuna de 3.594,8 GWh = 100%.
+
+    [!] As anômalas de platô baixo eram artefato, não defeito de arranjo.
+        Das sete originais, cinco eram deslocamento noturno do piranômetro
+        somado ao integral do dia. Sobram três abaixo de 0,75, duas com
+        diagnóstico: Guaimbé 1 com depressão ao meio-dia entre dois máximos
+        (sombreamento parcial), Santa Luzia 4 com o dia truncado às 13h00.
+
+    [-] Indisponibilidade declarada de fotovoltaica NÃO EXISTE.
+        taxa_teif_teip cobre UHE/UTE/UTN. disponibilidade_usina idem: 0 linhas
+        UFV. A separação de três vias vira de duas — corte contra resto, e o
+        resto mistura subdesempenho com indisponibilidade.
+
+    [ ] PR é referenciado à potência FISCALIZADA (CA), não à potência CC dos
+        módulos, que a ANEEL não publica. Por isso passa de 1. Não comparar com
+        PR de norma sem dizer isso.
+
+    [ ] gen_estimated do ONS não distingue a montagem: PR potencial mediano de
+        1,154 nas fixas contra 0,971 nas rastreadoras. Consistente com modelo
+        que supõe arranjo fixo — MAS razão CC/CA menor em usina com rastreador
+        prevê o mesmo sinal. Não separável com o dado disponível.
+
+[ ] F4 · CVU e ordem de mérito
+    cvu-usitermica, 5.221 linhas, uma tarde. O capítulo de despacho fora do
+    mérito argumenta sobre ordem de mérito sem ter o custo variável que a define.
+    Não é experimento; é fechar lacuna de capítulo escrito. Melhor custo-benefício
+    da tabela.
+
+[ ] Crosswalk cod_usinapdp <-> id_ons
+    Entregável próprio, serve a todas as famílias. Hoje: 50% com casamento exato
+    normalizado (usina_conjunto nom_conjunto + nom_usina, modalidade_usina
+    nom_usina). Os 297 restantes parecem recuperáveis por casamento aproximado.
+    Senão: modalidade_usina tem id_ons em só 57% das linhas; usar CEG como ponte
+    (99% preenchido, e é a chave de br.plant).
+
+[ ] F2 · Benchmark de previsão contra o ONS
+    programacao_x_previsao: 2.073 arquivos diários, out/2024 a hoje, 1,8 GB.
+    Previsão e programado lado a lado, POR USINA, em 48 patamares. Baseline não
+    é modelo ingênuo: é a previsão que o operador usou para programar despacho.
+    Desenho: foundation models zero-shot (TimesFM, Chronos, Moirai, MOMENT)
+    contra o ONS, como o benchmark ERCOT/PERFORM faz.
+    DEPENDE do crosswalk.
+
+[ ] F5 · Reservatório por satélite
+    11 conjuntos hidro do ONS, zero usados, num país 65% hidrelétrico.
+    Verdade de campo completa: EAR e ENA por reservatório, vazão fluviométrica,
+    contorno vetorial das bacias. Testado: ~5 MB, baixa em 10 s.
+    Prazo é do pipeline de imagem (Landsat/Sentinel-1 + SRTM), não do dado.
+
+[ ] F3 · Inventário e detecção de ativo
+    Única família sem lacuna de insumo: SIGA tem 25.133 empreendimentos com
+    coordenada e data de operação, MMGD tem 4.678.147 conexões, ONS tem 2.208
+    linhas e 1.677 subestações. É onde a série começou (Figs. 2, 3, 7).
+    Ramo não explorado: infraestrutura de rede por imagem — linha, torre,
+    subestação. Campo maduro, com dataset anotado e financiamento Banco Mundial.
+    LIMITE: exige imagem sub-métrica (WorldView-3), que não é gratuita. É custo,
+    não indisponibilidade.
+
+[ ] F7 · Locação e conflito de uso do solo
+    MapBiomas, IBGE, SIGA, contorno de bacia do ONS. Fora do estoque atual.
+    Já é 4 dos 12 itens da coleção "Energia" do Zotero (agrivoltaica).
+    Disponibilidade não verificada.
+
+[ ] F8 · Acesso à energia e demanda
+    MMGD tem código IBGE de município nas 4,7 M conexões; curva de carga do ONS
+    em disco; luzes noturnas VIIRS. A mais distante do que já existe aqui.
+    Cobertura do VIIRS não verificada.
+
+================================================================================
+ LITERATURA — o que a pesquisa de campo devolveu
+================================================================================
+ Levantamento de 05/09/2026. Posicionamento e lacunas de citação.
+
+[!] Onde o lucertae cai no campo
+    Quatro correntes: quantificar, reduzir, precificar/alocar, descrever
+    localmente. A série está na quarta, que é a menor e mais nova.
+    Comparador direto: maji2025 (ERCOT 2023, nó a nó, best-paper e-Energy '25).
+    Diferença de método a declarar: eles usam LMP nodal; o Brasil não publica
+    preço nodal (CMO é por subsistema), daí as covariáveis topológicas.
+
+[ ] Citar Gorka & Roald 2024 — URGENTE para o enquadramento
+    doi:10.1145/3632775.3661951, e-Energy. Classificação binária "há corte nesta
+    hora?" a partir de estado do sistema, CAISO. É o M1 já publicado.
+    A novidade da série é a AUC DENTRO DA HORA, que decompõe "quando" de "qual".
+    Sem essa citação um revisor acha o paper e o enquadramento cai.
+
+[ ] Citar O'Shaughnessy, Cruce & Xu 2020
+    "Too much of a good thing? Global trends in the curtailment of solar PV",
+    Solar Energy, ~170 citações. É a referência canônica de tendência global de
+    corte fotovoltaico. Ausência conspícua na bibliografia atual (16 itens).
+
+[ ] Atualizar Newbery
+    O relatório cita EPRG WP 2401. Existe CWPE 2581, "Marginal curtailment under
+    network constraints", posterior.
+
+[ ] Cap. 10 · a regra de método tem implementação de prateleira
+    O texto cita proctor2023 (NBER WP) e admite não ter aplicado. A linha virou
+    literatura formal: Angelopoulos et al., "Prediction-Powered Inference",
+    Science 2023 — IC válido para média, quantil e coeficiente sem supor nada
+    sobre o modelo. Extensões que batem no caso: PPI com covariável imputada
+    (arXiv 2501.18577) e cross-PPI. Deixou de ser objeção teórica; é cálculo.
+
+[ ] Satélite — o campo andou desde as referências atuais
+    Dataset global de PV a 20 m, 2019-2022 (U-Net + PUL-RF): sucessor prático do
+    kruitwagen2021.
+    "Back in time" (2025): série temporal + deep learning para DATAR instalações
+    — é a Fig. 7 por outro caminho, alternativa ao temporal cluster matching.
+    "Poor Reliability of DL Models: rooftop PV" (arXiv 2408.07828): sustenta a
+    Fig. 2 pelo lado teórico; os 91% sub-pixel são o caso limite.
+
+[!] A Fig. 1 está num vazio real
+    Procurado: trabalho que trate corte como contaminante da geração verificada
+    usada como proxy de recurso solar. Não existe. A literatura de validação de
+    irradiância satelital valida contra estação de solo, nunca contra geração
+    verificada. É o argumento mais original da série.
+
+[ ] Zotero desalinhado do lucertae
+    1 item de curtailment em ~100 (vieira2026), zero de detecção de PV por
+    satélite, zero de topologia de rede. As coleções são da linha TERRA/mestrado.
+    As 16 referências do relatório existem só dentro do .tex — sem PDF, sem DOI,
+    sem chave estável. Criar coleção própria e popular com o levantamento acima.
+
+================================================================================
+ DÍVIDA — encanamento e reprodutibilidade
+================================================================================
+
+[x] Cache do POWER com fuso misturado
+    9 de 90 células em LST, até 14,2% do GHI anual caindo com o sol abaixo do
+    horizonte. Rebaixadas em UTC; originais em data/raw/power_hourly_lst_backup/.
+    _power_h.py passa &time-standard=UTC; _power_h_todas.py valida o cabeçalho
+    em vez de só testar se o arquivo existe.
+
+[x] Remedir etapa 0 sobre o cache corrigido
+    _transpor.py: 24 de 25 usinas mudaram de inclinação ajustada.
+    _otimo.py: ajustado - ótimo de +5,0° para +0,0° — CONCLUSÃO INVERTIDA.
+    _tilt_pareado.py: +2,5° para +0,0°; Janaúba p de 0,015 para 0,056, cruzando
+    o limiar convencional. Saídas antigas em data/processed/_antes_correcao_lst/.
+    Texto corrigido em notebooks/br/README.md.
+
+[x] Controle de qualidade da POA: janela errada e exclusão por limiar
+    O QC rodava a mediana noturna sobre o período inteiro do banco, e a análise
+    é de 2025: Santa Luzia 1 e V passavam com 2,8 W/m2 porque o sensor estava
+    são em 2024 e 2026 e deslocado em 323,8 durante todo o 2025 — ~3,9
+    kWh/m2/dia de artefato no denominador. Agora o QC corre na mesma janela.
+    E a exclusão por limiar virou subtração da linha de base noturna por
+    usina-mês: a média noturna da frota é contínua (mediana 4,6, p75 15,5,
+    p90 69,1) e qualquer limiar custaria de 25% a 47% das usinas.
+    Efeito: todos os resultados do F1/F1b/F6 refeitos, nenhuma conclusão mudou.
+
+[x] Recuperar a cadeia de ML do transcript da sessão morta
+    _juntar.py e _exportar.py existiam só como heredoc. SP agora é data/interim/,
+    não scratchpad de sessão. Ver notebooks/ml/README.md.
+
+[x] Bug do M3 — CÓDIGO corrigido em _modelos.py, _dentro_hora.py, _boot_ganho.py
+    Os três restringem à base com covariável de rede antes de ajustar. _modelos.py
+    reporta M1 e M2 também no painel inteiro, para a perda de amostra ficar visível.
+
+[x] Refazer as saídas de ML sobre o código corrigido
+    Cadeia rodada de ponta a ponta em 05/09/2026. O resultado principal mudou
+    de direção: a fração que as covariáveis de rede recuperam do ganho da
+    identidade vai de 92,4% para 98,7%, IC95% [97,1%; 100,2%]. O 92,4% era
+    artefato do M3 rodar com NaN em oito colunas para um terço do painel.
+    No global, fora da hora, o M3 passa o M2: 0,9028 contra 0,8958.
+    Custo medido: ~20 min num M-series de 11 núcleos. Preparo é 3 min; o resto
+    é LightGBM. Sem caminho por GPU — o wheel não tem suporte, e os back-ends
+    do LightGBM são OpenCL/CUDA/ROCm, não Metal. MPS é caminho de PyTorch.
+
+[ ] Estágio Sentinel-2 ausente do repo
+    data/raw/s2 (37 MB, 5 .npy) não é lido por código nenhum. Dez intermediários
+    fig7_*/s2_* sem produtor. O notebook 07 só plota. A Fig. 7 não é reconstruível.
+    Falta também jaiba_2025.npy: a série vai 2021-2024, 2026.
+
+[ ] Notebooks 05 e 06 sem gerador
+    Os outros dez têm _build_notebook*.py. O código de 05 e 06 existe só dentro
+    do .ipynb.
+
+[ ] Dependência externa não declarada
+    sys.path para geosense-infer/sidecar (terra.grid) em 7 scripts de br/, mais
+    Postgres local com PostGIS e o banco terra_br populado. pyproject.toml não
+    menciona nada disso. Caminhos absolutos /Users/fox/... em 5 _build_notebook*.
+
+[ ] Repositório sem commit
+    Zero commits, tudo untracked, em master (o principal do projeto é main).
+    .gitignore não cobre .DS_Store, o Screenshot da raiz, nem os intermediários
+    do LaTeX (.aux .log .fls .fdb_latexmk .out .toc).
+
+[ ] Intermediários mortos em data/processed
+    Sem produtor E sem consumidor: painel_corte_diario, painel_corte_solar,
+    painel_diario_clima, painel_fc_solar, painel_vies, alvo_series, alvo_pontos,
+    celulas_power, fig4_fc_corte, fig4_fc_mensal, fig6_vies_por_usina,
+    s2_brilho_jaiba.
+    Raw órfão: siget/lt.csv, rel_conj.csv, cap_ger.csv, data/raw/power/, cmo/.
+
+[ ] Esqueleto lipsum em report/capitulos
+    03-sinal, 04-representacao, 05-transferencia, 06-produto-crop. Nenhum é
+    incluído pelo reporte.tex. Ou escreve, ou apaga.
+
+[ ] serie.tex e serie-relatorio.tex
+    Divergem em 1.664 linhas — reescrita de voz, não cópia. Decidir qual sobrevive.
+
+[ ] Cabeçalho corrente errado nos apêndices
+    Páginas de continuação mostram "CAPÍTULO 10. O QUE FALTA" com numeração do
+    corpo. Afeta A e B. Um \markboth depois de cada \chapter dentro do landscape.
+
+================================================================================

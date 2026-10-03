@@ -1,0 +1,84 @@
+% !TEX program = lualatex
+% =====================================================================
+% modelo.tex -- esqueleto de documento avulso da linha TERRA
+%
+% Copie este arquivo, renomeie, troque os tres campos da `\abertura` e
+% escreva. Nao ha decisao de forma a tomar: mancha, colunas, fontes,
+% paleta e abertura saem todas do `estilo-reporte.sty`.
+%
+%   cp modelo.tex meu-registro.tex
+%   latexmk -lualatex meu-registro.tex
+%
+% MOTOR. lualatex, e nao pdflatex. A sem serifa da linha e a Urbanist,
+% que vive como TTF em `fontes/urbanist/` e so `fontspec` alcanca. Em
+% pdflatex o documento ainda compila, caindo de volta na IBM Plex, mas
+% nao e a saida pretendida. O `% !TEX program` no topo faz o VS Code
+% acertar o motor sozinho.
+%
+% DIRETORIO. Compile de dentro de `report/`. O `Path` do `fontspec` e o
+% caminho da marca sao relativos a ele.
+%
+% DUAS COLUNAS. A classe e `book` porque a folha de estilo usa
+% `\chaptertitlename` e os comandos de capitulo do `tocloft`; em
+% `article` ela nao carrega. Documento avulso nao abre capitulo -- use
+% `\section*` e `\subsection*`, como abaixo.
+% =====================================================================
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+% A pagina termina onde o texto termina.
+\raggedbottom
+\pagestyle{plain}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+\autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
+% \marca{../terra-mark.png}   % descomente so para trocar a marca
+
+\begin{document}
+
+\abertura{Título do documento}
+         {Registro de execução · \today{} ·
+          \texttt{caminho/do/script.py}}
+
+\section*{Primeira seção}
+
+Texto. O corpo e a Urbanist a 10 pt, e a coluna corre a 49,7 caracteres
+por linha.
+
+\campo{Rótulo} Parágrafo com rótulo destacado na cor da marca.
+
+\termo{Termo} marca vocabulário novo; \exper{nome-do-experimento} marca
+nome de experimento; \texttt{arquivo.py} marca caminho e nome de coluna.
+
+\begin{ficha}
+  \item[Primeiro]  a lista de ficha e para definição curta, e o rótulo
+                   fica na sem serifa em negrito.
+  \item[Segundo]   o corpo dela cai para 7,4 pt.
+\end{ficha}
+
+\pepar[Pendente]{a marca de vaga imprime o que falta e some quando o
+campo e preenchido; uma varredura por \texttt{pe} diz quanto do
+documento existe.}
+
+\section*{Resultado}
+
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.3cm}rr@{}}
+\toprule
+\cab{Modelo} & \cab{Viés} & \cab{MAE} \\
+\midrule
+Uma linha      & $-1{,}032$ & 1,301 \\
+Outra linha    & $+0{,}258$ & 0,962 \\
+\bottomrule
+\end{tabular}
+\notas{A nota de tabela cai para 6,8 pt e diz unidade, recorte e
+janela. \num{271} usinas, 2025.}
+
+\end{document}

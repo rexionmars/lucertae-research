@@ -1,0 +1,190 @@
+\chapter{Despacho fora da ordem de mérito}
+\label{cap:despacho}
+
+A seção~\ref{sec:fig3} registra que o Custo Marginal de Operação durante o corte
+é menor que durante a geração. O sistema corta quando a energia vale pouco. A
+decomposição de despacho publicada pelo operador diz com o que esse corte
+coincide no mesmo instante.
+
+\section{Coincidência entre corte e térmica inflexível}
+\label{sec:fig8}
+
+\begin{ficha}
+  \item[Janela]      abril de 2024 a agosto de 2026
+  \item[Amostra]     21.192 horas
+  \item[Unidade]     hora do SIN
+  \item[Fonte]       ONS: \textit{constrained-off}, geração térmica por motivo
+                     de despacho, curva de carga, energia armazenada
+  \item[Teste]       Mann-Whitney e Spearman, estratificado por quintil de carga
+\end{ficha}
+
+A decomposição de geração térmica do ONS é aninhada, e não aditiva. Somar todos
+os campos dá 1,58 vez a geração total. A definição consistente subtrai a parcela
+econômica do total:
+
+\begin{equation*}
+\begin{aligned}
+\text{fora do mérito} = {} & \texttt{verifgeracao} \\
+                          {}-{} & \texttt{verifordemmerito}
+\end{aligned}
+\end{equation*}
+
+A definição foi verificada contra a soma dos motivos não econômicos disjuntos,
+com razão de 1,0030 e mediana da diferença de 0,17 MWmed.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig8_despacho_merito.pdf}
+\caption{\textbf{O corte fotovoltaico por excesso de oferta coincide com térmica
+inflexível, mas apenas em carga baixa.}
+\textbf{a}, Perfil diurno médio nacional. Em área azul a geração fotovoltaica
+verificada, em área vermelha empilhada a energia cortada por razão energética, e
+em linhas a geração térmica separada em parcela econômica, por ordem de mérito,
+e parcela fora do mérito. A anotação registra a carga líquida, igual à carga do
+SIN menos a geração fotovoltaica, na madrugada e no pico solar.
+\textbf{b}, Composição da geração térmica fora do mérito nas horas com e sem
+corte por razão energética, decomposta pelos motivos não econômicos disjuntos do
+dicionário do ONS. O rótulo indica o total.
+\textbf{c}, Correlação de Spearman entre corte por razão energética e geração
+térmica fora do mérito, estratificada por quintil de carga do SIN, restrita às
+horas de 9 h a 15 h. As barras cinza indicam associação não significativa, e
+abaixo do eixo aparece o corte médio de cada quintil.
+\textbf{d}, Controle negativo: taxa diária de corte por razão energética contra
+a energia armazenada do SIN, com a mediana por quartil de armazenamento.}
+\label{fig:despacho}
+\end{figure*}
+
+A janela acumula 21.889 GWh de corte, dos quais 68,5\% por razão energética. Nas
+horas com esse corte há 4.564 MWmed de térmica fora do mérito, contra 3.146 nas
+demais, um acréscimo de 45\%. Ponderado pela energia cortada, o valor sobe para
+5.266 MWmed, dos quais 73\% são inflexibilidade pura.
+
+Da madrugada ao pico solar a parcela por mérito cai 1.640 MWmed e a parcela fora
+do mérito sobe 1.184 MWmed. A mesma térmica permanece ligada e deixa de ser
+econômica quando o CMO cai.
+
+\conclusao{Dois terços do corte são classificados como excesso de oferta e
+ocorrem com 4,6 GWmed de térmica fora da ordem de mérito no mesmo instante.}
+
+\campo{A leitura que o controle de carga desfaz} A hipótese de que a térmica
+desloca a geração solar não sobrevive ao controle de carga. A carga sobe
+aproximadamente o quanto a geração solar sobe, e a carga líquida é plana, de
+72,2 para 72,1 GWmed. O que varia ao longo do dia é a classificação do despacho
+térmico, e não o seu volume.
+
+\campo{A associação é condicional} A correlação entre corte e térmica inflexível
+é de 0,48 no quintil de carga mais baixa e de 0,38 no segundo, e cai para a
+faixa de 0,09 a 0,20 nos três superiores. Com $n$ da ordem de 1.240 por estrato,
+todos os quintis dão $p < 0{,}05$. A leitura se apoia na magnitude, e não na
+significância, e a queda não é monotônica.
+
+\begin{objecao}
+Coincidência não é causalidade. Separar as duas exigiria reotimizar o despacho
+sem a inflexibilidade declarada. A inflexibilidade é declaração do agente, e não
+mínimo técnico verificável em dado aberto. O agregado é nacional, e a
+seção~\ref{sec:fig9} o revisa. Como controle negativo, a energia armazenada não
+explica o corte, com $\rho = 0{,}06$ e $p = 0{,}06$.
+\end{objecao}
+
+\campo{Posição na literatura} O mecanismo é documentado na literatura chinesa de
+\textit{curtailment}. Unidades térmicas com mínimo técnico e status
+\textit{must-run} ocupam a faixa que a renovável variável utilizaria, e a
+resposta de política foi o programa de \textit{flexibility retrofit}
+\cite{cem2018}, com 16,35 GW em demonstração em 2017. No Brasil, Vieira et al.
+\cite{vieira2026} modelaram o corte com regressão logística horária. Eles
+identificaram a geração distribuída como preditor mais forte do corte por
+demanda, com razão de chances próxima de 9,8, e a carga do sistema atuando de
+forma protetiva. É o gradiente que o painel \textbf{c} reproduz.
+
+\section{Decomposição por subsistema}
+\label{sec:fig9}
+
+\begin{ficha}
+  \item[Janela]      a mesma, restrita às horas de 9 h a 15 h
+  \item[Amostra]     21.192 horas
+  \item[Unidade]     hora do subsistema
+  \item[Fonte]       ONS, com intercâmbio nacional acrescentado
+  \item[Teste]       Spearman, sem correção de multiplicidade
+\end{ficha}
+
+Nordeste e Sudeste com Centro-Oeste cortam volumes semelhantes nas horas
+solares. A térmica inflexível não acompanha.
+
+\begin{table}[t]
+\centering
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.6cm}rr@{}}
+\toprule
+\cab{MWmed, 9 h a 15 h} & \cab{NE} & \cab{SE/CO} \\
+\midrule
+corte por razão energética & 1.079 & 950 \\
+inflexibilidade pura local & 36 & 1.739 \\
+razão corte sobre piso local & 30,2 & 0,5 \\
+$\rho$ com térmica do NE & +0,08 & +0,10 \\
+$\rho$ com térmica do SE & +0,42 & +0,41 \\
+\bottomrule
+\end{tabular}
+\caption{Corte e piso térmico inflexível por subsistema.}
+\label{tab:subsistema}
+\notas{A razão corte sobre piso local mede quantas vezes o corte do subsistema
+excede a inflexibilidade pura declarada nele. As duas últimas linhas medem a
+mesma correlação contra a térmica de cada subsistema.}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig9_decomposicao_subsistema.pdf}
+\caption{\textbf{O piso térmico inflexível está onde o corte não está, e a
+coincidência nacional não sustenta leitura causal local.}
+\textbf{a}, Potência média nas horas solares por subsistema: corte fotovoltaico
+por razão energética, geração térmica fora da ordem de mérito e a parcela desta
+que é inflexibilidade pura. Abaixo do eixo, a razão entre o corte e o piso
+inflexível local.
+\textbf{b}, Correlação de Spearman entre corte por razão energética e térmica
+fora do mérito do mesmo subsistema, por quintil de carga do próprio subsistema,
+com tracejado no limiar de magnitude declarado.
+\textbf{c}, A mesma correlação medida contra a térmica do próprio subsistema e
+contra a do outro subsistema com corte material.
+\textbf{d}, Distribuição acumulada do fluxo Nordeste para Sudeste nas horas de
+corte alto e nas demais, com tracejado no percentil 95 do fluxo, usado como
+referência empírica de teto por não haver limite operativo publicado.}
+\label{fig:subsistema}
+\end{figure*}
+
+No Nordeste, onde está o maior volume de corte do país, há 36 MWmed de
+inflexibilidade contra 1.079 de corte. A associação local é de 0,08 e não passa
+de 0,16 em nenhum quintil de carga.
+
+No Sudeste com Centro-Oeste o painel \textbf{b} reproduz o padrão da
+seção~\ref{sec:fig8}, com $\rho = 0{,}40$ nos quintis de carga baixa. O painel
+\textbf{c} não sustenta a leitura local. A térmica do Sudeste se correlaciona
+com o corte do Sudeste em 0,41 e com o do Nordeste em 0,42, a mais de dois mil
+quilômetros de distância. O valor de $\rho$ é determinado por qual térmica se
+mede, e não por qual corte. Uma causa local produziria associação mais forte com
+o corte local.
+
+\conclusao{A coincidência nacional entre corte e térmica inflexível é real e
+compatível com um fator comum, a carga nacional baixa. Este desenho não distingue
+as duas hipóteses, e a atribuição causal da seção anterior é retirada.}
+
+\campo{A hipótese de corredor também não se sustenta} Nas horas de corte alto o
+fluxo do Nordeste para o Sudeste é menor, de 2.993 contra 3.848 MWmed. Ele fica
+acima do teto empírico em 2,9\% das horas, contra 5,7\% nas demais, com
+$\rho = -0{,}25$. O Nordeste é cortado com o corredor operando abaixo do seu
+percentil habitual.
+
+\campo{O que muda na seção anterior} Nenhum valor da seção~\ref{sec:fig8} muda.
+O que se retira é a atribuição causal.
+
+\begin{objecao}
+Subsistema ainda é agregação grosseira, e o Sudeste com Centro-Oeste vai de
+Minas ao Mato Grosso do Sul. O teto do corredor é o percentil 95 do próprio
+fluxo. Não há limite operativo publicado: o pacote
+\texttt{programacao\_\allowbreak fluxo\_\allowbreak controlado} cobre apenas
+elos de corrente contínua e interligações internacionais, e o pacote
+\texttt{linha-\allowbreak transmissao} dá capacidade por linha, e não do
+corredor, que resulta de estudo de estabilidade. A ausência de demanda no destino é inferência
+por eliminação, e não foi testada de forma positiva. O painel \textbf{c} não
+estabelece ausência de mecanismo local no Sudeste; ele mostra que este desenho
+não o identifica, porque inflexibilidade local e carga nacional são colineares.
+\end{objecao}
