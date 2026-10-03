@@ -1,0 +1,326 @@
+' CON module · Continuity and quality
+' en-US version of con.puml: same diagrams, same elements, same order.
+' Diagrams of the module (features-energia-en.tex, RED and CON research section)
+'
+' Render: plantuml -charset UTF-8 -tsvg -tpng con-en.puml
+
+' ===========================================================================
+' 1. Layers: on which entity each feature of the module is drawn
+' ===========================================================================
+@startuml con-camadas-en
+title CON — layers by entity and the data that feed them
+
+top to bottom direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam ArrowColor #444444
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+  HeaderBackgroundColor #EAF1F8
+}
+skinparam class<<source>> {
+  BackgroundColor #FFFFFF
+  BorderColor #8AA9C7
+}
+skinparam class<<aggregated>> {
+  BackgroundColor #FFF8E6
+  BorderColor #B07A1A
+}
+hide circle
+hide methods
+hide empty members
+
+package "Sources" {
+  class "ANEEL · DEC and FEC\nby set and month" as f_decfec <<source>> {
+    measured and limit
+    components and exclusions
+    compensations paid
+  }
+  class "ANEEL · Interruptions\nby event, since 2017" as f_int <<source>> {
+    feeder and substation code
+    cause, exclusion, affected consumers
+  }
+  class "BDGD" as f_bdgd <<source>> {
+    network and sets
+    monthly DIC and FIC per unit
+  }
+  class "Weather forecast\n(CLI-01)" as f_nwp <<source>> {
+    gust, rain, convection
+  }
+  class "Lightning (CLI-03)" as f_raios <<source>> {
+    open GLM or BrasilDAT
+  }
+  class "Vegetation (ATV-03)" as f_veg <<source>> {
+    canopy height per span
+  }
+}
+
+package "Entities and layers of the module" {
+  class "Electrical set" as conj {
+    CON-01 · forecast DEC and FEC
+    probability of violating the annual limit
+  }
+  class "Feeder" as al {
+    CON-02 · expected compensation in R$
+    CON-03 · forecast interruptions in the event
+  }
+  class "Feeder section" as tr {
+    CON-03 · risk per section in the event
+    CON-04 · probable fault location, V4
+  }
+  class "Transformer" as trafo {
+    CON-02 · expected compensation, aggregated
+  }
+  class "Consumer units" as uc <<aggregated>> {
+    simulated DIC, FIC and DMIC
+    used in the calculation, never shown one by one
+  }
+}
+
+conj "1" o-- "n" al : groups
+al "1" *-- "n" tr
+al "1" *-- "n" trafo
+trafo "1" *-- "n" uc
+
+f_decfec ..> conj
+f_int ..> conj
+f_int ..> al
+f_bdgd ..> uc
+f_bdgd ..> tr
+f_nwp ..> tr
+f_raios ..> tr
+f_veg ..> tr
+
+legend right
+  Everything at level 0 (public data), except
+  CON-04, which requires recloser events
+  and client smart metering (level 3).
+  Exclusions are modeled separately:
+  the regulated target is the share without exclusion.
+end legend
+@enduml
+
+' ===========================================================================
+' 2. Use cases of the module
+' ===========================================================================
+@startuml con-casos-de-uso-en
+title CON — use cases
+
+left to right direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+  BackgroundColor<<V4>> #FFFFFF
+  BorderColor<<V4>> #8AA9C7
+}
+skinparam rectangle {
+  BorderColor #1C568C
+}
+
+actor "Continuity manager" as gestor
+actor "Operations center\noperator (COD)" as operador
+actor "Planning\nengineer" as planejador
+actor "Field crew" as campo
+actor "Scheduler" as agenda <<system>>
+
+rectangle "CON module" {
+  package "Regulatory tracking (monthly)" {
+    usecase "View forecast DEC and FEC\nagainst the limit" as UC_dec
+    usecase "View sets at risk of\nviolating the annual limit" as UC_risco
+    usecase "View expected compensation\nby feeder" as UC_comp
+    usecase "Prioritize improvement actions\nunder budget" as UC_prio
+  }
+  package "Weather event (hours to days)" {
+    usecase "Receive weather\nevent alert" as UC_alerta
+    usecase "View sections at risk\nin the event" as UC_trechos
+    usecase "Generate pre-positioning\nplan" as UC_plano
+    usecase "Report available\ncrews" as UC_equipes
+    usecase "Locate probable fault" as UC_falta <<V4>>
+  }
+  package "Learning" {
+    usecase "Record interruption\nand cause" as UC_reg
+    usecase "Rate alert\n(useful / false)" as UC_aval
+  }
+  package "Internal" {
+    usecase "Run forecast at each\nweather run" as UC_rodada
+    usecase "Update indicators\nwith the closed month" as UC_mes
+  }
+}
+
+gestor --> UC_dec
+gestor --> UC_risco
+gestor --> UC_comp
+planejador --> UC_prio
+operador --> UC_alerta
+operador --> UC_trechos
+operador --> UC_plano
+operador --> UC_falta
+operador --> UC_aval
+campo --> UC_reg
+agenda --> UC_rodada
+agenda --> UC_mes
+
+UC_risco ..> UC_dec : <<include>>
+UC_prio ..> UC_comp : <<include>>
+UC_trechos .> UC_alerta : <<extend>>
+UC_plano ..> UC_equipes : <<include>>
+UC_alerta ..> UC_rodada : <<include>>
+
+legend right
+  <<V4>>: roadmap (requires recloser data
+  and client smart metering)
+end legend
+@enduml
+
+' ===========================================================================
+' 3. State machine: a weather event
+' ===========================================================================
+@startuml con-estados-evento-en
+title CON — life cycle of a weather event
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 55
+skinparam roundcorner 12
+skinparam ArrowColor #333333
+skinparam state {
+  BackgroundColor #FFE066
+  BorderColor #333333
+  StartColor #111111
+  EndColor #111111
+}
+hide empty description
+
+state "Monitoring" as Monit
+state "Alert\nissued" as Alerta
+state "Crews\npositioned" as Posic
+state "In progress" as Curso
+state "Restoration" as Recomp
+state "Assessment" as Apur
+state "Closed without\noccurrence" as SemOc
+state "Labeled" as Rot
+
+[*] --> Monit
+Monit --> Alerta : Weather run with\nrisk above the threshold
+Alerta --> Monit : Next run\nlowers the risk
+Alerta --> Posic : Operator approves\ncrew plan
+Alerta --> Curso : Event starts\nwithout action
+Posic --> Curso : Lightning or gusts\nobserved in the area
+Posic --> SemOc : Window passes\nwithout event
+Curso --> Recomp : Interruptions\nrecorded
+Curso --> SemOc : Event passes\nwithout interruption
+Recomp --> Apur : All units\nrestored
+Apur --> Rot : Interruptions matched to the event,\nexclusion classified
+SemOc --> Rot : False alarm\nrecorded
+Rot --> [*]
+@enduml
+
+' ===========================================================================
+' 4. State machine: an electrical set in the regulatory year
+' ===========================================================================
+@startuml con-estados-conjunto-en
+title CON — an electrical set over the regulatory year
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 55
+skinparam roundcorner 12
+skinparam ArrowColor #333333
+skinparam state {
+  BackgroundColor #FFE066
+  BorderColor #333333
+  StartColor #111111
+  EndColor #111111
+}
+hide empty description
+
+state "Within the\ntrajectory" as Dentro
+state "At risk" as Risco
+state "Action\nplanned" as Acao
+state "Violation\nlikely" as Provavel
+state "Closed within\nthe limit" as FechadoOk
+state "Closed with\nviolation" as FechadoViol
+
+[*] --> Dentro : Start of the year,\nlimit in force
+Dentro --> Risco : P(violate annual limit)\nabove the cutoff
+Risco --> Dentro : Following months\nreduce the risk
+Risco --> Acao : Manager approves actions\n(trimming, reinforcement, crews)
+Acao --> Dentro : Actions reduce\nthe forecast risk
+Acao --> Provavel : Risk persists
+Risco --> Provavel : Accumulated value already\ncompromises the annual limit
+Provavel --> FechadoViol : December\nmeasured
+Dentro --> FechadoOk : December\nmeasured
+Risco --> FechadoOk : December\nmeasured
+FechadoOk --> [*]
+FechadoViol --> [*]
+
+note right of Provavel
+  Even here the layer remains useful:
+  it prioritizes actions that reduce the
+  DIC and FIC compensation (CON-02).
+end note
+@enduml
+
+' ===========================================================================
+' 5. Flow: monthly cycle and event cycle
+' ===========================================================================
+@startuml con-fluxo-en
+title CON — flow of data, models and decisions
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceMessageAlign left
+skinparam ParticipantBorderColor #1C568C
+skinparam ParticipantBackgroundColor #F4F8FC
+skinparam DatabaseBorderColor #1C568C
+skinparam DatabaseBackgroundColor #EAF1F8
+skinparam NoteBackgroundColor #FFF8E6
+
+participant "Sources\n(ANEEL, BDGD,\nweather, lightning)" as fontes
+database "Canonical model\n(series and labels)" as mc
+participant "CON models\n(01, 02, 03)" as mod
+database "Layers" as cam
+participant "Engine" as eng
+actor "Manager" as gestor
+actor "Operator" as op
+actor "Field\ncrew" as campo
+
+== Monthly cycle (CON-01, CON-02) ==
+fontes -> mc : indicators and interruptions\nof the closed month
+mc -> mod : history without leakage\n(what was known at each date)
+mod -> cam : forecast DEC and FEC by set\nexpected compensation by feeder
+cam -> eng : trend and threshold\ndetectors
+eng --> gestor : "Set X: 62% chance\nof violating the annual DEC"
+gestor -> cam : opens the set, drills down to the\nfeeders with the highest compensation
+gestor -> eng : approves improvement actions
+
+== Event cycle (CON-03) ==
+fontes -> mod : new weather forecast run
+mod -> cam : forecast interruptions by\nfeeder and section
+cam -> eng : risk above the threshold
+eng --> op : alert: storm in 18 h,\n40 to 90 interruptions in the North region
+op -> eng : reports available crews
+eng --> op : pre-positioning plan on the map
+op -> campo : positions crews
+campo -> fontes : interruptions and causes\nrecorded in the event
+
+== Closing ==
+fontes -> mc : event assessed\n(exclusion, critical day)
+mc -> mod : event labels
+note right of mod
+  Leave-one-event-out and leave-one-region-out
+  validation: a random split
+  inflates performance.
+end note
+@enduml
