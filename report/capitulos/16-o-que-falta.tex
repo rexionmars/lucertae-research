@@ -1,0 +1,74 @@
+\chapter{O que falta}
+\label{cap:falta}
+
+\section{Perguntas em aberto}
+
+\campo{Alocação do corte entre usinas} A seção~\ref{sec:fig10} identificou duas
+covariáveis que sobrevivem à correção de multiplicidade: distância de rede à
+demanda e capacidade da usina. Sob os critérios da seção~\ref{sec:fig12} é a
+segunda que resiste, e é a que não tem explicação testada. A variância explicada
+é pequena, e a maior parte da dispersão da taxa de corte permanece sem
+explicação.
+
+\campo{Causa do corte no Nordeste} Nem piso térmico local, nem escoamento. Resta
+ausência de demanda no destino, obtida por eliminação e não testada de forma
+positiva.
+
+\campo{Inflexibilidade declarada contra mínimo técnico real} É a grandeza que
+uma auditoria exigiria, e não está publicada.
+
+\section{Trabalho seguinte, em ordem de retorno esperado}
+
+\begin{enumerate}[leftmargin=1.2em,itemsep=0.35em]
+\item \textbf{Reconstruir o corte anterior a abril de 2024.} A maquinaria da
+seção~\ref{sec:fig6} já existe. Um modelo treinado nos intervalos sem restrição,
+aplicado de forma retroativa, viabiliza o teste temporal da
+seção~\ref{sec:fig4}. Há verdade de campo para validar, nos dois anos em que as
+duas séries coexistem.
+
+\item \textbf{Medir o resíduo não explicado.} No nível de intervalo, a diferença
+de desempenho entre um modelo só com observáveis sistêmicos e outro com
+identidade de usina quantifica o que os capítulos de rede deixaram sem
+explicação. A série eólica acrescenta 1,4 GB e três anos de painel. A primeira
+metade já está publicada: Gorka e Roald \cite{gorka2024} classificam a
+ocorrência de corte no CAISO a partir do estado do sistema, que é o modelo sem
+identidade. O que não se encontrou publicado é o passo seguinte, de recalcular o
+desempenho \emph{dentro} de cada intervalo, onde a informação de quando o corte
+ocorre é removida por construção e resta a de qual usina o recebe.
+
+\item \textbf{Substituir NASA POWER por NSRDB.} A célula passa de cerca de 50 km
+para 2 km, e o passo de diário para 10 minutos, sem custo. Atende três das
+objeções já escritas.
+
+\item \textbf{Delinear o arranjo por segmentação.} Substitui os círculos de
+400 m da seção~\ref{sec:fig7}, aumenta a precisão da datação e mede a razão
+entre terreno e módulo que o capítulo~\ref{cap:aplicacao} assume.
+\end{enumerate}
+
+\section{Uma regra de método}
+
+Qualquer saída de modelo que entre em inferência a jusante enviesa o ponto e o
+erro padrão \cite{proctor2023}. A predição entra como distribuição, e não como
+valor pontual. A regra vale para a irradiância do capítulo~\ref{cap:calibracao}
+e para o grafo do capítulo~\ref{cap:rede}, e não foi aplicada em nenhum dos
+dois.
+
+\campo{O cálculo está disponível} Angelopoulos et al. \cite{angelopoulos2023}
+dão o procedimento: intervalo de confiança válido para média, quantil e
+coeficiente de regressão, sem hipótese sobre o algoritmo que produz a predição,
+desde que exista um subconjunto com o valor observado. Kluger et al.
+\cite{kluger2025} estendem o procedimento ao caso em que a predição entra como
+covariável imputada, e motivam com predição de indicador ambiental por imagem de
+satélite alimentando regressão a jusante, que é a forma exata dos capítulos de
+calibração e de rede.
+
+A condição é ter verdade de campo num subconjunto. Para a irradiância ela
+existe: a série medida no plano do arranjo cobre a mesma janela. Para o grafo
+não há equivalente publicado, e ali a correção exige antes definir contra o quê
+a predição seria comparada.
+
+\begin{objecao}
+Aplicá-la alargaria os intervalos de todos os resultados de rede. Nenhum deles
+foi medido sob essa correção, e não se pode afirmar que o resultado que passa
+nos três critérios sobreviveria a ela.
+\end{objecao}

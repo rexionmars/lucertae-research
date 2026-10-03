@@ -1,0 +1,209 @@
+\documentclass[10pt,a4paper,oneside]{article}
+
+% ---------------------------------------------------------------------------
+% features-energia-en.tex -- en-US version of `features-energia.tex`.
+%
+% PARITY WITH THE PORTUGUESE FILE. This is a translation, not a fork: both
+% documents carry the same sections, the same 66 features, the same numbers
+% and the same references. A change in one belongs in the other. The catalog
+% lives in `features/catalogo.csv` (pt) and `features/catalogo-en.csv` (en);
+% `features/gerar.py` checks that the two agree on ids, levels, clients,
+% phases, map fit and dependencies before it generates the tables.
+%
+% DELIBERATE DIVERGENCES FROM THE SOURCE FILE:
+%
+%   `babel` loads `american`. The cover block, the footer and the NOTE box
+%   come from the shared preamble with Portuguese labels; they are redefined
+%   below, locally, so the preamble keeps serving the Portuguese documents
+%   unchanged.
+%
+%   Numbers follow en-US: decimal point, comma as thousands separator.
+%
+%   The phase tag `fora` is `out`. Feature ids, module codes, agency names,
+%   dataset names and regulation numbers stay as in the source: they are
+%   identifiers.
+%
+% Base preamble of the repository: font, type area, packages, caption, title
+% and header. Compile from inside `docs/product/`.
+% ---------------------------------------------------------------------------
+\usepackage[american]{babel}
+\input{../../report/config/preambulo}
+\renewcommand{\doctitulo}{Energy features}
+\renewcommand{\docsubtitulo}{Mapping: required data, models, approaches and phases}
+\renewcommand{\docresponsavel}{Mapeamento Energético}
+\renewcommand{\docdata}{2026-09}
+
+% English labels for the cover block, the footer and the note box.
+\makeatletter
+\renewcommand{\pb@identificacao}{%
+  \texttt{\doccodigo}%
+  \ifx\docversao\@empty\else\enspace\textperiodcentered\enspace version \docversao\fi
+  \enspace\textperiodcentered\enspace\docdata}
+\fancyfoot[R]{\footnotesize\thepage\ of \pageref*{LastPage}}
+\renewcommand{\rosto}{%
+  \thispagestyle{rosto}%
+  \begin{adjustwidth}{-\margemmanual}{0pt}
+    \raggedright
+    \marcadoc[45mm]\par\vspace{16mm}
+    {\fontsize{24}{29}\selectfont\bfseries\doctitulo\par}
+    \ifx\docsubtitulo\@empty\else
+      \vspace{3mm}{\Large\color{cinza}\docsubtitulo\par}\fi
+    \vspace{9mm}{\hrule height 0.8pt}\vspace{4mm}
+    {\small\renewcommand{\arraystretch}{1.25}%
+     \begin{tabular}{@{}>{\bfseries}p{28mm}p{110mm}@{}}
+       Document & \texttt{\doccodigo} \\
+       \pb@linha{Version}{\docversao}%
+       Date & \docdata \\
+       \pb@linha{Owner}{\docresponsavel}%
+     \end{tabular}\par}
+  \end{adjustwidth}
+  \vspace{10mm}}
+\renewenvironment{nota}{\csname pb@mensagem\endcsname{NOTE}{sinalnota}{white}}{\csname endpb@mensagem\endcsname}
+\makeatother
+
+% `L` here is a left-aligned `X` column, and the tables of this document use
+% it that way; it overrides the `L{width}` of the base preamble.
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\definecolor{prodcolor}{RGB}{28,86,140}
+\definecolor{notecolor}{RGB}{110,110,110}
+\definecolor{fMVP}{HTML}{1C568C}
+\definecolor{fV2}{HTML}{5B8BB5}
+\definecolor{fV3}{HTML}{A9C4DD}
+\definecolor{fV4}{HTML}{DDE7F0}
+\definecolor{fCond}{HTML}{F0E0BC}
+\definecolor{fFora}{HTML}{EEEEEE}
+
+\setlength{\fboxsep}{1.5pt}
+
+% map fit: 3 = high, 2 = medium, 1 = low
+\newcommand{\encaixe}[1]{%
+  \ifcase#1\or
+    \textcolor{prodcolor}{$\bullet$}\textcolor{black!20}{$\bullet\bullet$}\or
+    \textcolor{prodcolor}{$\bullet\bullet$}\textcolor{black!20}{$\bullet$}\or
+    \textcolor{prodcolor}{$\bullet\bullet\bullet$}\fi}
+
+
+% Research card of a feature
+\newtcolorbox{ficha}[2]{
+  enhanced, breakable,
+  colback=prodcolor!3, colframe=prodcolor!70,
+  fonttitle=\bfseries\small, title={#1\hfill #2},
+  left=6pt, right=6pt, top=4pt, bottom=4pt, fontupper=\small
+}
+\newcommand{\campo}[1]{\par\smallskip\noindent\textbf{\color{prodcolor}#1.}\ }
+
+\graphicspath{{diagrams/}}
+
+\begin{document}
+
+\rosto
+
+\begin{abstract}
+This document maps 66 energy features, in 12 modules, for the map-based
+predictive platform, from the spatial base of the network to the analysis
+engine. For each feature it records the map entity it acts on, the type of
+output, the required data and their access level, the model, the insight or
+decision it produces, the client, the fit with the map requirement and the
+phase. The second part carries the research per module: concrete data
+sources, approaches (from the baseline to the recent literature), metrics,
+pitfalls and references.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{How to read the mapping}
+% ===========================================================================
+
+Each feature has one of six types and always acts on a map entity
+(requirement R3 of the specification):
+
+\begin{table}[H]
+\centering
+\caption{Feature types.}
+\begin{tabularx}{\textwidth}{l L}
+\toprule
+\textbf{Type} & \textbf{What it is} \\
+\midrule
+layer & model output drawn on the map, with uncertainty, version and date \\
+insight & finding of the analysis engine, anchored to an entity \\
+decision & output that depends on a user constraint (plan, priority) \\
+base & structure without a model that the others presuppose (hierarchy,
+  boundaries) \\
+context & third-party observed or forecast data, shown as reference
+  (weather, satellite); not a model output of the platform \\
+out & energy feature that does not pass the map criterion; recorded with
+  the reason for exclusion \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Catalog columns.}
+\begin{tabularx}{\textwidth}{l L}
+\toprule
+\textbf{Column} & \textbf{Values} \\
+\midrule
+Entity & SS: substation; CU: consumer unit \\
+Data level & 0: public data only; 1: client files; 2: scheduled connector
+  or metering at substation and feeder; 3: continuous metering
+  (transformer, smart metering) \\
+Client & D distribution utility, T transmission utility, G generator,
+  C energy trader, I end consumer \\
+Map & \encaixe{3} high: the question is spatial;
+  \encaixe{2} medium: the map helps at portfolio or region level;
+  \encaixe{1} low: few polygons (submarkets) \\
+Phase & \colorbox{fMVP}{\scriptsize\textcolor{white}{\textbf{MVP}}}
+  \colorbox{fV2}{\scriptsize\textcolor{white}{\textbf{V2}}}
+  \colorbox{fV3}{\scriptsize\textbf{V3}}
+  \colorbox{fV4}{\scriptsize\textbf{V4}}
+  \colorbox{fCond}{\scriptsize\textbf{cond}}
+  \colorbox{fFora}{\scriptsize\textbf{out}}.
+  \textbf{cond} is the conditional track: outside the roadmap, it enters
+  only if the target-client question of the specification is resolved in
+  favor of generator and energy trader \\
+Depends on & features whose output is input to this one; they define the
+  build order \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ===========================================================================
+\section{Overview}
+% ===========================================================================
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{features-en.png}
+\caption{Modules and features, colored by phase.}
+\label{fig:mindmap}
+\end{figure}
+
+\input{features/matrizes-en}
+
+\input{features/leitura-en}
+
+% ===========================================================================
+% ===========================================================================
+
+\begin{landscape}
+\part{Catalog}
+\section{Catalog by module}
+\input{features/tabelas-en}
+\end{landscape}
+
+% ===========================================================================
+\part{Research by module}
+% ===========================================================================
+
+\input{features/pesquisa-per-en}
+\input{features/pesquisa-car-en}
+\input{features/pesquisa-red-en}
+\input{features/pesquisa-atv-en}
+\input{features/pesquisa-eng-en}
+
+\end{document}

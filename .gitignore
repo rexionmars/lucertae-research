@@ -9,13 +9,30 @@ wheels/
 # Virtual environments
 .venv
 
-# Dados, modelos e saídas geradas (recriáveis pelos passos do README)
+# Dados, modelos, figuras e saídas geradas (recriáveis pelos passos do README)
 data/
 models/
 logs/
+figures/
 .ipynb_checkpoints/
+
+# LaTeX -- intermediarios e saida gerada.
+# O PDF nao entra: cada um se reconstroi do proprio `.tex` com o
+# `latexmk` que o cabecalho do arquivo indica.
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.synctex.gz
+report/*.pdf
+docs/produto/*.pdf
 
 # Ambiente local
 .env
 .DS_Store
 .temp/
+
+# Claude Code, permissões locais
+.claude/settings.local.json

@@ -1,0 +1,372 @@
+% !TEX program = lualatex
+% =====================================================================
+% execucao-cmo.tex -- nota tecnica
+%
+% Previsao do custo marginal de operacao semi-horario contra a ingenua
+% sazonal, e o que a distribuicao do alvo impoe a comparacao.
+%
+% Todo numero vem de data/interim/E-preco-cmo/: janelas.json, controles.json,
+% resultado.json, decomposicao.json e ablacao.json, lidos do arquivo e nao de
+% saida de tela. Onde um numero aparece aqui e no README do experimento, os
+% dois saem do mesmo JSON -- mudar um exige mudar o outro, porque a ligacao e
+% de procedencia e nao automatica.
+%
+% Nao entra no `reporte.tex`. Compila sozinho:
+%   latexmk -pdf execucao-cmo.tex
+% =====================================================================
+
+% A folha de estilo pressupoe `book`: usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`. Em `article` ela nao carrega.
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[brazilian]{babel}
+% Mancha e medianiz do `reporte.tex`: 17,2 cm em duas colunas de 8,25 cm.
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+\raggedbottom
+\pagestyle{plain}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\marca{../docs/img/terra-mark.png}
+\autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
+
+\begin{document}
+\abertura{Previsão do custo marginal de operação}
+         {Nota técnica · \today{} ·
+          \texttt{experiments/E-preco-cmo/}}
+
+\section*{Objetivo}
+
+Medir a habilidade de modelos de aprendizado de máquina sobre a linha de base
+ingênua sazonal na previsão do CMO semi-horário do SIN, a um e a dois dias, e
+determinar o que na distribuição do alvo governa o resultado.
+
+Tarefa~11 de \texttt{tarefas-dados.tex}. Até 6 de setembro de 2026 a tarefa
+tinha dado em disco e nenhum experimento: \texttt{data/raw/cmo/} constava do
+inventário como bruto órfão, baixado e não lido por código.
+
+\section*{Dados}
+
+CMO semi-horário do ONS, três arquivos anuais. Covariáveis: curva de carga
+horária, intercâmbio nacional horário, EAR e ENA diárias por subsistema.
+
+\begin{ficha}
+  \item[Fonte]     \num{184704} registros, 4 subsistemas $\times$ \num{46176}
+                   meias-horas, 01/01/2024 a 27/08/2026, zero nulos.
+  \item[Painel]    \num{180288} linhas de \num{186240} na grade cheia.
+  \item[Descartes] \num{1536} sem alvo (8 dias de CMO ausentes na fonte) e
+                   \num{4416} sem D$-$1 ou D$-$7.
+  \item[Alvo]      CMO em R\$/MWh da meia-hora, mínimo $-39{,}24$,
+                   máximo \num{4870.95}.
+\end{ficha}
+
+\campo{Massa no piso} 20,5\% das meias-horas do painel ficam em CMO
+$\leq 1$~R\$/MWh. A distribuição é inflada no piso e de cauda pesada à direita,
+com p99 entre 614 e \num{1082} conforme o subsistema.
+
+\campo{Cada buraco na fonte custa três dias de painel} Além do próprio dia, cai
+o dia seguinte, que perde o D$-$1 da ingênua, e o dia sete depois, que perde o
+D$-$7. Oito buracos, \textbf{24 dias fora do painel}. Os dias ausentes não são
+interpolados: interpolar criaria alvo que o operador não publicou.
+
+\section*{Método}
+
+\campo{Estimando} CMO das 48 meias-horas do dia D nos quatro subsistemas, com
+previsão emitida às 12:00 do dia D$-$1.
+
+\campo{Adversário} Ingênua sazonal: terça a sexta repetem D$-$1; sábado,
+domingo e segunda repetem D$-$7.
+
+\campo{Perda} MAE, declarada antes da execução. RMSE como secundário.
+
+\campo{Origem móvel} Recalibração mensal com janela de treino expansiva, 15
+reajustes. Teste de 01/06/2025 a 27/08/2026: \num{85248} linhas, 444 dias,
+41 features.
+
+\campo{Intervalo} Reamostragem de dia, \num{2000} repetições, os quatro
+subsistemas no mesmo bloco.
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.0cm}>{\rag\arraybackslash}p{4.6cm}@{}}
+\toprule
+\cab{Fonte} & \cab{Portão} \\
+\midrule
+CMO                 & até o fim de D$-$1 \\
+Carga, intercâmbio  & até o fim de D$-$2 \\
+EAR, ENA            & até D$-$3 \\
+Calendário de D     & determinístico \\
+\bottomrule
+\end{tabular}
+\notas{Portão medido, uma observação por fonte, pela diferença entre o último
+registro do arquivo e a data de modificação dele. O CMO é publicado
+\textbf{antes} do dia: o arquivo baixado às 10:08 de 27/08/2026 já trazia as 48
+meias-horas daquele mesmo dia. Carga e intercâmbio atrasam 1,2~d; EAR e ENA,
+2,2 e 2,3~d. O portão vale igual para o modelo e para as linhas de base.}
+
+\campo{Modelos} Três variantes de LightGBM sobre o mesmo insumo: \emph{direto}
+prevê o nível do preço; \emph{residual} prevê a correção da ingênua;
+\emph{duas partes} classifica se a meia-hora cai no piso e regride o resto, com
+a regra de decisão que minimiza MAE sob esse modelo. Uma configuração de
+hiperparâmetro, uma semente.
+
+\section*{Resultados}
+
+\vspace{0.2em}
+\tabfont
+% A coluna de IC leva $[-176{,}4;-136{,}1]$, que estoura 1,75 cm com o
+% `\tabcolsep` padrao. Reduzir a separacao paga a largura sem baixar o corpo.
+\begingroup\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.05cm}rrr>{\rag\arraybackslash}p{2.05cm}@{}}
+\toprule
+\cab{Preditor} & \cab{MAE} & \cab{RMSE} & \cab{Hab.} & \cab{IC 95\%} \\
+\midrule
+Ingênua D$-$1    &  52,70 & 129,33 & $-7{,}36$   & $[-14{,}1;-1{,}2]$ \\
+Ingênua D$-$7    &  69,82 & 140,19 & $-42{,}24$  & $[-53{,}7;-32{,}0]$ \\
+\textbf{Ingênua sazonal} & \textbf{49,09} & \textbf{122,02} & --- & --- \\
+Climatologia     & 125,18 & 162,89 & $-155{,}02$ & $[-176{,}4;-136{,}1]$ \\
+LGBM direto      &  51,32 & 103,38 & $-4{,}54$   & $[-12{,}4;+2{,}7]$ \\
+LGBM residual    &  50,04 & 115,42 & $-1{,}94$   & $[-6{,}5;+2{,}3]$ \\
+\textbf{LGBM duas partes} & \textbf{48,71} & \textbf{102,31} & $\mathbf{+0{,}76}$ & $[-6{,}7;+7{,}7]$ \\
+Oráculo de nível &  40,42 & 112,69 & $+17{,}66$  & $[+15{,}3;+20{,}2]$ \\
+\bottomrule
+\end{tabular}
+\endgroup
+\notas{MAE e RMSE em R\$/MWh. Habilidade em \% sobre a ingênua sazonal, na
+métrica MAE. Habilidade em RMSE: duas partes $+16{,}15$, direto $+15{,}27$,
+residual $+5{,}41$. Climatologia é a média por subsistema e meia-hora,
+calculada no treino de cada dobra. O oráculo recebe a mediana verdadeira do
+resíduo do dia: não é previsão, é controle positivo.}
+
+\vspace{0.4em}
+Os três modelos têm intervalo cruzando zero em MAE. Em RMSE os três batem a
+ingênua, o de duas partes por 16,2\%.
+
+\campo{Horizonte} O alvo deslocado para D$+$1, com o portão inteiro deslocado
+junto.
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{1.3cm}rrr>{\rag\arraybackslash}p{1.85cm}@{}}
+\toprule
+\cab{Horiz.} & \cab{Modelo} & \cab{Ingênua} & \cab{Hab.} & \cab{IC 95\%} \\
+\midrule
+D     & 48,71 & 49,09 & $+0{,}76$  & $[-6{,}7;+7{,}7]$ \\
+D$+$1 & 62,68 & 74,89 & $\mathbf{+16{,}31}$ & $[+10{,}6;+21{,}9]$ \\
+\bottomrule
+\end{tabular}
+\notas{MAE em R\$/MWh, modelo de duas partes. Degradação de um dia para o
+outro: ingênua $+25{,}80$, modelo $+13{,}96$. O erro cresce nos dois termos, o
+que o controle de horizonte exige.}
+
+\campo{Comportamento no piso} 14,0\% das linhas de teste têm o alvo em
+CMO $\leq 1$~R\$/MWh.
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.5cm}rrr@{}}
+\toprule
+\cab{Preditor} & \cab{No piso} & \cab{Md.\ ali} & \cab{Md.\ fora} \\
+\midrule
+Ingênua sazonal  & 71,6\% &  0,00 &  15,10 \\
+LGBM direto      & 19,2\% & 16,65 &  22,86 \\
+LGBM residual    & 18,6\% & 13,06 &  19,48 \\
+LGBM duas partes & 66,0\% &  0,01 &  22,03 \\
+Climatologia     &  0,0\% & 97,01 & 127,38 \\
+\bottomrule
+\end{tabular}
+\notas{\emph{No piso}: fração das linhas de alvo no piso em que o preditor
+também prevê $\leq 1$~R\$/MWh. \emph{Md.}: erro absoluto mediano, R\$/MWh,
+dentro e fora dessas linhas.}
+
+\vspace{0.4em}
+A ingênua é um caminho realizado e acerta o piso exatamente. Um regressor único
+devolve a mediana condicional, que quase nunca cai em zero. Modelar o piso
+explicitamente move a habilidade de $-4{,}54$\% para $+0{,}76$\%.
+
+% Rotulo e tabela nao podem cair em colunas diferentes: o `\campo` sozinho no
+% pe da coluna vira titulo orfao. A minipage os mantem juntos.
+\begin{minipage}{\linewidth}
+\campo{Quantis do erro absoluto}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.15cm}rrrrr@{}}
+\toprule
+\cab{Preditor} & \cab{q25} & \cab{q50} & \cab{q75} & \cab{q90} & \cab{q95} \\
+\midrule
+Ingênua sazonal  & \textbf{2,25} & \textbf{12,10} & \textbf{53,50} & 157,6 & 222,5 \\
+LGBM direto      & 7,73 & 22,06 & 69,94 & \textbf{136,5} & \textbf{179,9} \\
+LGBM duas partes & 5,13 & 19,78 & 63,68 & 131,8 & 184,9 \\
+\bottomrule
+\end{tabular}
+\notas{R\$/MWh. q99: ingênua 346,7; direto 311,3; duas partes 315,7. Fração de
+linhas em que o preditor erra menos que a ingênua: direto 39,1\%, residual
+41,3\%, duas partes 40,7\%, oráculo 61,1\%.}
+\end{minipage}
+
+\vspace{0.4em}
+A ingênua erra menos nos quantis baixos e mais nos altos. MAE pesa toda linha
+igual; RMSE pesa a cauda.
+
+\campo{Nível do dia e forma dentro do dia}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.5cm}rrr@{}}
+\toprule
+\cab{Preditor} & \cab{Completo} & \cab{Nível} & \cab{Forma} \\
+\midrule
+Ingênua sazonal  & 49,09 & 40,21 & 48,64 \\
+LGBM direto      & 51,32 & 37,80 & 42,45 \\
+LGBM duas partes & \textbf{48,71} & \textbf{35,52} & 42,65 \\
+Oráculo de nível & 40,42 & 23,57 & 48,64 \\
+\bottomrule
+\end{tabular}
+\notas{MAE em R\$/MWh. \emph{Nível}: média do dia por subsistema.
+\emph{Forma}: desvio de cada meia-hora em torno dessa média. O nível responde
+por 39,3\% da variância do CMO no conjunto dos quatro subsistemas e de 32,2\% a
+52,4\% dentro de cada um, na janela de teste.}
+
+\vspace{0.4em}
+Os modelos batem a ingênua nas duas partes medidas em separado e empatam no
+total. MAE não é aditiva sobre a separação: o erro de uma linha é a soma dos
+dois, e $|a+b|$ não é $|a|+|b|$.
+
+\campo{Dispersão} Habilidade do modelo de duas partes, por subsistema:
+S $+3{,}61$\%, SE $+1{,}49$\%, NE $+0{,}89$\%, N $-2{,}68$\%. Por mês de teste,
+de $-68{,}2$\% (dez/2025) a $+38{,}7$\% (jan/2026), acima de zero em 10 dos 15
+meses. Dois meses carregam o agregado.
+
+\section*{Controles}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{0.5cm}>{\rag\arraybackslash}p{3.1cm}>{\rag\arraybackslash}p{3.6cm}@{}}
+\toprule
+& \cab{Controle} & \cab{Resultado} \\
+\midrule
+C1 & Grade, chave única e dias ausentes preservados &
+     0 duplicatas, 0 dias incompletos, 24 ausentes \\
+C2 & Faixa física do alvo &
+     0 fora de faixa, $-39{,}24$ a \num{4870.95} \\
+C3 & Portão de informação &
+     40 dias, \num{307200} células, 0 divergências \\
+C4 & Cobertura de feature $\geq$ 97\% &
+     pior 99,15\% (\texttt{cmo\_l2}) \\
+C5 & Ordem das linhas de base &
+     43,93 $<$ 136,40 e 42,47 $\leq$ 61,75 \\
+C6 & Subsistemas são séries distintas &
+     correlação máxima 0,933 \\
+\bottomrule
+\end{tabular}
+\notas{Os seis são bloqueantes e os seis passaram. O C3 apaga das fontes tudo o
+que está depois do instante de emissão e reconstrói as features com a mesma
+função do passo~1, exigindo valor idêntico célula a célula. Nulo por permutação
+de feature no treino, com alvo intacto: habilidade $-206{,}91$\%.}
+
+\campo{O C1 reprovou uma vez} O limiar estava em 8, o número de buracos na
+fonte; o painel perde 24 dias. A aritmética não estava medida.
+
+\campo{O controle positivo custou uma correção} O oráculo deslocado pela média
+do resíduo do dia entrega $+0{,}9$\% com intervalo cruzando zero. A perda é MAE
+e a constante que a minimiza é a mediana. Trocada, $+17{,}66$\% com intervalo
+inteiro acima de zero, sobre o mesmo dado e o mesmo dia.
+
+\section*{Ablação}
+
+\vspace{0.2em}
+% Tabela e nota juntas: a nota define `Canon.` e `1a cor.`, e lida uma coluna
+% depois da tabela ela nao serve para nada.
+\begin{minipage}{\linewidth}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.55cm}rrrr@{}}
+\toprule
+\cab{Conjunto} & \cab{$n$} & \cab{Canôn.} & \cab{1ª cor.} & \cab{Dif.} \\
+\midrule
+A0 calendário + CMO próprio      & 20 & $-4{,}87$ & $-3{,}66$ & 1,21 \\
+A1 + CMO dos outros subsistemas  & 28 & $-1{,}01$ & $-1{,}84$ & 0,83 \\
+A2 + carga e intercâmbio         & 36 & $-9{,}50$ & $-2{,}69$ & \textbf{6,81} \\
+A3 + hidrologia (completo)       & 41 & $\mathbf{+0{,}76}$ & $+4{,}40$ & 3,64 \\
+\bottomrule
+\end{tabular}
+\notas{Habilidade em \%, modelo de duas partes, mesma origem móvel e mesma
+recalibração do resultado principal. \emph{Canôn.}: colunas na ordem do painel.
+\emph{1ª cor.}: colunas na ordem em que a ablação as concatenava. As duas
+corridas usam o mesmo conjunto de features e a mesma semente. \emph{Dif.} em
+pontos percentuais.}
+\end{minipage}
+
+\vspace{0.4em}
+Com \texttt{colsample\_bytree} menor que 1 o LightGBM sorteia coluna por
+posição: permutar as mesmas colunas equivale a trocar de semente. Na ordem
+canônica o A3 reproduz o resultado principal exatamente, $+0{,}76$\% contra
+$+0{,}76$\%, o que fecha a explicação.
+
+\begin{objecao}
+As diferenças entre degraus vizinhos --- 3,86, $-8{,}49$ e 10,26 pontos --- são
+da mesma ordem que a variação induzida só por permutar coluna, de 0,83 a 6,81.
+Com uma semente, a ablação mede variância de ajuste junto com efeito de família
+e não separa as duas. \textbf{Nenhuma afirmação sobre qual fonte carrega a
+habilidade se sustenta com este número de sementes}, e esta nota não faz
+nenhuma. A faixa inteira cabe dentro do intervalo de 14 pontos do resultado
+principal.
+\end{objecao}
+
+\section*{Limitações}
+
+\campo{O portão é um ponto por fonte} Os arquivos do ONS não trazem carimbo de
+publicação. A data de modificação do arquivo em disco é a única evidência
+disponível, e o portão inteiro repousa sobre cinco observações.
+
+\campo{O CMO é saída de modelo} É o valor que o modelo de despacho do operador
+produz, não medição ex-post. Não há segunda fonte para conferir contra, e
+nenhum controle testa se o número publicado é o custo marginal realizado.
+
+\campo{Sem feriado} Não há tabela de feriado no repositório. O efeito cai
+dentro do erro dos dois termos, e a ingênua sazonal é a base que mais sofre com
+isso.
+
+\campo{Sem preço de liquidação} O CMO não é o PLD. A CCEE devolve HTTP 403 por
+três vias distintas, medido em 06/09/2026. Nada aqui é afirmação sobre preço de
+liquidação.
+
+\campo{Grão de subsistema} O ONS não publica CMO nodal. O comparador direto da
+literatura, nó a nó, não é reproduzível com este dado: objeto de comparação
+inexistente, não validação pendente.
+
+\campo{Uma configuração e uma semente} O intervalo cobre variação entre dias do
+teste. Não cobre variância de ajuste, de semente, nem da data de corte entre
+treino e teste. A ablação dá uma medida parcial dessa variância.
+
+\campo{Custo} \num{864}~s de ajuste no resultado principal, 15 recalibrações.
+Recalibração diária, que a literatura de preço pede, exigiria 444 e não foi
+testada.
+
+\conclusao{A um dia, nenhum modelo se distingue da ingênua sazonal em MAE; a
+dois dias o modelo ganha 16,31\% com intervalo inteiro acima de zero. O trunfo
+da ingênua é acertar o piso do CMO exatamente, e ele é perecível.}
+
+\section*{Artefatos}
+
+% Nome de arquivo em monoespacada nao quebra sozinho, e justificar a coluna
+% estreita da ficha deixa hbox subcheia em cada linha. Ragged aqui, e so aqui.
+\begin{ficha}
+  \item[Código] \raggedright \texttt{experiments/E-preco-cmo/}, cinco passos
+                numerados mais \texttt{\_comum.py}, \texttt{\_painel.py} e
+                \texttt{\_modelos\_comum.py}.
+  \item[Saídas] \raggedright \texttt{data/interim/E-preco-cmo/}:
+                \texttt{painel.parquet}, \texttt{janelas.json},
+                \texttt{controles.json}, \texttt{previsoes.parquet},
+                \texttt{resultado.json}, \texttt{decomposicao.json},
+                \texttt{ablacao.json}.
+  \item[Registro] \raggedright \texttt{TAREFAS.txt}, entrada F11, e
+                  \texttt{report/tarefas-dados.tex}, tarefa~11.
+\end{ficha}
+
+\end{document}

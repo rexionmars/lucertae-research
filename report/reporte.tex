@@ -1,0 +1,93 @@
+% !TEX program = lualatex
+% =====================================================================
+% Relatorio -- O corte de geracao fotovoltaica no SIN
+%
+% Um documento so, reunindo as doze analises sobre o corte de geracao
+% fotovoltaica no SIN. A forma e a de uma colecao tematica: cada
+% capitulo reune as analises que se completam.
+%
+% ESTRUTURA. Capitulo por bloco de analises que se completam, secao por
+% analise. A regra de agrupamento esta escrita no prefacio: analises
+% entram no mesmo capitulo quando uma fecha lacuna da outra, e nao por
+% compartilharem fonte de dado.
+%
+% FIGURAS. As doze figuras foram compostas a 183 mm e entram em
+% `figure*`, que atravessa as duas colunas: a mancha tem 17,2 cm e a
+% reducao e de 6%. Em coluna de 8,25 cm nenhum painel seria legivel.
+%
+% CLASSE. `book` em duas colunas. O `\part` agrupa: seis partes cabem
+% num sumario que o leitor percorre antes de procurar pelo titulo. O
+% `\frontmatter` numera o pre-textual em romano, de modo que
+% acrescentar pagina ao sumario nao renumera o corpo.
+%
+% MEDIDAS DA MANCHA: comentario de cabecalho do `estilo-reporte.sty`.
+%
+% Compilar, da raiz do repositorio:
+%   make reporte
+% Ou daqui:
+%   latexmk -pdf reporte.tex
+% O latexmk vive em /Library/TeX/texbin, fora do PATH padrao.
+%
+% Antes de fechar, rodar os diagnosticos da secao 13 do guia de escrita
+% da linha: travessao solto = 0, termos proibidos = 0, mediana de frase
+% entre 10 e 30, log sem Overfull nem referencia pendente. O README
+% deste diretorio traz os comandos.
+% =====================================================================
+
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+% A pagina termina onde o texto termina. Com tabela curta em coluna
+% estreita, o `\flushbottom` da classe estica a folga entre paragrafos
+% ate o rodape e desfaz o ritmo vertical.
+\raggedbottom
+
+\hyphenation{sen-so-ria-men-to fo-to-vol-tai-ca fo-to-vol-tai-co
+             sub-sis-te-ma in-fle-xi-bi-li-da-de ir-ra-di-an-cia
+             de-tec-ta-bi-li-da-de mul-ti-pli-ci-da-de}
+
+\begin{document}
+
+\frontmatter
+\onecolumn
+\input{capitulos/00-rosto.tex}
+\twocolumn
+\tableofcontents
+\input{capitulos/00-prefacio.tex}
+
+\mainmatter
+
+\part{A proposta e o que a redefiniu}
+\input{capitulos/01-ancora.tex}
+\input{capitulos/02-regra.tex}
+
+\part{Observabilidade por satélite}
+\input{capitulos/03-satelite.tex}
+
+\part{Restrição ou recurso}
+\input{capitulos/04-caso.tex}
+\input{capitulos/05-calibracao.tex}
+
+\part{Despacho e alocação do corte}
+\input{capitulos/06-despacho.tex}
+\input{capitulos/07-rede.tex}
+\input{capitulos/08-aplicacao.tex}
+
+\part{Síntese}
+\input{capitulos/15-o-que-se-estabelece.tex}
+\input{capitulos/16-o-que-falta.tex}
+
+\appendix
+\onecolumn
+\input{apendices/A-inventario.tex}
+\input{apendices/B-procedencia.tex}
+
+\input{capitulos/99-referencias.tex}
+
+\end{document}

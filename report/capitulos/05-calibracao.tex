@@ -1,0 +1,152 @@
+\chapter{Controle climático e calibração da referência}
+\label{cap:calibracao}
+
+O capítulo anterior mede uma queda de fator de capacidade sem separar restrição
+de variação do recurso. A irradiância medida sobre cada usina faz essa
+separação, e a separação depende de um pressuposto sobre o ano de base.
+
+\section{Restrição ou recurso}
+\label{sec:fig5}
+
+\begin{ficha}
+  \item[Janela]      2023 a julho de 2026
+  \item[Amostra]     meses com cobertura climática
+  \item[Unidade]     conjunto por mês
+  \item[Fonte]       ONS; NASA POWER, irradiância diária no ponto da usina
+  \item[Teste]       nenhum: decomposição aritmética
+\end{ficha}
+
+Com a irradiância global horizontal diária $H$ sobre a usina, a razão de
+desempenho divide a energia gerada por kW instalado pelo recurso disponível:
+
+\[ PR = \frac{FC \cdot 24\,\mathrm{h}}{H} \]
+
+Se a queda do fator de capacidade viesse de menor irradiância, $PR$ permaneceria
+estável.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig5_controle_climatico.pdf}
+\caption{\textbf{Normalizada pela irradiância medida sobre a usina, a perda de
+Sol do Cerrado permanece; o recurso solar não a explica.}
+\textbf{a}, Razão de desempenho mensal, definida como energia gerada por kW
+instalado dividida pela irradiância global horizontal diária. O tracejado
+horizontal marca a média de cada ano.
+\textbf{b}, Irradiância global horizontal mensal sobre cada usina, em linha
+cheia, e a mesma sob céu claro, em tracejado.
+\textbf{c}, Decomposição da queda do fator de capacidade de Sol do Cerrado entre
+2023 e 2025: observado em 2023, esperado em 2025 caso apenas a irradiância
+tivesse mudado, e observado em 2025.
+\textbf{d}, Fator de capacidade mensal contra irradiância mensal em Sol do
+Cerrado, por ano.}
+\label{fig:clima}
+\end{figure*}
+
+A irradiância sobre Jaíba caiu 2,8\% entre 2023 e 2025, e o fator de capacidade
+caiu 29,1\%. Escalando o fator de 2023 pela razão de irradiância, o esperado
+para 2025 seria 0,206, e o observado foi 0,150. Cerca de um décimo da queda é
+atribuível ao recurso. A razão de desempenho cai de 0,854 para 0,619 em Sol do
+Cerrado, enquanto o controle Três Marias 3 permanece em torno de 0,99 sem
+tendência.
+
+\conclusao{Nove décimos da queda do fator de capacidade não são atribuíveis à
+irradiância. A perda é de rede, e não de recurso.}
+
+Os meses de 2025 não estão sobre a curva de 2023 em posição de menor
+irradiância. Eles estão sobre uma curva mais baixa. O deslocamento é consistente
+com perda independente do recurso.
+
+\campo{Uma conclusão secundária que não se sustentou} O déficit não explicado
+pela irradiância é de 0,056 em fator de capacidade, e o corte apurado pelo ONS
+equivale a 0,147, ou 2,6 vezes mais. A diferença foi interpretada como indício
+de que a geração de referência do operador superestima o contrafactual. A
+interpretação pressupõe que 2023 fosse um ano sem restrição. A
+seção~\ref{sec:fig6} mostra que não era.
+
+\begin{objecao}
+A irradiância vem de reanálise, e não de piranômetro: NASA POWER combina MERRA-2
+com satélite em célula de 0,5 por 0,625 grau. A grandeza é irradiância
+horizontal, e os módulos não são horizontais. A razão de desempenho é indicador
+relativo dentro de cada usina, e não a razão de norma IEC. A
+temperatura não é modelada e o contrafactual é linear.
+\end{objecao}
+
+\campo{Erro de variável derivada de sensoriamento} A irradiância entra como
+denominador. Proctor, Carleton e Sum \cite{proctor2023} mostram que uma variável
+assim enviesa o ponto e o erro padrão de uma inferência a jusante, mesmo com
+erro de medida pequeno. Eles recomendam tratá-la como distribuição, por
+imputação múltipla. Alix-García e Millimet \cite{alixgarcia2023} acrescentam que o erro de
+produto de satélite raramente é clássico. Nenhuma das duas correções foi
+aplicada. A diferença medida é grande o bastante para sobreviver a erro
+moderado, e o intervalo em torno dela é mais estreito do que deveria ser.
+
+\section{Calibração da geração de referência}
+\label{sec:fig6}
+
+\begin{ficha}
+  \item[Janela]      abril de 2024 a julho de 2026
+  \item[Amostra]     74 usinas com 30 dias limpos ou mais
+  \item[Unidade]     usina; dia-usina na calibração
+  \item[Fonte]       ONS; NASA POWER
+  \item[Teste]       Spearman sobre 2 covariáveis
+\end{ficha}
+
+Para cada usina calibra-se uma razão de desempenho nos dias sem restrição da
+própria usina, com fração cortada abaixo de 1\%. Compara-se então o potencial
+implicado pelo ONS, igual à geração verificada mais a cortada, com o potencial
+previsto pela irradiância local sob aquela razão calibrada.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/fig6_vies_referencia.pdf}
+\caption{\textbf{A geração de referência do ONS é bem calibrada; o viés aparente
+da seção anterior vinha do contrafactual, e não do operador.}
+\textbf{a}, Distribuição do viés mediano por usina, definido como a razão entre
+o potencial implicado pelo ONS e o potencial previsto pela irradiância local sob
+a razão de desempenho calibrada nos dias sem restrição da própria usina. O
+tracejado em 1 marca ausência de viés.
+\textbf{b}, Viés contra a intensidade mediana de corte nos dias restritos.
+\textbf{c}, Validação da calibração: fator de capacidade contra irradiância nos
+dias sem restrição de Sol do Cerrado, com a reta ajustada pela razão de
+desempenho limpa.
+\textbf{d}, Razão de desempenho anual de Sol do Cerrado contra o desempenho
+limpo calibrado. O rótulo interno indica o corte implícito de cada ano.}
+\label{fig:calibracao}
+\end{figure*}
+
+O viés mediano por usina é de 1,02, com metade das usinas entre 0,98 e 1,06.
+Nenhuma das 74 usinas calibradas passa de 1,5, e 26 ficam abaixo de 1, o que
+torna a referência conservadora para um terço delas. No agregado energético dos
+dias restritos, o corte apurado é 1,03 vezes o implicado pela irradiância. A
+associação entre viés e intensidade de corte é nula, o que descarta a falha de
+maior consequência.
+
+\conclusao{A geração de referência do ONS não apresenta viés detectável, e não
+se degrada onde o corte é mais intenso.}
+
+\campo{A revisão} O desempenho limpo de Sol do Cerrado, calibrado em 279 dias
+sem restrição, é de 0,931. Em 2023 a usina operou a 0,854, ou 8,3\% abaixo do
+seu próprio desempenho limpo. Aquele ano já era restrito, e não havia apuração
+pública. Ao usar 2023 como base, a seção~\ref{sec:fig5} mediu um déficit
+reduzido e concluiu de forma incorreta que o operador superestimava o corte.
+
+\campo{O que muda e o que permanece} A conclusão principal da
+seção~\ref{sec:fig5} permanece e sai reforçada. Contra o desempenho limpo, o
+corte implícito é de 33\% em 2025, e não de 26\%. A afirmação secundária sobre
+viés do operador é retirada. A taxa agregada da seção~\ref{sec:fig1} não requer
+correção, porque uma referência calibrada sustenta o agregado.
+
+\begin{objecao}
+Dias classificados como limpos podem não ser limpos. Como o resultado é ausência
+de viés, esse erro só o tornaria mais forte. Seis usinas ficaram de fora por não
+atingirem 30 dias limpos, e são as mais restritas, onde a referência é mais
+usada. A razão de desempenho limpa é constante por usina e herda qualquer viés
+sazonal dos dias de calibração.
+\end{objecao}
+
+\campo{Posição na literatura} A geração de referência do ONS é derivada de
+curvas de desempenho da própria usina, como descrevem Vieira et al.
+\cite{vieira2026}. Validá-la exige fonte independente. No lado eólico, Nascimento
+et al. \cite{silva2026} usam anemometria de SCADA. A verificação equivalente no
+lado solar, com irradiância de satélite, não foi localizada na literatura
+consultada, e a busca não foi sistemática.

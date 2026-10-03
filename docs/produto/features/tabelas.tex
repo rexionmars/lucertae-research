@@ -1,0 +1,199 @@
+% Gerado por features/gerar.py a partir de features/catalogo.csv. Não edite.
+\subsection*{BAS \textperiodcentered{} Base espacial da rede}
+\addcontentsline{toc}{subsection}{BAS \textperiodcentered{} Base espacial da rede}
+\label{cat:BAS}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{BAS-01} & Hierarquia elétrica georreferenciada & base & concessão, SE, alimentador, trafo, UC & BDGD (geodatabase anual, ODbL, 8 a 20 meses de defasagem) & 0 & ETL, grafo por pontos de conexão, normalização de unidades por distribuidora & navegar, selecionar & D & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{BAS-02} & Recortes administrativos e regulatórios & base & estado, município, setor censitário, conjunto elétrico & IBGE (malhas), ANEEL (conjuntos) & 0 & ETL & cruzar, filtrar & D T G & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{BAS-03} & Qualidade e cobertura de dados por entidade\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & todas & todas as fontes ingeridas & 0 & regras de completude e atualidade & lacuna de dados / acionar fonte, ressalvar camada & D T G C & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{BAS-04} & Correção de topologia e fase\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & UC agregada, trafo & medição inteligente (tensão), BDGD & 3 & correlação de séries de tensão, agrupamento & divergência cadastro $\times$ medição / corrigir cadastro & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{BAS-05} & Auditoria de plausibilidade do registro\newline{\color{black!55}\scriptsize depende: BAS-01} & insight & UC agregada, usina & BDGD, reanálise (NASA POWER, ERA5) & 0 & teto físico (modelo de recurso solar), regras & divergência modelo $\times$ registro / corrigir cadastro, fiscalizar & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{PER \textperiodcentered{} Perdas não técnicas}
+\addcontentsline{toc}{subsection}{PER \textperiodcentered{} Perdas não técnicas}
+\label{cat:PER}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{PER-01} & Perda estimada por transformador e alimentador\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trafo, alimentador & BDGD (energia do alimentador, perdas técnicas e não técnicas, energia por unidade), faturamento do cliente, medição no trafo quando houver & 0 & balanço energético (energia do alimentador -- soma das unidades -- técnica), técnica no OpenDSS, rateio hierárquico bayesiano entre trafos & anomalia espacial, mudança entre ciclos / selecionar alvos & D & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{PER-02} & Probabilidade de irregularidade (exibida agregada)\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & UC agregada por trafo & faturamento, cadastro, histórico de inspeções & 1 & gradient boosting com vizinhança, peso inverso da propensão de inspeção, PU learning com propensão (SAR) & concentração / compor alvos do plano & D & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{PER-03} & Energia recuperável estimada\newline{\color{black!55}\scriptsize depende: PER-01, PER-02} & camada & trafo, alimentador, plano & PER-01, PER-02, consumo & 1 & probabilidade $\times$ energia desviada estimada & ranking por valor / priorizar & D & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{PER-04} & Plano de inspeção com rotas\newline{\color{black!55}\scriptsize depende: PER-02, PER-03} & decisão & seleção & PER-02, PER-03, base operacional, restrição do usuário & 1 & team orienteering problem (OR-Tools) com fração exploratória sorteada e probabilidades registradas & aprovar e enviar ao campo & D & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{PER-05} & Avaliação do método por região (A/B)\newline{\color{black!55}\scriptsize depende: PER-04} & insight & região, lote & resultados de inspeção & 1 & teste A/B, precisão no topo da lista & desempenho do método / ajustar política de inspeção & D & \encaixe{2} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{PER-06} & Monitor de viés geográfico e socioeconômico\newline{\color{black!55}\scriptsize depende: PER-04} & insight & setor censitário, município & inspeções, IBGE & 1 & taxa de indicação $\times$ taxa confirmada por recorte & concentração injustificada / rever critérios & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{CAR \textperiodcentered{} Carga e demanda}
+\addcontentsline{toc}{subsection}{CAR \textperiodcentered{} Carga e demanda}
+\label{cat:CAR}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{CAR-01} & Carga prevista por subestação e alimentador (P10--P90)\newline{\color{black!55}\scriptsize depende: BAS-01, CLI-01} & camada & SE, alimentador & medição de SE e alimentador, previsão do tempo, calendário & 2 & gradient boosting quantílico ou TFT, reconciliação hierárquica (MinT) & tendência e limiar / programar operação & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CAR-02} & Carregamento previsto de transformadores\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trafo & BDGD (energia mensal e tipologia por unidade), curvas típicas CTR (ANEEL), medição no trafo quando houver & 0 & método regulatório (energia $\times$ curva típica no OpenDSS) calibrado em trafos medidos & limiar (sobrecarga) / remanejar, trocar trafo & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CAR-03} & Pico de demanda previsto\newline{\color{black!55}\scriptsize depende: CAR-01} & camada & alimentador, trafo & séries medidas & 2 & previsão probabilística de pico, foundation models de séries temporais & tendência e limiar / reforço, gestão de pico & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CAR-04} & Demanda espacializada (densidade de carga)\newline{\color{black!55}\scriptsize depende: BAS-02} & camada & setor censitário, grade & BDGD, IBGE, OSM ou footprints, luzes noturnas (NASA) & 0 & dasimétrico: consumo $\times$ edificações, população e luzes noturnas & concentração, mudança / planejar expansão & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CAR-05} & Sensibilidade climática da carga\newline{\color{black!55}\scriptsize depende: CAR-01} & camada & alimentador, SE & medição, reanálise, previsão do tempo & 2 & regressão carga $\times$ temperatura (curva em U) & limiar em onda de calor / preparar operação & D & \encaixe{2} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{CAR-06} & Crescimento de carga de longo prazo\newline{\color{black!55}\scriptsize depende: CAR-04} & camada & município, alimentador & consumo histórico, IBGE, EPE (PDE) & 0 & modelos estruturais com cenários & tendência / plano de expansão & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{CAR-07} & Perfis de consumo por área (agregados)\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trafo, setor censitário & medição inteligente ou faturamento & 3 & agrupamento de curvas de carga & mudança de perfil / tarifas, campanhas & D & \encaixe{2} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\textbf{CAR-08} & Carga prevista por submercado\newline{\color{black!55}\scriptsize depende: CLI-01} & camada & submercado & ONS (carga verificada e programada), previsão do tempo & 0 & gradient boosting ou TFT & tendência / contratação & C G & \encaixe{1} & \colorbox{fCond}{\scriptsize \textbf{cond}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{MMG \textperiodcentered{} MMGD e recursos distribuídos}
+\addcontentsline{toc}{subsection}{MMG \textperiodcentered{} MMGD e recursos distribuídos}
+\label{cat:MMG}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{MMG-01} & MMGD instalada por alimentador (normalizada)\newline{\color{black!55}\scriptsize depende: BAS-01} & contexto & alimentador, trafo & registro de MMGD da ANEEL (mensal), BDGD & 0 & junção registro $\times$ BDGD, normalização de unidades, conversão módulo (CC) para inversor (CA) & concentração & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{MMG-02} & Geração distribuída prevista (injeção)\newline{\color{black!55}\scriptsize depende: MMG-01, CLI-01} & camada & alimentador, SE & MMG-01, previsão do tempo, satélite, medição quando houver & 0 & irradiância prevista $\times$ capacidade instalada, calibrada & rampa, limiar de fluxo reverso / operar a rede & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{MMG-03} & Decomposição carga bruta $\times$ MMGD\newline{\color{black!55}\scriptsize depende: CAR-01, MMG-02} & camada & alimentador, SE & CAR-01, MMG-02 & 2 & carga líquida = bruta -- MMGD, modelos separados & curva do pato acentuada / planejar operação & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{MMG-04} & Crescimento previsto da MMGD\newline{\color{black!55}\scriptsize depende: MMG-01} & camada & alimentador, município & registro de MMGD da ANEEL, IBGE, PDE 2035 & 0 & Bass hierárquico com covariáveis espaciais, referência EPE 4MD (epe4md) & tendência / planejar reforço & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{MMG-05} & MMGD não cadastrada\newline{\color{black!55}\scriptsize depende: MMG-01} & insight & trafo, UC agregada & faturamento ou medição inteligente, imagens & 1 & anomalia no perfil de consumo, detecção em imagem de telhados & divergência modelo $\times$ registro / regularizar & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{MMG-06} & Capacidade de hospedagem por alimentador\newline{\color{black!55}\scriptsize depende: MMG-02, CAR-01} & camada & alimentador & modelo elétrico da BDGD, MMG-02, CAR-01 & 0 & surrogate de fluxo de potência de distribuição sobre cenários & limiar (sem folga) / aprovar ou negar conexões, reforçar & D G & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{MMG-07} & Risco de fluxo reverso e sobretensão\newline{\color{black!55}\scriptsize depende: MMG-02, CAR-02} & insight & alimentador, trafo & MMG-02, CAR-02 & 0 & limiar de injeção prevista sobre carga mínima & limiar / ajustar tap, reforçar & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{MMG-08} & Adoção prevista de veículos elétricos\newline{\color{black!55}\scriptsize depende: CAR-06} & camada & município, alimentador & frota por município (Senatran), IBGE & 0 & modelo de difusão com renda e frota & tendência / planejar reforço & D & \encaixe{3} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{RED \textperiodcentered{} Operação e planejamento da rede}
+\addcontentsline{toc}{subsection}{RED \textperiodcentered{} Operação e planejamento da rede}
+\label{cat:RED}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{RED-01} & Pontos quentes de carregamento previstos\newline{\color{black!55}\scriptsize depende: CAR-01, CAR-02} & camada & alimentador, trafo, SE & BDGD convertida para OpenDSS, CAR-01, CAR-02 & 0 & quantis do pico agregados pela topologia, fluxo confirmado no OpenDSS & limiar / remanejar carga & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{RED-02} & Violação de tensão prevista\newline{\color{black!55}\scriptsize depende: CAR-01, MMG-02} & camada & alimentador, barra & modelo elétrico da BDGD (bdgd2opendss), carga e MMGD previstas & 0 & surrogate de fluxo de potência (GNN), verificado por solver & limiar / ajustar regulação & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{RED-03} & Priorização de obras de reforço\newline{\color{black!55}\scriptsize depende: RED-01, CAR-06, MMG-06, CON-01, CON-02} & decisão & alimentador, SE & RED-01, CAR-06, MMG-06 & 1 & otimização sob orçamento: risco $\times$ custo & plano de investimentos & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{RED-04} & Restrição e curtailment por região & camada & SE, barra & ONS constrained-off por usina (semi-horário, com razão e ponto de conexão) & 0 & modelo de probabilidade de restrição por região & concentração / localizar nova geração & G T & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{RED-05} & Recomendação de reconfiguração\newline{\color{black!55}\scriptsize depende: RED-02} & decisão & alimentador & modelo elétrico, carga prevista & 2 & GNN e otimização, verificado por solver & chaveamento & D & \encaixe{2} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\textbf{RED-06} & Triagem de contingências N-1 (transmissão)\newline{\color{black!55}\scriptsize depende: RED-02} & camada & linha, SE & modelo da rede do cliente, previsões & 2 & surrogate GNN com confirmação por fluxo de potência completo & limiar / ações corretivas & T & \encaixe{2} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{ATV \textperiodcentered{} Ativos e manutenção}
+\addcontentsline{toc}{subsection}{ATV \textperiodcentered{} Ativos e manutenção}
+\label{cat:ATV}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{ATV-01} & Índice de saúde de transformadores de potência\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trafo de potência (SE) & laudos de óleo (DGA), ensaios, carregamento & 1 & gradient boosting sobre gases dissolvidos, carregamento e idade & mudança, limiar / inspecionar, manter & D T & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{ATV-02} & Risco de falha por equipamento\newline{\color{black!55}\scriptsize depende: ATV-05} & camada & equipamento, alimentador & BDGD, interrupções por evento (ANEEL), ordens de serviço do cliente, clima & 0 & random survival forest, contagem por km & concentração / manutenção preventiva & D & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{ATV-03} & Vegetação próxima à rede\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trecho de alimentador, linha & altura de dossel (Lang 10 m, Meta 1 m), Sentinel-2, LiDAR do cliente & 0 & mapas globais de altura de dossel, segmentação e regressão de altura & concentração / programa de poda & D T & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{ATV-04} & Defeitos em imagens de inspeção & camada & estrutura, equipamento & imagens de drone & 1 & detecção de objetos (YOLO, DETR) & concentração / ordem de serviço & D T G & \encaixe{3} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\textbf{ATV-05} & Estruturação de ordens de serviço e causas & base & equipamento, alimentador & ordens de serviço em texto & 1 & extração com modelo de linguagem & concentração de causa & D T & \encaixe{2} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{ATV-06} & Vida útil remanescente e plano de manutenção\newline{\color{black!55}\scriptsize depende: ATV-01, ATV-02} & decisão & equipamento & ATV-01, ATV-02 & 1 & sobrevivência e otimização sob orçamento e equipes & plano de manutenção & D T & \encaixe{3} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{CON \textperiodcentered{} Continuidade e qualidade}
+\addcontentsline{toc}{subsection}{CON \textperiodcentered{} Continuidade e qualidade}
+\label{cat:CON}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{CON-01} & DEC e FEC previstos por conjunto\newline{\color{black!55}\scriptsize depende: BAS-02} & camada & conjunto elétrico & DEC e FEC por conjunto (ANEEL), interrupções por evento com código do alimentador (ANEEL, desde 2017), clima & 0 & séries temporais com clima & limiar contra meta regulatória / ações de melhoria & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CON-02} & Risco de violação de DIC e FIC (compensação)\newline{\color{black!55}\scriptsize depende: CON-01} & camada & alimentador, trafo (agregado) & DIC e FIC mensais por unidade na BDGD, interrupções por evento (ANEEL), TUSD & 0 & simulação de DIC, FIC e DMIC por unidade e regras de compensação do PRODIST & ranking por valor / priorizar ações & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CON-03} & Risco de interrupção por evento climático\newline{\color{black!55}\scriptsize depende: CLI-01, CLI-03, ATV-03} & camada & trecho de alimentador, linha & interrupções por evento com causa (ANEEL), previsão do tempo, raios (GLM aberto ou BrasilDAT), ATV-03 & 0 & clima previsto $\times$ vulnerabilidade (vegetação, idade) & limiar / pré-posicionar equipes & D T & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{CON-04} & Localização provável de falta\newline{\color{black!55}\scriptsize depende: BAS-01} & camada & trecho de alimentador & eventos de religadores, medição inteligente, chamadas & 3 & classificação sobre religadores, medição e chamadas & despachar equipe & D & \encaixe{3} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{GER \textperiodcentered{} Geração renovável}
+\addcontentsline{toc}{subsection}{GER \textperiodcentered{} Geração renovável}
+\label{cat:GER}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{GER-01} & Geração prevista por parque (P10--P90)\newline{\color{black!55}\scriptsize depende: CLI-01} & camada & parque & geração por usina do ONS (pública), SCADA do parque, previsão do tempo & 0 & gradient boosting ou TFT sobre previsão do tempo, zero-shot no onboarding & tendência / programação e declaração & G C & \encaixe{2} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{GER-02} & Alertas de rampa\newline{\color{black!55}\scriptsize depende: GER-01} & insight & parque, região & GER-01 & 1 & limiar na trajetória prevista & tendência e limiar / ajustar oferta & G & \encaixe{2} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{GER-03} & Nowcasting por satélite (0 a 6 h)\newline{\color{black!55}\scriptsize depende: CLI-02} & camada & parque, região & GOES-19 & 0 & U-Net sobre índice de nuvem, difusão latente (SHADECast) & mudança / ajuste intradiário & G & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{GER-04} & Curtailment detectado e marcado\newline{\color{black!55}\scriptsize depende: GER-01} & camada & parque & ONS constrained-off por usina, SCADA & 0 & regras e modelo de potência disponível & concentração / contestar, limpar treino & G & \encaixe{2} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{GER-05} & Desempenho real $\times$ esperado\newline{\color{black!55}\scriptsize depende: GER-01} & insight & parque, turbina, bloco solar & SCADA, recurso & 1 & modelo de comportamento normal & divergência modelo $\times$ registro / inspecionar & G & \encaixe{2} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{GER-06} & Saúde de turbinas & camada & turbina & SCADA de turbina & 1 & modelo de comportamento normal sobre temperaturas e vibração & mudança / manutenção & G & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\textbf{GER-07} & Sujidade e programação de limpeza solar\newline{\color{black!55}\scriptsize depende: GER-05} & decisão & parque, bloco solar & SCADA, chuva & 1 & perda por sujidade estimada $\times$ custo de limpeza & limiar / programar limpeza & G & \encaixe{2} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\textbf{GER-08} & Geração agregada prevista por submercado\newline{\color{black!55}\scriptsize depende: GER-01} & camada & submercado & GER-01, ONS & 0 & agregação de previsões & tendência / posição comercial & C & \encaixe{1} & \colorbox{fCond}{\scriptsize \textbf{cond}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{MER \textperiodcentered{} Mercado e preço}
+\addcontentsline{toc}{subsection}{MER \textperiodcentered{} Mercado e preço}
+\label{cat:MER}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{MER-01} & PLD previsto por submercado (quantis)\newline{\color{black!55}\scriptsize depende: CAR-08, GER-08} & camada & submercado & CCEE PLD horário (CSV anual, CC-BY), decks NEWAVE/DECOMP/DESSEM, ONS & 0 & gradient boosting ou emulação do DESSEM & tendência / posição comercial & C G & \encaixe{1} & \colorbox{fCond}{\scriptsize \textbf{cond}} \\
+\textbf{MER-02} & Cenários conjuntos de geração, carga e preço\newline{\color{black!55}\scriptsize depende: MER-01, CAR-08, GER-01} & camada & submercado, parque & GER-01, CAR-08, MER-01 & 0 & cópulas sobre previsões marginais & análise de risco & C G & \encaixe{1} & \colorbox{fCond}{\scriptsize \textbf{cond}} \\
+\textbf{MER-03} & Otimização de oferta e despacho de baterias\newline{\color{black!55}\scriptsize depende: MER-02} & decisão & parque, bateria & MER-02 & 1 & otimização estocástica sobre cenários & oferta, despacho & G C & \encaixe{1} & \colorbox{fCond}{\scriptsize \textbf{cond}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{CLI \textperiodcentered{} Contexto climático}
+\addcontentsline{toc}{subsection}{CLI \textperiodcentered{} Contexto climático}
+\label{cat:CLI}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{CLI-01} & Tempo previsto & contexto & grade & ECMWF Open Data (CC-BY), GFS, CPTEC/INPE, INMET & 0 & previsão numérica do tempo com pós-processamento por entidade & -- & D T G C & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CLI-02} & Satélite e radar observados & contexto & grade & GOES-19 (ABI), radar REDEMET e CEMADEN & 0 & nowcasting de precipitação (pysteps) & -- & D T G & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{CLI-03} & Raios e eventos severos & contexto & grade & BrasilDAT (ELAT/INPE, sob contrato) ou GLM do GOES-19 (aberto) & 0 & -- & -- & D T & \encaixe{3} & \colorbox{fV3}{\scriptsize \textbf{V3}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{DRE \textperiodcentered{} Resposta da demanda e consumidor}
+\addcontentsline{toc}{subsection}{DRE \textperiodcentered{} Resposta da demanda e consumidor}
+\label{cat:DRE}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{DRE-01} & Alvos de resposta da demanda por alimentador\newline{\color{black!55}\scriptsize depende: CAR-01, RED-01} & decisão & alimentador & medição inteligente, contratos do programa & 3 & baseline contrafactual e previsão de carga & limiar de carregamento / acionar programa & D & \encaixe{3} & \colorbox{fV4}{\scriptsize \textbf{V4}} \\
+\textbf{DRE-02} & Desagregação de consumo (NILM) & fora & UC & medição de alta frequência & 3 & seq2point & -- & I & \encaixe{1} & \colorbox{fFora}{\scriptsize \textbf{fora}} \\
+\textbf{DRE-03} & Recomendação tarifária e de eficiência & fora & UC & medição, tarifas & 3 & previsão e recomendação & -- & I & \encaixe{1} & \colorbox{fFora}{\scriptsize \textbf{fora}} \\
+\bottomrule
+\end{longtable}}
+
+\subsection*{ENG \textperiodcentered{} Engine de análise e modelos}
+\addcontentsline{toc}{subsection}{ENG \textperiodcentered{} Engine de análise e modelos}
+\label{cat:ENG}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}P{1.35cm}P{4.1cm}P{1.3cm}P{3.1cm}P{3.7cm}C{0.6cm}P{3.6cm}P{3.3cm}P{1.1cm}P{0.9cm}P{1.1cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Feature} & \textbf{Tipo} & \textbf{Entidade} & \textbf{Dados} & \textbf{Nív.} & \textbf{Modelo} & \textbf{Insight / decisão} & \textbf{Cliente} & \textbf{Mapa} & \textbf{Fase} \\
+\midrule\endhead
+\textbf{ENG-01} & Feed de insights consolidado & insight & hierarquia inteira & todas as camadas & 0 & LISA e Getis-Ord com FDR, pontos de mudança, pontuação impacto $\times$ significância, consolidação & todos os detectores / seguir insight & D T G C & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{ENG-02} & Explicação por entidade & camada & todas & modelos & 0 & importância de variáveis (SHAP) & -- & D T G C & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{ENG-03} & Erro dos modelos por entidade & camada & todas & realizados & 1 & previsto $\times$ realizado (nMAE, CRPS, precisão no topo) & desempenho do modelo / recalibrar, desconfiar & D T G C & \encaixe{3} & \colorbox{fMVP}{\scriptsize \textcolor{white}{\textbf{MVP}}} \\
+\textbf{ENG-04} & Deriva de dados por região & insight & todas & entradas dos modelos & 1 & testes de duas amostras (KS, PSI, MMD) com tamanho de efeito e FDR & mudança / retreinar & D T G C & \encaixe{2} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{ENG-05} & Simulação de cenário & decisão & seleção & camadas & 0 & modelos com entradas alteradas & comparar alternativas & D & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\textbf{ENG-06} & Pergunta em texto livre\newline{\color{black!55}\scriptsize depende: ENG-01} & decisão & seleção & camadas e insights & 0 & modelo de linguagem orquestrando consultas, números vêm da engine & -- & D T G C & \encaixe{3} & \colorbox{fV2}{\scriptsize \textcolor{white}{\textbf{V2}}} \\
+\bottomrule
+\end{longtable}}
+

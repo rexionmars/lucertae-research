@@ -1,0 +1,1273 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,landscape,top=12mm,bottom=12mm,left=13mm,right=13mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx,xcolor,amsmath,microtype,booktabs}
+\usepackage[hidelinks]{hyperref}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\definecolor{tinta}{HTML}{272727}
+\definecolor{cinza}{HTML}{4D4D4D}
+\definecolor{claro}{HTML}{767676}
+\definecolor{vermelho}{HTML}{B64342}
+\definecolor{azul}{HTML}{0F4D92}
+\definecolor{teal}{HTML}{42949E}
+\color{tinta}
+
+% cabeçalho de página de análise
+\newcommand{\cab}[3]{%
+  {\color{claro}\footnotesize\textsf{#1}}\\[-2pt]
+  {\LARGE\textbf{#2}}\\[2pt]
+  {\color{cinza}\small #3}\par\vspace{4pt}
+  {\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{5pt}}
+
+% rótulo de bloco no painel de texto
+\newcommand{\bloco}[1]{\vspace{2pt}{\color{vermelho}\footnotesize\textbf{#1}}\par\vspace{-2pt}}
+\newcommand{\ressalva}[1]{{\color{claro}\scriptsize #1}\par\vspace{1pt}}
+\newcommand{\lit}[1]{\vspace{2pt}{\color{azul}\footnotesize\textbf{Na literatura}}\par\vspace{-2pt}{\color{cinza}\scriptsize #1}\par\vspace{1pt}}
+
+% página: figura à esquerda, leitura à direita
+\newcommand{\analise}[6]{%
+  \cab{#1}{#2}{#3}
+  \begin{minipage}[t]{0.588\linewidth}\vspace{0pt}
+    \includegraphics[width=\linewidth]{#4}\par\vspace{6pt}
+    {\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{4pt}
+    {\scriptsize\setlength{\parskip}{0pt}\color{cinza}#6\par}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.383\linewidth}\vspace{0pt}%
+    \footnotesize\setlength{\parskip}{3pt}#5
+  \end{minipage}
+  \clearpage}
+
+\newcommand{\analisec}[6]{%
+  \cab{#1}{#2}{#3}
+  \begin{minipage}[t]{0.588\linewidth}\vspace{0pt}
+    \includegraphics[width=\linewidth]{#4}\par\vspace{6pt}
+    {\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{4pt}
+    {\scriptsize\setlength{\parskip}{0pt}\color{cinza}#6\par}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.383\linewidth}\vspace{0pt}%
+    \scriptsize\setlength{\parskip}{2.5pt}#5
+  \end{minipage}
+  \clearpage}
+
+
+\newcommand{\analisea}[6]{%
+  \cab{#1}{#2}{#3}
+  \begin{minipage}[t]{0.515\linewidth}\vspace{0pt}
+    \includegraphics[width=\linewidth]{#4}\par\vspace{6pt}
+    {\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{4pt}
+    {\scriptsize\setlength{\parskip}{0pt}\color{cinza}#6\par}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.455\linewidth}\vspace{0pt}%
+    \scriptsize\setlength{\parskip}{2.5pt}#5
+  \end{minipage}
+  \clearpage}
+
+
+
+\input{legendas}
+
+\begin{document}
+
+%================================================================ CAPA
+\vspace*{6mm}
+{\color{claro}\textsf{ANÁLISE DE DADOS ABERTOS DO SETOR ELÉTRICO BRASILEIRO}}\\[3mm]
+{\fontsize{30}{34}\selectfont\textbf{O corte fotovoltaico no SIN}}\\[2mm]
+{\fontsize{16}{20}\selectfont\color{cinza} Magnitude, composição da causa e alocação entre usinas, em doze análises sobre dados abertos}\\[6mm]
+{\color{claro}\rule{\linewidth}{0.4pt}}\\[4mm]
+
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}
+\bloco{Escopo}
+O objeto é o corte de geração fotovoltaica no Sistema Interligado Nacional: quanto
+se corta, por que motivo declarado e como o corte se distribui entre usinas.
+
+O objetivo inicial --- detectar instalações fotovoltaicas por satélite para verificar
+programas de crédito rural --- foi redefinido após duas medidas. A \textbf{Fig.\,1}
+mede que o corte incide sobre toda a janela solar e é majoritariamente de razão
+energética, de modo que a geração verificada não é proxy do recurso solar. A
+\textbf{Fig.\,2} mede que 91\% da micro e minigeração distribuída é sub-pixel no
+Sentinel-2, o que inviabiliza a verificação por imagem com sensor gratuito. A
+\textbf{Fig.\,8} desloca a análise para a decisão de despacho.
+
+\bloco{Revisões internas}
+Cinco das doze análises examinam resultados das anteriores: duas revisam uma
+conclusão (Figs.\,6 e 9) e três delimitam escopo (Figs.\,10, 11 e 12). As conclusões
+revisadas permanecem no texto com a correção correspondente.
+
+A \textbf{Fig.\,6} revisa a conclusão secundária da Fig.\,5: o viés atribuído à
+geração de referência do ONS decorre do contrafactual adotado --- 2023 já era um ano
+com restrição, anterior ao início da apuração pública.
+
+A \textbf{Fig.\,9} retira a atribuição causal da Fig.\,8: decomposta por subsistema, a
+coincidência entre corte e térmica inflexível não sustenta leitura local em nenhum dos
+dois subsistemas com corte.
+
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}
+\bloco{Conteúdo}
+\footnotesize
+\begin{tabular}{@{}p{11mm}p{58mm}p{28mm}@{}}
+\textbf{Método} & Janela, amostra, teste e multiplicidade & \textit{referência} \\
+\textbf{Fig.\,1} & Corte fotovoltaico no SIN & mecanismo \\
+\textbf{Fig.\,2} & MMGD: detectabilidade por satélite & viabilidade \\
+\textbf{Fig.\,3} & Estudo de caso pareado, PIE $\times$ APE & caso \\
+\textbf{Fig.\,4} & Cronologia do entorno & hipótese temporal \\
+\textbf{Fig.\,5} & Controle climático & restrição ou recurso \\
+\textbf{Fig.\,6} & Calibração da referência do ONS & \textit{revisa a 5} \\
+\textbf{Fig.\,7} & Detecção de construção por Sentinel-2 & executa $H_2$ \\
+\textbf{Fig.\,8} & Despacho fora da ordem de mérito & mecanismo \\
+\textbf{Fig.\,9} & Decomposição por subsistema & \textit{revisa a 8} \\
+\textbf{Fig.\,10} & Topologia da rede de transmissão & \textit{responde à 3} \\
+\textbf{Fig.\,11} & Replicação em eólica & \textit{delimita a 10} \\
+\textbf{Fig.\,12} & Robustez dos resultados de rede & \textit{qualifica 10 e 11} \\
+\textbf{Aux} & Imagem comercial: resolução e custo & decisão \\
+\textbf{Aplic.} & Produção e exposição de uma área nova & exercício \\
+\end{tabular}
+\normalsize
+
+\bloco{Fontes}
+Exclusivamente dados abertos, sem autenticação: ONS (\textit{constrained-off},
+geração térmica por motivo de despacho, fator de capacidade, curva de carga,
+intercâmbio, energia armazenada, CMO), ANEEL (SIGA e geração distribuída),
+Sentinel-2 L2A pelo catálogo STAC público, NASA POWER e malhas do IBGE.
+
+\end{minipage}
+
+\clearpage
+
+%================================================================ MÉTODO
+\cab{MÉTODO}{Janela, amostra e multiplicidade}{O recorte de cada figura, a unidade que se repete dentro dele, o teste que ela declara, o contrato de exportação e o número total de testes reportados.}
+
+\begin{minipage}[t]{0.635\linewidth}\vspace{0pt}
+\bloco{Janela, amostra, unidade de repetição e teste}
+\par\vspace{3pt}\small
+\begin{tabular}{@{}lp{41mm}p{26mm}p{31mm}p{49mm}@{}}
+\toprule
+ & janela & $n$ & unidade de repetição & teste declarado \\
+\midrule
+\textbf{1} & abr/2024--jul/2026 & 85 usinas & usina · 30 min & nenhum: descritiva \\
+\textbf{2} & conexões até abr/2026 & 4,6 M instalações & empreendimento & nenhum: descritiva \\
+\textbf{3} & out/2024--ago/2026 (par) & 2 ativos; 60 conj. & conjunto & Spearman; 5 covariáveis, sem correção \\
+\textbf{4} & 2023--jul/2026; entorno 2021 & 43 e 24 meses & conjunto · mês & nenhum teste formal \\
+\textbf{5} & 2023--jul/2026 & meses com clima & conjunto · mês & nenhum: decomposição aritmética \\
+\textbf{6} & abr/2024--jul/2026 & 74 calibradas & usina · dia-usina & Spearman; 2 covariáveis \\
+\textbf{7} & 2018--2026 & 34 conj., 306 med. & conjunto · ano & Wilcoxon pareado; 2 comparações \\
+\textbf{8} & abr/2024--ago/2026 & 21.192 horas & hora do SIN & Mann-Whitney e Spearman; quintis \\
+\textbf{9} & idem, 9--15\,h & 21.192 horas & hora do subsistema & Spearman; sem correção \\
+\textbf{10} & set/2025--ago/2026 & 59 conjuntos & conjunto & Spearman; 8 covariáveis, \textbf{Holm} \\
+\textbf{11} & nov/2022--jul/2025 eól. & 120 conjuntos & conjunto & idem, \textbf{Holm} por fonte \\
+ & set/2025--ago/2026 sol. & 59 conjuntos & conjunto &  \\
+\textbf{12} & amostras das Figs.\,10 e 11 & 59 e 120 & conjunto & bootstrap e $z$ de Fisher \\
+\bottomrule
+\end{tabular}
+\par\vspace{3pt}
+\ressalva{As janelas de corte saem da mesma regra --- percentil 80 do início e 20 do fim da apuração --- e por isso diferem entre fontes. A Fig.\,1 vem de extração anterior às demais. Cada figura repete estas declarações na sua própria página, com as exclusões.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.335\linewidth}\vspace{0pt}\small
+\bloco{Padrão de figura}
+Todas as figuras seguem o mesmo contrato: 183\,mm de largura, corpo 7\,pt, piso de
+5\,pt para qualquer glifo, texto editável em PDF e SVG, TIFF a 600\,dpi, dados-fonte
+exportados em CSV e auditoria automática de colisão obrigatória. Cada figura declara
+$n$, unidade de repetição, teste, exclusões e limites de interpretação.
+
+\bloco{Multiplicidade}
+A correção é aplicada \textbf{dentro} de figura --- Holm sobre as oito covariáveis
+pré-declaradas nas Figs.\,10 e 11 --- e declarada ausente na Fig.\,3, onde as cinco
+covariáveis testadas resultaram todas nulas. \textbf{Não há correção entre figuras.}
+Somados os testes que vão a arquivo, a série reporta \textbf{49} --- 5 na Fig.\,3, 2 na
+7, 5 na 8, 14 na 9, 8 na 10, 8 na 11 e 7 na 12 ---, dos quais \textbf{16 passam por Holm
+e 33 não}. As oito covariáveis foram pré-declaradas e testadas na mesma ordem nas duas
+fontes, e a Fig.\,12 submete as sobreviventes a testes adicionais. Um limiar de
+multiplicidade em nível de série não é aplicado neste documento.
+\end{minipage}
+\clearpage
+
+%================================================================ FIG 1
+\analise{ANÁLISE 1 \quad · \quad ONS, restrição por constrained-off}
+{O corte fotovoltaico no SIN é sistêmico}
+{Incide sobre toda a janela solar, cresce em ritmo semelhante no Nordeste e no Sudeste/CO, e é majoritariamente de razão energética, classificada como origem sistêmica.}
+{../figures/fig1_curtailment_sin.pdf}
+{
+\bloco{Método}
+O corte é definido como
+\[ \max\bigl(\text{referência} - \text{verificada},\; 0\bigr) \]
+nos intervalos com razão de restrição apurada. O campo \texttt{val\_geracaolimitada}
+\textbf{não} é a energia cortada: é o teto ao qual a geração foi limitada. Sua
+correlação com a geração verificada é 0,86 e com a perda apurada é \textbf{0,02}.
+Usá-lo como energia cortada superestima a perda.
+
+\bloco{Resultados}
+Corte de \textbf{21,6\%} no parque com apuração. A razão energética domina o total
+cortado; a origem declarada é predominantemente sistêmica.
+
+\bloco{Interpretação}
+Onde a geração de uma usina é limitada por decisão operativa, um modelo que preveja
+geração a partir de irradiância ou de imagem de satélite ajusta um alvo que incorpora
+essa decisão, e não apenas o recurso físico. Isso condiciona o alvo de modelagem de
+todas as análises seguintes.
+
+\lit{Os 21,6\% medidos são de solar centralizada com apuração, na janela
+abr/2024--jul/2026. O ONS reporta 20,7\% para eólica \textit{e} solar em 2025 --- ordens
+de grandeza compatíveis, denominadores diferentes. Os valores publicados para outros
+sistemas são menores: o Chile perdeu 17\% da renovável variável disponível em 2024, a
+Espanha registrou $\approx$11\% em jul/2025, e na Califórnia a curtailment \textit{média}
+da solar é 4,3\%. Novan e Wang (2024) medem que a taxa \textbf{marginal} é cerca de duas
+vezes a média, o que implica exposição de uma usina nova superior a 21,6\% caso a razão
+se mantenha no Brasil.}
+
+\bloco{Limitações}
+\ressalva{O denominador é o das usinas com apuração, não do parque solar nacional.}
+\ressalva{Não cobre MMGD, que tem regime de restrição distinto.}
+\ressalva{A referência é estimativa do operador: em 21,8\% dos intervalos restritos ela fica abaixo da geração verificada, e o truncamento em zero torna a estimativa conservadora, não exata.}
+\ressalva{Razão e origem são classificações operativas do ONS, não inferência causal independente.}
+}{\legI}
+
+%================================================================ FIG 2
+\analisec{ANÁLISE 2 \quad · \quad ANEEL, geração distribuída}
+{91\% da MMGD é sub-pixel no Sentinel-2}
+{A verificação de instalações registradas por imagem de satélite é inexequível com sensor gratuito, e a data de conexão não é exógena.}
+{../figures/fig2_mmgd_detectabilidade.pdf}
+{
+\bloco{Método}
+A ANEEL publica a \textbf{área do arranjo} de cada instalação. Sobre 4,6 milhões de
+registros, o número de pixels que cada sensor entrega por instalação é
+\[ \mathrm{px}(s) = A_{\text{arranjo}} / r_s^2 \]
+
+\bloco{Resultados}
+Mediana de pixels por instalação e fração sub-pixel: Sentinel-2 (10\,m)
+\textbf{0,29\,px} e \textbf{91,2\%}; CBERS-4A WPM (2\,m) 7,25\,px e 0,5\%; VHR
+comercial (0,5\,m) 116\,px e $\approx$0. A classe rural --- alvo dos programas de
+crédito --- tem área mediana de 41\,m$^2$ e \textbf{5,2\%} de segmentabilidade no
+Sentinel-2.
+
+\bloco{Interpretação}
+\textbf{Localização.} O registro \textbf{não tem localização utilizável}: os campos de
+coordenada existem no esquema e estão preenchidos em \textbf{0,06\%}. Há
+\texttt{CodCEP} --- completo para os 7,7\% de pessoa jurídica, truncado em 5 dígitos
+para os 92,3\% de pessoa física ---, com mediana de 1 prefixo por município, o que
+\textbf{não refina o alvo rural}. Sem coordenada por instalação, a verificação exige
+varredura exaustiva; apenas o segmento de pessoa jurídica é endereçável. A resolução do
+sensor não é a restrição dominante.
+
+\textbf{Exogeneidade da data de conexão.} A janela de transição da Lei 14.300/2022
+concentrou 98 mil conexões em um único mês --- quatro vezes a média do ano anterior. A
+data de conexão não é exógena: um estudo de evento sobre ela mediria a antecipação
+regulatória, não a política.
+
+\lit{A literatura que segmenta telhados opera em 0,1--0,3\,m: DeepSolar (Yu et al., 2018)
+usa imagem aérea submétrica; o conjunto multirresolução de Jiang et al.\ (2021) vai de
+0,1 a 0,8\,m. O inventário global de Kruitwagen et al.\ (2021), em \textit{Nature}, é a
+referência com Sentinel-2 e cobre apenas instalações acima de 10\,kW. Não foi localizado
+trabalho que segmente telhado residencial a 10\,m. A Fig.\,2 quantifica a razão.}
+
+\bloco{Limitações}
+\ressalva{Contar pixels não é detectar: um objeto sub-pixel ainda altera a assinatura espectral. O que a contagem descarta é a segmentação.}
+\ressalva{O piso de 4 pixels é convenção declarada, não constante física.}
+\ressalva{É censo administrativo, não amostra: não há erro amostral a declarar.}
+}{\legII}
+
+%================================================================ FIG 3
+\analisec{ANÁLISE 3 \quad · \quad ONS + ANEEL/SIGA, estudo de caso pareado}
+{Diferença de 3,0$\times$ entre dois ativos, sem covariável local que a reproduza na frota}
+{Sol do Cerrado perde 3,0$\times$ mais energia que Três Marias 3. Nenhuma das cinco covariáveis locais testadas reproduz esse padrão no parque.}
+{../figures/fig3_estudo_caso.pdf}
+{
+\bloco{Método}
+Sol do Cerrado (681,3\,MW, produtor independente, 17 SPEs de um grupo, barramento
+de Jaíba 230\,kV \textit{dividido}) contra Conj.\ Três Marias 3 (70,0\,MW,
+autoprodução, sete empresas privadas distintas, ponto \textit{exclusivo}). Ambos em
+Minas Gerais, mesmo subsistema, janela comum recortada programaticamente.
+
+O campo \texttt{nom\_agenteproprietario} do ONS identifica o \textbf{agente
+representante}, não o proprietário, e não sustenta a leitura de que Três Marias 3
+seja ativo estatal. O SIGA registra sete proprietários privados sob regime de
+autoprodução; não há usina solar estatal no parque despachado, e o eixo público
+$\times$ privado não é testável nesta amostra.
+
+\bloco{Resultados}
+Taxa de corte de 26,8\% contra 8,8\%. A energia cortada equivale a cerca de
+\textbf{R\$\,64 milhões} contra pouco mais de R\$\,1 milhão, valorada a CMO.
+
+Nos dois ativos o CMO ponderado \textbf{durante o corte} é menor que durante a
+geração, o que é consistente com restrição de razão energética. A Fig.\,8 examina
+esse ponto no despacho.
+
+\bloco{Interpretação}
+Duas explicações locais eram plausíveis: barramento compartilhado e densidade
+regional de renovável. Nenhuma se reproduz na frota --- nem carga do ponto de conexão,
+nem número de conjuntos, nem densidade regional, nem tensão, nem capacidade própria.
+Uma explicação local consistente com um par de ativos não se generaliza a mecanismo
+sem esse teste.
+
+\bloco{Revisão}
+A versão anterior desta análise concluía que a topologia de transmissão não está em
+dado aberto. \textbf{Está.} O SIGET publica o grafo linha a linha --- 1.166 linhas,
+619 subestações com código ONS, tensão e comprimento --- e o \texttt{fator-capaci\-dade-2}
+traz a coordenada do ponto de conexão de cada usina; o join cobre 168 dos 229
+conjuntos despachados. O \textbf{limite de transferência} também está publicado:
+\texttt{linha-transmissao} do ONS traz capacidade operativa em MVA com variantes
+sazonais, além de resistência e reatância. Permanece indisponível
+\textbf{qual restrição está ativa em cada intervalo}. As cinco covariáveis testadas
+são locais ao ponto e não usam a estrutura da rede, de modo que o resultado nulo não
+se estende a ela; a \textbf{Fig.\,10} a testa.
+
+\lit{Newbery (2024): quem é cortado depende do regime de acesso, não apenas da física da rede.}
+
+\bloco{Limitações}
+\ressalva{Dois ativos não são amostra: o par foi escolhido por contraste.}
+\ressalva{Cinco covariáveis testadas sem correção de multiplicidade; como nenhuma resultou significativa, a correção só tornaria a conclusão mais conservadora.}
+\ressalva{CMO é proxy de valor sistêmico, não preço de liquidação nem prejuízo líquido.}
+}{\legIII}
+
+%================================================================ FIG 4
+\analise{ANÁLISE 4 \quad · \quad ONS, fator de capacidade}
+{Cronologia do corte e da energização do entorno}
+{A apuração de corte começa em abr/2024 e a onda de construção em Jaíba é de 2021 a 2024. O fator de capacidade cobre o período anterior à apuração.}
+{../figures/fig4_cronologia.pdf}
+{
+\bloco{Método}
+A série de corte começa em abr/2024 e não cobre o período em que a hipótese se
+manifestaria. O fator de capacidade existe desde a entrada em operação e cai quando a
+geração é limitada:
+\[ FC_{\text{verificado}}(t)=\frac{E_{\text{gerada}}(t)}{P_{\text{inst}}\cdot\Delta t} \]
+A partir de abr/2024 a apuração permite recompor o potencial:
+\[ FC_{\text{potencial}} = FC_{\text{verificado}} + FC_{\text{cortado}} \]
+Se a queda for de restrição de rede, o potencial recomposto permanece estável
+enquanto o verificado cai. Se for recurso solar ou degradação, os dois caem juntos.
+
+\bloco{Interpretação}
+A decomposição separa restrição de degradação, mas não separa restrição de
+\textbf{variação climática}: se 2025 tiver sido menos ensolarado que 2023, a queda
+não informa sobre a rede. A Fig.\,5 mede a irradiância diretamente sobre cada usina.
+
+\lit{O desenho é um estudo de evento com adoção escalonada --- cada vizinho energiza em
+data diferente ---, caso em que Callaway e Sant'Anna (2021) mostram que o estimador de
+diferenças em diferenças com efeitos fixos duplos fica enviesado, por ponderar
+comparações entre unidades já tratadas. A leitura desta figura é descritiva e pareada
+contra um único controle, o que evita o problema e também não estima efeito de
+tratamento. Estimá-lo exigiria o estimador por grupo e período daqueles autores e uma
+definição de tratamento exógena, que a Fig.\,2 mostra não existir do lado da MMGD.}
+
+\bloco{Limitações}
+\ressalva{O fator de capacidade é observável de longo prazo, mas responde a várias causas ao mesmo tempo; a decomposição só vale onde a apuração existe.}
+\ressalva{Comparação pareada sem aleatorização, como na Fig.\,3.}
+}{\legIV}
+
+%================================================================ FIG 5
+\analise{ANÁLISE 5 \quad · \quad ONS + NASA POWER}
+{A queda do fator de capacidade não é atribuível à irradiância}
+{Normalizada pela irradiância medida sobre a usina, a perda de Sol do Cerrado permanece: nove décimos da queda não são atribuíveis ao recurso solar.}
+{../figures/fig5_controle_climatico.pdf}
+{
+\bloco{Método}
+Com a irradiância global horizontal diária $H$ sobre a usina, a razão de desempenho
+\[ PR = \frac{FC \cdot 24\,\mathrm{h}}{H} \]
+divide a energia gerada por kW instalado pelo recurso disponível. Se a queda fosse de
+menor irradiância, $PR$ permaneceria estável.
+
+\bloco{Resultados}
+A irradiância sobre Jaíba caiu \textbf{2,8\%} entre 2023 e 2025. O fator de
+capacidade caiu \textbf{29,1\%}. Escalando o FC de 2023 pela razão de irradiância, o
+esperado para 2025 seria 0,206; o observado foi 0,150. Cerca de um décimo da queda é
+atribuível ao recurso.
+
+A razão de desempenho cai de 0,854 para 0,619 em Sol do Cerrado. No controle, Três
+Marias 3 permanece em torno de 0,99 sem tendência.
+
+\bloco{Interpretação}
+Os meses de 2025 não estão na curva de 2023 em posição de menor irradiância: estão em
+uma curva mais baixa. O deslocamento é consistente com perda independente do recurso.
+
+\bloco{Revisão}
+O déficit não explicado pela irradiância é de 0,056 em fator de capacidade; o corte
+apurado pelo ONS equivale a 0,147 --- 2,6 vezes maior. Essa diferença foi interpretada
+como indício de que a referência do ONS superestima o contrafactual. A interpretação
+pressupõe que 2023 fosse um ano sem restrição; a Fig.\,6 mostra que não era, e a
+conclusão secundária não se sustenta.
+
+\lit{A irradiância entra como denominador da razão de desempenho, na condição de variável
+derivada de sensoriamento. Proctor, Carleton e Sum (2023) mostram que usar uma variável
+assim em inferência a jusante enviesa o ponto e o erro padrão mesmo com erro de medida
+pequeno, e recomendam tratá-la como distribuição --- imputação múltipla --- e não como
+valor pontual. Alix-García e Millimet (2023) acrescentam que o erro de produto de satélite
+raramente é clássico. Nenhuma das duas correções foi aplicada: a diferença medida é grande
+o bastante para sobreviver a erro moderado, mas o intervalo em torno dela é mais estreito
+do que deveria ser.}
+
+\bloco{Limitações}
+\ressalva{Reanálise, não piranômetro: NASA POWER é MERRA-2 combinado com satélite, em célula de 0,5$^\circ\times$0,625$^\circ$.}
+\ressalva{GHI no lugar de POA: a irradiância é horizontal, os módulos não. O PR aqui é indicador relativo dentro de cada usina, não PR de norma IEC.}
+\ressalva{Temperatura não modelada; contrafactual linear.}
+}{\legV}
+
+%================================================================ FIG 6
+\analise{ANÁLISE 6 \quad · \quad revisão da Fig.\,5}
+{A geração de referência do ONS é calibrada}
+{Em 74 usinas o viés mediano é 1,02. O déficit aparente da Fig.\,5 decorre do contrafactual, não do operador: 2023 já era um ano com restrição.}
+{../figures/fig6_vies_referencia.pdf}
+{
+\bloco{Método}
+Para cada usina, calibra-se uma razão de desempenho \textbf{nos dias sem restrição da
+própria usina} ($f<1\%$) e compara-se o potencial implicado pelo ONS (verificado $+$
+cortado) com o potencial previsto pela irradiância local.
+
+\bloco{Resultados}
+Viés mediano por usina \textbf{1,02}, com metade entre 0,98 e 1,06. Nenhuma das 74
+usinas calibradas passa de 1,5, e 26 ficam abaixo de 1 --- para um terço delas a
+referência do ONS é \textit{conservadora}. No agregado energético dos dias restritos,
+o corte apurado é 1,03 vezes o implicado pela irradiância. A associação entre viés e
+intensidade de corte é nula, o que descarta a falha de maior consequência.
+
+\bloco{Revisão}
+O desempenho limpo de Sol do Cerrado, calibrado em 279 dias sem restrição, é
+\textbf{0,931}. Em 2023 a usina operou a 0,854 --- \textbf{8,3\% abaixo do seu próprio
+desempenho limpo}. Aquele ano já era restrito, sem apuração pública. Ao usar 2023 como
+base, a Fig.\,5 mediu um déficit reduzido e concluiu, incorretamente, que o ONS
+superestimava o corte.
+
+\bloco{Interpretação}
+A conclusão principal da Fig.\,5 --- perda de rede, não de recurso --- permanece e é
+reforçada: contra o desempenho limpo, o corte implícito é \textbf{33\% em 2025}, não
+26\%. A afirmação secundária sobre viés do operador é retirada. Os 21,6\% da Fig.\,1
+não requerem correção: com a referência calibrada, o agregado permanece válido.
+
+\lit{A geração de referência do ONS é derivada de curvas de desempenho da usina
+(irradiância ou vento contra potência), como descrevem Vieira et al.\ (2026). Validá-la
+por fora exige fonte independente: no lado eólico, Silva et al.\ (2026) usam anemometria
+de SCADA. A verificação equivalente no lado solar, com irradiância de satélite, não foi
+localizada na literatura consultada; a busca não foi sistemática.}
+
+\bloco{Limitações}
+\ressalva{Dias ``limpos'' podem não ser limpos; como o resultado é ausência de viés, esse erro só o tornaria mais forte.}
+\ressalva{Seis usinas ficaram de fora por não atingirem 30 dias limpos --- justamente as mais restritas, onde a referência é mais usada.}
+\ressalva{O $PR$ limpo é constante por usina e herda qualquer viés sazonal dos dias de calibração.}
+}{\legVI}
+
+%================================================================ FIG 7
+\analisec{ANÁLISE 7 \quad · \quad Sentinel-2 L2A (STAC público) + ANEEL/SIGA}
+{A construção é detectável por Sentinel-2; a operação não é}
+{A construção de uma usina fotovoltaica eleva a razão de brilho no vermelho em 34\% na mediana e data a entrada em operação; a fase operacional não se separa do entorno a 10\,m.}
+{../figures/fig7_deteccao_construcao.pdf}
+{
+\bloco{Método}
+Para cada conjunto, mede-se anualmente a razão entre o brilho no vermelho dentro do
+arranjo e num anel de controle:
+\[ \rho(t)=\frac{\overline{B_{\text{red}}}\big|_{d\le 400\,\mathrm{m}}}
+{\overline{B_{\text{red}}}\big|_{1{,}5\le d\le 3\,\mathrm{km}}} \]
+O anel controla iluminação, estação e umidade do solo. As séries são alinhadas pela
+\textbf{data de entrada em operação} do SIGA, não pelo calendário. 34 conjuntos,
+9 anos, 306 medições.
+
+\bloco{Resultados}
+Da base à construção a razão sobe de 1,01 para 1,30 --- \textbf{+34\% na mediana, 24 de
+30 usinas}, Wilcoxon $p=1{,}2\times10^{-5}$. Da base à operação a mediana vai de 0,95
+para 1,02 --- \textbf{$+6{,}6\%$}, com 11 de 18 usinas em alta contra 7 em queda
+($p=0{,}09$).
+
+\bloco{Interpretação}
+A construção remove vegetação de centenas de hectares, e solo exposto tem refletância
+mais alta no vermelho. Na fase operacional não há sinal em nenhuma direção: módulos são
+escuros, mas a 10\,m o pixel mistura painel, corredor, via e solo.
+
+A hipótese ``registro $\leftrightarrow$ evidência no satélite'' é executável para
+geração centralizada, com uma inversão: o satélite confirma a usina pela cicatriz da
+obra, não pelo arranjo. Trata-se de evento transitório, de modo que a auditoria exige
+monitoramento contínuo, não observação do estado atual.
+
+\bloco{Revisão}
+A primeira execução usou a coordenada do \textbf{conjunto} publicada pelo ONS, que
+corresponde à subestação coletora, e resultou nula. Em \textbf{31 de 37} conjuntos a
+subestação fica a mais de 750\,m do centroide do arranjo, com mediana de 1,9\,km, de
+modo que a máscara amostrava terreno fora do arranjo. Refeita com as coordenadas de
+usina do SIGA, a diferença entre fases aparece.
+
+\lit{A razão dentro/fora do arranjo é uma versão simplificada do \textit{Temporal Cluster
+Matching} (Robinson et al., Microsoft Research), que data construções comparando a relação
+espectral dentro e fora da pegada, e foi aplicado a usinas solares em Karnataka. O Global
+Renewables Watch estima datas de construção em escala global por imagem de alta resolução.
+A Fig.\,7 acrescenta a validação contra o \textbf{registro de outorga} e o resultado
+negativo sobre a fase operacional a 10\,m.}
+
+\bloco{Limitações}
+\ressalva{A qualidade da geolocalização de referência domina o resultado; qualquer replicação depende dessa camada.}
+\ressalva{Uma cena por ano fixa a datação em resolução anual: acerto exato em 21\% e dentro de um ano em 62\% dos casos.}
+\ressalva{Círculos de 400\,m não são o polígono do arranjo; delinear por segmentação melhoraria o contraste.}
+\ressalva{O pulso indica remoção de vegetação, que também ocorre em lavoura, mineração e loteamento: a atribuição depende do cruzamento com o registro. O resultado não se estende a telhados.}
+}{\legVII}
+
+%================================================================ FIG 8
+\analise{ANÁLISE 8 \quad · \quad ONS, geração térmica por motivo de despacho}
+{O corte por excesso de oferta coincide com térmica inflexível}
+{Dois terços do corte são classificados como excesso de oferta e ocorrem com 4,6\,GWmed de térmica fora da ordem de mérito no mesmo instante, 73\% dela inflexibilidade declarada.}
+{../figures/fig8_despacho_merito.pdf}
+{
+\bloco{Método}
+A decomposição do ONS é \textbf{aninhada, não aditiva}: somar todos os campos dá
+1,58 vez a geração total. A definição consistente é
+\[ \text{fora do mérito} = \texttt{verifgeracao} - \texttt{verifordemmerito} \]
+verificada contra a soma dos motivos não-econômicos disjuntos --- razão
+\textbf{1,0030}, mediana da diferença 0,17\,MWmed.
+
+\bloco{Resultados}
+21.889\,GWh de corte na janela, 68,5\% por razão energética. Nas horas com esse corte
+há 4.564\,MWmed de térmica fora do mérito contra 3.146 nas demais (+45\%); ponderado
+pela energia cortada, 5.266. \textbf{73\% é inflexibilidade pura.}
+
+Da madrugada ao pico solar a parcela por mérito cai \textbf{1.640\,MWmed} e a parcela
+fora do mérito sobe \textbf{1.184\,MWmed}: a mesma térmica permanece ligada e deixa de
+ser econômica quando o CMO cai.
+
+A correlação entre corte e térmica inflexível é $\rho=0{,}48$ no quintil de carga mais
+baixa, 0,38 no segundo, e 0,09--0,20 nos três superiores. Com $n\approx1.240$ por
+estrato \textbf{todos os quintis dão $p<0{,}05$}; a leitura se apoia na magnitude, não
+na significância, e a queda não é monotônica.
+
+\bloco{Interpretação}
+A leitura de que a térmica desloca a geração solar não sobrevive ao controle de carga:
+a carga sobe aproximadamente o quanto a geração solar sobe, e a \textbf{carga líquida é
+plana} (72,2 $\rightarrow$ 72,1\,GWmed). O que varia é a classificação do despacho
+térmico, não o seu volume.
+
+\lit{O mecanismo é documentado na literatura chinesa de curtailment: unidades térmicas com
+mínimo técnico e status \textit{must-run} ocupam a faixa que a renovável variável
+utilizaria, e a resposta de política foi o programa de \textit{flexibility retrofit} ---
+16,35\,GW em demonstração em 2017, somando 4,8\,GW de capacidade de regulação de ponta.
+No Brasil, Vieira et al.\ (2026) modelaram o corte com regressão logística horária e
+identificaram a MMGD como preditor mais forte do corte por demanda ($OR\approx9{,}8$), com
+a carga do sistema atuando de forma protetiva --- o gradiente que o painel \textbf{c}
+reproduz.}
+
+\bloco{Limitações}
+\ressalva{Coincidência não é causalidade: separar exigiria reotimizar o despacho sem a inflexibilidade declarada.}
+\ressalva{Inflexibilidade é declaração do agente, não mínimo técnico verificável em dado aberto.}
+\ressalva{Agregado nacional --- revisado na Fig.\,9.}
+\ressalva{Controle negativo: energia armazenada não explica ($\rho=0{,}06$, $p=0{,}06$).}
+}{\legVIII}
+
+%================================================================ FIG 9
+\analise{ANÁLISE 9 \quad · \quad revisão da Fig.\,8}
+{O piso térmico inflexível não coincide geograficamente com o corte}
+{Decomposta por subsistema, a coincidência nacional não sustenta leitura causal local em nenhum dos dois subsistemas com corte.}
+{../figures/fig9_decomposicao_subsistema.pdf}
+{
+\bloco{Resultados}
+Nordeste e Sudeste cortam volumes semelhantes nas horas solares; a térmica inflexível
+não acompanha.
+\par\vspace{1pt}\scriptsize
+\begin{tabular}{@{}lrr@{}}
+\toprule
+MWmed, horas de 9\,h a 15\,h & Nordeste & Sudeste/CO \\
+\midrule
+corte por razão energética & 1.079 & 950 \\
+inflexibilidade pura local & \textbf{36} & 1.739 \\
+corte / piso local & \textbf{30,2$\times$} & 0,5$\times$ \\
+$\rho$ com térmica do NE & +0,08 & +0,10 \\
+$\rho$ com térmica do SE & \textbf{+0,42} & \textbf{+0,41} \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}
+No Nordeste, onde o volume de corte é o maior do país, há 36\,MWmed de inflexibilidade
+contra 1.079 de corte; a associação local é $\rho=0{,}08$ e não passa de 0,16 em nenhum
+quintil de carga.
+
+No Sudeste/CO o painel \textbf{b} reproduz o padrão da Fig.\,8, com $\rho=0{,}40$ nos
+quintis de carga baixa. O painel \textbf{c} não sustenta a leitura local: a térmica do
+Sudeste se correlaciona com o corte do Sudeste em 0,41 e com o do \textbf{Nordeste} em
+0,42, a mais de dois mil quilômetros. O valor de $\rho$ é determinado por qual térmica
+se mede, não por qual corte; uma causa local produziria associação mais forte com o
+corte local.
+
+\bloco{Interpretação}
+A hipótese de saturação do corredor também não se sustenta. Nas horas de corte alto o
+fluxo NE$\rightarrow$SE é \textit{menor} --- 2.993 contra 3.848\,MWmed --- e fica acima
+do teto empírico em 2,9\% das horas contra 5,7\% nas demais ($\rho=-0{,}25$): o
+Nordeste é cortado com o corredor com folga.
+
+\bloco{Revisão}
+Nenhum valor da Fig.\,8 muda. O que se retira é a \textbf{atribuição causal}: a
+coincidência é real e compatível com um fator comum --- carga nacional baixa --- e este
+desenho não distingue as duas hipóteses.
+
+\lit{Newbery (2024) trata de \textit{quem} é cortado sob restrição de transmissão e de como
+o regime de acesso distorce o sinal de investimento, o que fornece o enquadramento
+econômico do descompasso medido. A invisibilidade da MMGD ao despacho é problema
+documentado: geração atrás do medidor não é observada pelo operador e eleva o erro de
+previsão de carga líquida em 30\% no nível domiciliar e até 250\% no agregado.}
+
+\bloco{Limitações}
+\ressalva{Subsistema ainda é agregação grosseira: o Sudeste/CO vai de Minas ao Mato Grosso do Sul.}
+\ressalva{O teto do corredor é o percentil 95 do próprio fluxo. Verificado: \texttt{programacao\_fluxo\_controlado} cobre só HVDC e interligações internacionais, e \texttt{linha-transmissao} dá capacidade por linha, não do corredor --- que resulta de estudo de estabilidade.}
+\ressalva{``Ausência de demanda'' é inferência por eliminação, não testada positivamente.}
+\ressalva{O painel c não estabelece ausência de mecanismo local no Sudeste: mostra que este desenho não o identifica, porque inflexibilidade local e carga nacional são colineares.}
+}{\legIX}
+
+%================================================================ FIG 10
+\analisea{ANÁLISE 10 \quad · \quad EPE (rede) + ONS \quad · \quad responde à Fig.\,3}
+{A distância de rede até a demanda está associada à taxa de corte}
+{Com o grafo de transmissão montado, duas de oito covariáveis pré-declaradas sobrevivem à correção de multiplicidade.}
+{../figures/fig10_topologia_rede.pdf}
+{
+\bloco{Método}
+A Fig.\,3 testou cinco covariáveis \textbf{locais ao ponto de conexão} e nenhuma
+resultou significativa. As oito covariáveis testadas aqui são \textbf{estruturais}:
+dependem do grafo. Rede da EPE: 920 subestações, 1.896 linhas resolvidas em aresta
+(87\%), ancoragem mediana de 0,10\,km. Holm sobre as oito hipóteses pré-declaradas.
+
+\bloco{Resultados}
+Duas sobrevivem a Holm, com magnitude próxima e sinais opostos: \textbf{distância de
+rede à carga} ($+$0,38) e \textbf{capacidade da usina} ($-$0,38), ambas com Holm
+$p = 0{,}023$. A soma de tensões no nó atinge $p < 0{,}05$ bruto e não sobrevive à
+correção; as outras cinco não atingem.
+
+A distância mediana à carga é próxima nos dois subsistemas --- 497\,km no Nordeste,
+520 no Sudeste/CO --- e a associação se mantém \textbf{dentro} do Nordeste
+($\rho = +0{,}34$, $p = 0{,}027$, $n = 43$), mas não dentro do Sudeste/CO
+($+0{,}31$, $p = 0{,}25$, $n = 16$). A capacidade da usina se mantém nos \textit{dois}
+--- $-0{,}41$ e $-0{,}44$ ---, no Nordeste com $p = 0{,}006$. A estrutura local do nó
+não apresenta associação.
+
+\bloco{Interpretação}
+Quanto maior a distância em quilômetros de linha até o centro de carga, maior a taxa de
+corte. O resultado é consistente com a Fig.\,9, em que o Nordeste é cortado com o
+corredor NE$\rightarrow$SE com folga: as duas medidas apontam para a distância até a
+demanda, não para a saturação local do nó.
+
+A capacidade da usina tem sinal \textbf{negativo}: as maiores são cortadas menos. Não
+era hipótese direcional. As explicações plausíveis --- qualidade de conexão, seleção
+contratual --- são testáveis e \textbf{não foram testadas}.
+
+\bloco{Escopo e robustez}
+O resultado vale para fotovoltaica: a replicação em eólica não se sustenta, e a
+Fig.\,11 mede a razão. A Fig.\,12 avalia a robustez das duas covariáveis: a distância
+à carga tem intervalo bootstrap de largura 0,49, coeficiente que cai de 0,62 para 0,11
+conforme a metade da amostra, e não aparece no grafo construído por barra; a capacidade
+da usina passa nos dois critérios que se aplicam a ela. Os três testes usam apenas
+dados já disponíveis nesta análise.
+
+\lit{Maji et al.\ (e-Energy 2025) sustentam que o corte é fenômeno de \textbf{nó} e que
+estimá-lo exige descer ao ponto de conexão. É a hipótese que esta figura testa e que, no
+fotovoltaico, não confirma: o preditor é a distância até a carga, grandeza de caminho, não
+de nó. A Fig.\,11 mostra que em eólica a relação se inverte, o que delimita a afirmação
+daqueles autores por composição da causa. Newbery (2024) fornece o enquadramento: se a
+posição na rede determina a exposição ao corte e o regime de acesso não a precifica, o
+sinal de investimento aponta para o lugar errado.}
+
+\bloco{Limitações}
+\ressalva{Distância de rede não é elétrica: caminho ponderado por km de linha. A impedância está em dado aberto --- 100\% das linhas de \texttt{linha-transmissao} (ONS), com capacidade em MVA em 86,7\% ---, e a escolha da camada geométrica da EPE impediu o uso da distância elétrica nesta figura.}
+\ressalva{Centros de carga são nove metrópoles, proxy geográfico declarado.}
+\ressalva{n = 59 para oito hipóteses. Holm foi aplicado, mas não há poder para efeitos pequenos. É associação, não causalidade.}
+}{\legX}
+
+%================================================================ FIG 11
+\analisec{ANÁLISE 11 \quad · \quad ONS (eólica) + EPE \quad · \quad delimita a Fig.\,10}
+{O resultado da Fig.\,10 não se replica em eólica}
+{A covariável que prevê o corte de cada fonte acompanha a origem declarada do corte dessa fonte.}
+{../figures/fig11_replicacao_eolica.pdf}
+{
+\bloco{Método}
+O ONS apura \textit{constrained-off} eólico desde \textbf{out/2021} em \textbf{199
+conjuntos}, contra 87 do solar. Mesmas oito covariáveis da Fig.\,10, mesma ordem, mesmo
+grafo, Holm reaplicado dentro de cada fonte.
+
+\bloco{Resultados}
+A distância de rede à carga, que no solar dá $\rho = +0{,}38$ e sobrevive a Holm, dá
+$\rho = -0{,}07$ em 120 conjuntos eólicos. A amostra eólica é o dobro da solar.
+
+As covariáveis que sobrevivem em eólica são as que não sobreviveram em solar: usinas
+no mesmo nó vai de $+0{,}07$ para \textbf{$+0{,}47$} e grau do nó de $-0{,}17$ para
+\textbf{$+0{,}35$}, ambas sobrevivendo a Holm.
+
+A classificação de origem do ONS, independente de todas as covariáveis testadas,
+registra corte solar \textbf{91\% sistêmico} e eólico 76\%, com \textbf{24\% de origem
+local} --- 2,7 vezes a fração do solar. Confiabilidade local é 7\% do corte solar e
+\textbf{22\%} do eólico.
+
+A amostra eólica é 91\% nordestina e a solar não é. Restringindo as duas ao Nordeste,
+o solar mantém distância à carga em $+0{,}34$ e usinas no nó em $+0{,}05$; a eólica
+apresenta $-0{,}19$ e $+0{,}36$. A dissociação se mantém sob controle de geografia.
+
+\bloco{Interpretação}
+A covariável que prevê o corte de cada fonte acompanha a origem declarada do corte
+dessa fonte: corte de origem sistêmica é previsto por grandeza sistêmica --- distância
+até a demanda ---, e corte de origem local, por grandeza local --- número de usinas
+disputando o ponto.
+
+Em termos operativos, a exposição solar responde a aproximação da demanda ---
+armazenamento, deslocamento de carga --- e a eólica, a reforço local de escoamento.
+
+\bloco{Revisão}
+A Fig.\,10 enunciou a hipótese como sobre posição na rede, independentemente da
+tecnologia. A replicação restringe o enunciado: vale para fonte cujo corte é
+majoritariamente sistêmico. O resultado da Fig.\,10 permanece no fotovoltaico; muda a
+generalidade.
+
+Sob os testes da Fig.\,12, \textbf{grau do nó} passa nos três critérios e
+\textbf{usinas no nó} replica no grafo alternativo, mas varia entre subamostras: a
+direção se mantém, a magnitude não.
+
+\lit{É o eixo canônico da literatura: Bird, Lew e Milligan (2016) organizam a revisão de
+onze países por excesso de oferta sistêmico contra restrição local. A EirGrid formaliza a
+distinção no vocabulário --- \textit{curtailment} para razão sistêmica, \textit{constraint}
+para local --- e reporta 6,6\% contra 4,7\% no \textit{dispatch-down} eólico de 2025. Maji
+et al.\ (e-Energy 2025) sustentam que o corte é fenômeno de nó. Não foi localizado teste
+publicado de se a \textbf{covariável preditiva do corte varia com a composição da causa};
+a busca não foi sistemática.}
+
+\bloco{Limitações}
+\ressalva{As janelas não coincidem --- eólica de nov/2022 a jul/2025, solar de set/2025 a ago/2026. Parte da diferença pode ser de período; o teste no Nordeste controla geografia, não tempo.}
+\ressalva{A eólica se aglomera mais (mediana de 4 por nó contra 2 no solar), o que facilita detectar aglomeração --- mas a distância à carga tem faixa semelhante nas duas e não prevê o corte eólico.}
+\ressalva{Regimes distintos nesta amostra: 8\% mediano em eólica e 26\% em solar; nas frotas, 15,9\% e 22,1\%. Origem é classificação do ONS, não inferência causal.}
+}{\legXI}
+
+%================================================================ FIG 12
+\analisec{ANÁLISE 12 \quad · \quad Figs.\,10 e 11 + ONS \quad · \quad qualifica ambas}
+{Robustez dos quatro resultados de rede que sobreviveram a Holm}
+{Bootstrap, partição estrutural e reconstrução do grafo por outra fonte, aplicados aos quatro resultados. Um passa nos três critérios; o principal da Fig.\,10 passa em um.}
+{../figures/fig12_robustez.pdf}
+{
+\bloco{Método}
+O ONS publica a rede com \textbf{conectividade por número de barra}, impedância em
+100\% das linhas e capacidade em MVA em 87\%, o que permite reconstruir o grafo por
+via independente da camada geométrica usada nas Figs.\,10 e 11. Os três critérios são:
+intervalo bootstrap que exclui zero, estabilidade entre as metades de uma partição
+estrutural, e reprodução no grafo alternativo.
+
+\bloco{Resultados}
+\par\vspace{1pt}\scriptsize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & IC & estável & outro grafo \\
+\midrule
+eólica · grau do nó & sim & sim & sim \\
+eólica · usinas no nó & sim & \textbf{não} & sim \\
+solar · capacidade da usina & sim & sim & --- \\
+solar · distância à carga & sim & \textbf{não} & \textbf{não} \\
+\bottomrule
+\end{tabular}
+\par
+\ressalva{--- não se aplica: a capacidade da usina não deriva do grafo. Dois critérios, e não três.}
+
+Sobreviveram a Holm \textbf{quatro} resultados, e não três: a \textbf{capacidade da
+usina} em solar --- $\rho = -0{,}38$, Holm $p = 0{,}023$, magnitude igual à da distância
+à carga --- não constava do conjunto avaliado.
+
+A distância à carga tem intervalo bootstrap de 0,12 a 0,61 --- \textbf{largura 0,49},
+cerca do dobro dos demais. Partindo a amostra, o coeficiente cai de \textbf{0,62} para
+\textbf{0,11} conforme a metade ($p = 0{,}025$), e a metade de maior coeficiente contém
+\textbf{todas as 16 usinas do Sudeste}, o que reabre o confundimento regional que o
+painel \textbf{d} da Fig.\,10 afastava.
+
+A capacidade da usina passa nos dois critérios aplicáveis: IC de $-0{,}60$ a $-0{,}13$
+e partição não rejeitada ($-0{,}18$ contra $-0{,}48$, $p = 0{,}21$). Dois critérios não
+são três, e a diferença entre metades ainda reduz o coeficiente em dois terços:
+\textbf{passar aqui é não ser rejeitado, não é ser confirmado}.
+
+\bloco{Interpretação}
+No grafo do ONS a distância dá $-0{,}14$ em km e $-0{,}06$ em reatância. Rodando o grafo
+da EPE nas mesmas 28 usinas, ele também não apresenta associação: a diferença é de
+amostra, o que não recupera o resultado --- identifica em que subconjunto ele ocorre.
+
+A distância elétrica foi calculada, e a afirmação da Fig.\,10 de que ela não estaria
+disponível é incorreta. Sua correlação com a distância em km é de \textbf{0,53}, de modo
+que a substituição constitui teste independente. O resultado não muda.
+
+\bloco{Revisão}
+Os três critérios usam apenas dados já disponíveis na Fig.\,10 e poderiam ter sido
+aplicados naquela análise; foram executados a partir da troca de grafo.
+
+\lit{Proctor, Carleton e Sum (2023): variável derivada de sensoriamento --- como este
+grafo --- propaga erro para o intervalo, e nenhuma imputação foi aplicada.}
+
+\bloco{Limitações}
+\ressalva{A partição não é aleatória, por construção: testa dependência a característica estrutural, não variabilidade amostral genérica.}
+\ressalva{O grafo do ONS é exato onde cobre, mas exclui conexões abaixo de 230 kV --- para a amostra solar isso remove mais da metade e elimina um subsistema inteiro.}
+\ressalva{Três critérios não esgotam robustez: faltam validação temporal, análise de influência ponto a ponto e sensibilidade à definição de centro de carga. Os limiares são convenção declarada, e o teste do IC foi corrigido de ``é positivo'' para ``exclui zero''.}
+}{\legXII}
+
+%================================================================ AUX
+\analise{PÁGINA AUXILIAR \quad · \quad apoio de decisão, fora da série}
+{Imagem comercial: resolução, cobertura e custo}
+{Os 21 sensores de um fornecedor típico posicionados contra a curva de detectabilidade medida na Fig.\,2, e o custo de varredura na ausência de coordenada por instalação.}
+{../figures/aux_geopera_capacidade.pdf}
+{
+\bloco{Resultados}
+A transição de detectabilidade ocorre \textbf{entre 1\,m e 5\,m}. Abaixo de 1\,m,
+99,5\% da MMGD é segmentável e os 18 sensores submétricos estão no platô. Acima, a
+fração cai: 86,6\% a 2\,m, 7,5\% a 5,3\,m, 1,6\% no Sentinel-2. Os dois sensores
+hiperespectrais do catálogo ficam acima do joelho da curva.
+
+A faixa de 2\,m custa AUD 2--3/km$^2$ e entrega a mesma resolução do CBERS-4A WPM, que
+é público. Entre 0,80\,m e 2\,m há apenas arquivo, sem programação de aquisição.
+
+\bloco{Interpretação}
+O painel \textbf{c} quantifica a limitação registrada na Fig.\,2. Com coordenada por
+instalação, um chip de 0,01\,km$^2$ a 30\,cm custa AUD 0,18--0,28. Sem ela, a varredura
+municipal de 1.000\,km$^2$ custa AUD 18 mil--28 mil --- cinco ordens de grandeza. O
+custo é determinado pela ausência de localização no registro, não pela resolução
+disponível.
+
+A versão reduzida é executável: varrer 100--400\,km$^2$ da área ocupada de dois ou três
+municípios rurais custa AUD 1.800--11.200 e permite auditar a \textbf{contagem
+agregada} contra o registro municipal. A verificação por instalação na classe rural
+permanece inviável.
+
+As 361.622 instalações de \textbf{pessoa jurídica} têm CEP completo no registro,
+geocodificável em nível de rua. Para esse segmento --- comércio e indústria, com
+arranjos medianos de 66 e 92\,m$^2$ --- o chip dirigido é viável, com custo da ordem de
+AUD 0,20 por instalação.
+
+A análise energética por satélite em uso operacional emprega satélite
+\textbf{meteorológico geoestacionário} --- índice de nuvem $\rightarrow$ GHI
+$\rightarrow$ modelo de desempenho --- a 1--2\,km e 10 minutos. Ela mede a nuvem, não o
+arranjo, e é a abordagem das Figs.\,5 e 6.
+
+\bloco{Limitações}
+\ressalva{Preços e sensores são os publicados pelo fornecedor, em AUD e sem tributo; mudam sem aviso.}
+\ressalva{A profundidade de arquivo não é publicada por sensor, o que é decisivo porque todo desenho da série é longitudinal.}
+\ressalva{Catálogo só óptico: sem SAR, que seria o complemento imune a nuvem.}
+}{{\color{claro}Página auxiliar --- ver Fig.\,2 para a curva de detectabilidade.}}
+
+%================================================================ APLICAÇÃO
+\cab{APLICAÇÃO \quad · \quad exercício fora da série numerada}
+{Produção e exposição ao corte de uma área nova em Jaíba}
+{Encadeamento dos fatores medidos nas figuras anteriores para estimar quanto uma área nova junto a Sol do Cerrado produziria e quanto dessa energia o despacho absorveria.}
+
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Método}
+Todos os fatores são medidos em figuras anteriores; nenhum é suposto.
+\par\vspace{2pt}\scriptsize
+\begin{tabular}{@{}lll@{}}
+\toprule
+passo & fator & origem \\
+\midrule
+terreno $\rightarrow$ módulo & $\div$\,2,5 & Fig.\,3 \\
+módulo $\rightarrow$ capacidade & $\div$\,5,12\,m²/kWp & Fig.\,2 \\
+capacidade $\rightarrow$ potencial & $\times$\,0,229 de FC & Figs.\,5 e 6 \\
+\bottomrule
+\end{tabular}
+\par\small\vspace{2pt}
+O fator de capacidade potencial vem da razão de desempenho limpa de Sol do Cerrado
+(0,931, calibrada em 279 dias sem restrição) e do GHI da NASA POWER sobre Jaíba
+(5,908\,kWh/m²/dia).
+
+\bloco{Validação da cadeia}
+Aplicada à usina existente, a cadeia fecha: 681,3\,MW fiscalizados implicam 3,49\,km²
+de módulo, e o caminho inverso devolve 681,3\,MW. \textbf{Isso não valida a cadeia}: é
+divisão e multiplicação pela mesma constante de 5,12\,m²/kWp, e fecharia com qualquer
+valor dela. A ida e volta confere a aritmética.
+
+O elo não validado é o primeiro. A razão terreno/módulo de 2,5 é típica de projeto, não
+medida nesta usina, e entra linearmente na capacidade: um erro de 20\% nela produz 20\%
+de erro na capacidade. Medi-la exigiria delinear o arranjo por segmentação, o passo que
+a Fig.\,7 deixa em aberto.
+
+\bloco{Resultados}
+Para 2025, o método prevê fator de capacidade de \textbf{0,229} e \textbf{1.368\,GWh}.
+A usina entregou fator de \textbf{0,150} e \textbf{897\,GWh}.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Comparação com a apuração do ONS}
+A diferença é de \textbf{34,4\%}. O ONS apurou, por outro caminho --- curva de
+desempenho declarada da usina e apuração operativa de \textit{constrained-off} ---
+uma taxa de \textbf{32,8\%} na mesma usina e ano. As duas diferem em \textbf{1,6
+ponto}.
+
+A independência entre as duas estimativas é \textbf{parcial}. A cadeia não usa a
+geração de referência do operador, que é a parte externa. Usa a razão de desempenho
+limpa de 0,931, calibrada nos dias que a \textit{própria apuração do ONS} marca como
+sem restrição: o sinalizador de restrição é compartilhado, e o que se testa é a
+estimativa de \textit{quanto}, não a de \textit{quando}.
+
+Não é uma terceira estimativa: $1 - PR_{2025}/PR_{\text{limpo}}$ é o mesmo estimador da
+Fig.\,6, que dá \textbf{33,5\%}; a diferença para os 34,4\% é de agregação do GHI.
+\textbf{São duas estimativas, não três}, e o que esta página acrescenta à Fig.\,6 é o
+passo área\,$\rightarrow$\,capacidade, que é o elo não validado.
+
+\bloco{Cenários para uma área nova}
+\par\vspace{1pt}\scriptsize
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+AOI & capac. & potencial & a 31\% & a 62\% \\
+km² & MW & GWh/ano & GWh & GWh \\
+\midrule
+ 1 &    78 &   157 &   108 &    60 \\
+ 2 &   156 &   314 &   216 &   119 \\
+ 5 &   391 &   784 &   541 &   298 \\
+10 &   781 & 1.569 & 1.082 &   596 \\
+20 & 1.563 & 3.137 & 2.165 & 1.192 \\
+\bottomrule
+\end{tabular}
+\par\small\vspace{2pt}
+As duas últimas colunas separam taxa média de taxa marginal: \textbf{a taxa média não
+se aplica a uma usina nova}. Novan e Wang (2024) mediram que a taxa \textbf{marginal}
+--- quanto de uma usina nova é cortado --- é cerca de duas vezes a média, o que define
+a coluna de 62\%.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Exposição ao corte no ponto}
+O barramento de Jaíba tem \textbf{1.301\,MW} em três conjuntos --- Sol do Cerrado
+(681), Jaíba V (500) e Jaíba 138\,kV (120) ---, todos cortados entre 24\% e 31\% na
+janela de referência.
+
+O corte no ponto é \textbf{89,5\% de origem sistêmica}: 61,8\% por razão energética,
+16,2\% por confiabilidade e 11,5\% por indisponibilidade externa; 10,5\% tem origem
+local. No agregado nacional a distribuição é 68,5\% energética, 22,0\% confiabilidade e
+9,5\% indisponibilidade externa. A restrição não é de saturação do barramento, e sim de
+oferta excedente no instante do corte.
+
+O resultado é consistente com as Figs.\,8 a 10: térmica inflexível nas horas de corte,
+corredor com folga e distância à demanda como preditor. Jaíba está a \textbf{605\,km de
+rede} do centro de carga mais próximo, no terceiro quartil da amostra.
+
+\bloco{Leitura não sustentada pelos dados}
+A hipótese de que mais capacidade no mesmo nó produz mais corte não é sustentada: na
+Fig.\,10 a capacidade renovável no nó dá $\rho = -0{,}24$ e não sobrevive a Holm, e
+tampouco o grau, a tensão ou o número de usinas. O que sobrevive é a distância. A
+leitura defensável é a de posição na rede, não a de saturação do ponto, e uma usina
+nova ali herdaria essa posição.
+
+\end{minipage}
+
+\vspace{5pt}{\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{4pt}
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\small
+\bloco{Limitações}
+\ressalva{O cálculo não usa limite de linha. O ONS publica capacidade operativa em MVA, com variantes sazonais, em 86,7\% das linhas; incorporá-la tornaria a estimativa de exposição ao corte mais precisa.}
+\ressalva{A razão marginal de 2$\times$ é medida na Califórnia. Não há equivalente brasileiro publicado; é ordem de grandeza declarada, não fator calibrado nesta análise.}
+\ressalva{A razão terreno/módulo de 2,5 é o elo não validado da cadeia; inclinação, rastreamento e relevo a deslocam.}
+\ressalva{O fator de capacidade potencial usa o desempenho limpo de Sol do Cerrado; uma usina nova com outro módulo ou rastreamento teria outro.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\small
+\bloco{Escopo}
+O resultado é uma estimativa \textbf{física e operativa}: quanto a área produziria e
+quanto o despacho absorveria. Cobre dimensionamento, comparação de sítios e antecipação
+de exposição ao corte. Uma decisão de investimento depende de contrato, outorga e
+parecer de acesso, que não estão em dado aberto e não são tratados aqui.
+\par\vspace{3pt}
+{\color{claro}\scriptsize Dados-fonte em \texttt{data/processed/aplicacao\_*.csv},
+gerados por \texttt{notebooks/\_aplicacao\_expansao.py}.}
+\end{minipage}
+\clearpage
+
+%================================================================ FUNDAMENTAÇÃO
+\cab{FUNDAMENTAÇÃO}{Posição na literatura}{O que já estava publicado, o que a série reproduz, o que ela acrescenta e o que mudou na regulação durante a análise.}
+
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\footnotesize
+\bloco{Comparação internacional}
+\scriptsize
+\begin{tabular}{@{}lll@{}}
+\toprule
+sistema & taxa & referência \\
+\midrule
+Brasil, solar (apurada) & \textbf{21,6\%} & \textit{esta série} \\
+Brasil, eól.+solar 2025 & 20,7\% & ONS \\
+Chile 2024 & 17\% & imprensa setorial \\
+Brasil, eólica (apurada) & \textbf{15,9\%} & \textit{esta série} \\
+Irlanda, eólica 2025 & 11,3\% & EirGrid \\
+Espanha, jul/2025 & $\approx$11\% & recorde \\
+Califórnia, solar & 4,3\% & Novan e Wang \\
+\bottomrule
+\end{tabular}
+\par\vspace{3pt}\footnotesize
+Os denominadores diferem, e a comparação com os sistemas estrangeiros é de ordem de
+grandeza, não pareada. As \textbf{duas linhas brasileiras são pareadas}: ambas são razão
+de energia --- cortada dividida por disponível --- na janela abr/2024--ago/2026, em que
+solar e eólica têm apuração simultânea, sobre todos os conjuntos com apuração (87
+solares, 178 eólicos). Numa única extração de hoje elas dão 22,1\% e 15,9\%; a linha da
+solar preserva os 21,6\% da Fig.\,1, apurados em extração anterior.
+
+As taxas brasileiras estão no topo da faixa internacional para as duas fontes, com a
+solar acima do Chile e a eólica acima da Irlanda. A solar perde cerca de 1,4 vez o que a
+eólica perde, diferença menor do que sugeriria comparar a taxa agregada de uma com a
+mediana da outra. O que separa os dois regimes não é a magnitude do corte, e sim a
+\textbf{composição da causa}: 91\% de origem sistêmica na solar contra 76\% na eólica,
+medido na Fig.\,11.
+
+Novan e Wang (2024) mostram que a taxa \textbf{marginal} --- quanto de uma usina
+\textit{nova} será cortado --- é cerca de duas vezes a média; na Califórnia, média de
+4,3\% contra marginal de 9\%. Caso a razão se mantenha, a exposição de um projeto
+brasileiro entrando agora é superior aos 21,6\% medidos.
+
+\bloco{Mecanismo e teste}
+A competição entre mínimo técnico térmico e renovável variável é o problema central da
+literatura chinesa de curtailment, e gerou resposta de política explícita: o programa de
+\textit{flexibility retrofit}, com 16,35\,GW em demonstração em 2017.
+
+O que não estava disponível era o teste com a decomposição de despacho publicada pelo
+ONS, que separa geração por ordem de mérito de geração por inflexibilidade declarada,
+razão elétrica, \textit{unit commitment} e segurança energética. As Figs.\,8 e 9 usam
+esse campo, e a Fig.\,9 mostra que ele não sustenta atribuição local.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\footnotesize
+\bloco{Resultados reproduzidos}
+\textbf{MMGD como preditor do corte.} Vieira et al.\ (2026) identificaram a MMGD como
+preditor mais forte do corte por demanda ($OR\approx9{,}8$ para solar), com a carga do
+sistema atuando de forma protetiva. O gradiente por quintil de carga da Fig.\,8 reproduz
+esse padrão de forma independente.
+
+\textbf{Invisibilidade da geração atrás do medidor.} É problema documentado: a geração
+distribuída não é observada pelo operador e eleva o erro de previsão de carga líquida em
+30\% no nível domiciliar e até 250\% no agregado. A Fig.\,2 mede a outra face do mesmo
+problema: ela também não é observável por satélite gratuito.
+
+\textbf{Resolução necessária para telhado.} A literatura que detecta MMGD opera entre 0,1
+e 0,3\,m. O inventário global de Kruitwagen et al.\ (2021), a referência com Sentinel-2,
+cobre apenas instalações acima de 10\,kW.
+
+\bloco{Acréscimos}
+\textbf{Validação externa da referência do ONS.} A geração de referência é derivada de
+curvas de desempenho da própria usina. Validá-la exige fonte independente --- feito no
+lado eólico com anemometria de SCADA (Silva et al., 2026) e, na Fig.\,6, no lado solar
+com irradiância de satélite, em 74 usinas.
+
+\textbf{Resultado negativo sobre observabilidade.} A construção é detectável e datável
+por Sentinel-2; a operação não é.
+
+\textbf{Retirada de uma atribuição causal.} A Fig.\,9 mostra que a associação entre corte
+e térmica inflexível não distingue causa local de fator comum, o que retira da Fig.\,8 a
+atribuição causal ali formulada.
+
+\textbf{Dependência do preditor à composição da causa.} A literatura documenta que as
+duas causas existem (Bird et al.), mede a proporção entre elas (EirGrid) e sustenta que o
+corte deve ser estimado por nó (Maji et al.). A Fig.\,11 testa se \textbf{a covariável que
+prevê o corte muda conforme a composição da causa} --- preditor sistêmico onde o corte é
+sistêmico, preditor local onde é local. Não foi localizado teste publicado equivalente; a
+busca não foi sistemática.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\footnotesize
+\bloco{Mudança regulatória durante a análise}
+A questão que a Fig.\,3 deixou em aberto --- se o corte é ressarcido --- deixou de ser
+hipotética.
+
+A \textbf{Lei 15.269/2025} criou compensação por \textit{constrained-off} para eólicas e
+solares, custeada por Encargos de Serviços do Sistema, com efeitos retroativos a
+1\textsuperscript{o} de setembro de 2023 e condicionada à renúncia de ações judiciais e à
+assinatura de termo de compromisso. A Portaria MME 140 regulamentou os cortes ocorridos
+até 25 de novembro de 2025; os posteriores ficam com a ANEEL.
+
+A primeira fase do processo reuniu manifestação de interesse de \textbf{1.539 usinas},
+cerca de 53\,GW instalados. Estimativas setoriais apontam perda da ordem de
+\textbf{R\$\,6,5 bilhões} em 2025 com \textit{constrained-off} de eólica e solar, mesma
+ordem de grandeza da valoração a CMO da Fig.\,3 extrapolada para o parque.
+
+Isso reforça a limitação daquela figura: CMO mede valor sistêmico, não ressarcimento. Com
+a lei, os dois divergem por construção --- o gerador é compensado por energia cujo valor
+sistêmico, no instante do corte, era próximo de zero.
+
+\bloco{Qualidade das fontes}
+As fontes não têm o mesmo peso. São revisadas por pares: Vieira et al.\ (2026), Novan e
+Wang (2024), Kruitwagen et al.\ (2021), Yu et al.\ (2018), Jiang et al.\ (2021),
+Alix-García e Millimet (2023). São \textit{working papers} ou pré-prints: Newbery (2024),
+Proctor et al.\ (2023), Silva et al.\ (2026), Global Renewables Watch. São fontes
+normativas: a Lei 15.269/2025 e a Portaria MME 140. São imprensa setorial as taxas de
+Chile, Espanha e Europa e o valor de R\$\,6,5\,bi, usadas como ordem de grandeza e não
+como evidência.
+
+\end{minipage}
+\clearpage
+%================================================================ REFERÊNCIAS
+\cab{REFERÊNCIAS}{Fontes citadas}{Bibliografia, bases de dados e atos normativos.}
+
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\footnotesize
+\bloco{Curtailment e despacho}
+Vieira, G.T.T.; Silva, W.N.; Lourenço, L.F.N.; Monaro, R.M.; Salles, M.B.C.;
+Almeida, C.F.M. \textit{Characterizing wind and solar curtailment in Brazil: an
+evidence-based analysis of operational drivers.} Electric Power Systems Research,
+2026. \par\vspace{2pt}
+Novan, K.; Wang, Y. \textit{Estimates of the marginal curtailment rates for solar and
+wind generation.} Journal of Environmental Economics and Management, 2024.
+\par\vspace{2pt}
+Newbery, D. \textit{Marginal curtailment of wind and solar PV: transmission
+constraints, pricing and access regimes for efficient investment.} EPRG Working
+Paper 2401, University of Cambridge, 2024. \par\vspace{2pt}
+Silva, W.N. et al. \textit{An integrated methodology for assessing wind power
+curtailment using anemometric measurements and operational data in the Brazilian
+context.} Atmosphere, 2026. \par\vspace{2pt}
+Bird, L.; Lew, D.; Milligan, M. et al. \textit{Wind and solar energy curtailment: a
+review of international experience.} Renewable and Sustainable Energy Reviews, 65,
+577--586, 2016. \par\vspace{2pt}
+Maji, D.; Irwin, D.E.; Shenoy, P.J.; Sitaraman, R.K. \textit{A first look at
+node-level curtailment of renewable energy and its implications.} ACM e-Energy '25,
+Rotterdam, 2025. \par\vspace{2pt}
+EirGrid. \textit{Annual renewable energy constraint and curtailment report}, edições
+2013--2024. \par\vspace{2pt}
+Clean Energy Ministerial. \textit{Thermal power plant flexibility.} Advanced Power
+Plant Flexibility Campaign, 2018.
+
+\bloco{Sensoriamento remoto de fotovoltaica}
+Kruitwagen, L.; Story, K.T.; Friedrich, J.; Byers, L.; Skillman, S.; Hepburn, C.
+\textit{A global inventory of photovoltaic solar energy generating units.} Nature,
+598, 604--610, 2021. \par\vspace{2pt}
+Yu, J.; Wang, Z.; Majumdar, A.; Rajagopal, R. \textit{DeepSolar: a machine learning
+framework to efficiently construct a solar deployment database in the United
+States.} Joule, 2(12), 2018. \par\vspace{2pt}
+Jiang, H. et al. \textit{Multi-resolution dataset for photovoltaic panel segmentation
+from satellite and aerial imagery.} Earth System Science Data, 13, 5389--5401, 2021.
+\par\vspace{2pt}
+Robinson, C. et al. \textit{Temporal cluster matching for change detection of
+structures from satellite imagery.} Microsoft Research, 2021. \par\vspace{2pt}
+Microsoft Research. \textit{Global Renewables Watch: a temporal dataset of solar and
+wind energy derived from satellite imagery.} arXiv:2503.14860, 2025.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\footnotesize
+\bloco{Método --- variáveis derivadas de sensoriamento}
+Proctor, J.; Carleton, T.; Sum, S. \textit{Parameter recovery using remotely sensed
+variables.} NBER Working Paper 30861, 2023. \par\vspace{2pt}
+Alix-García, J.; Millimet, D.L. \textit{Remotely incorrect? Accounting for
+nonclassical measurement error in satellite data on deforestation.} Journal of the
+Association of Environmental and Resource Economists, 10(5), 1335--1367, 2023.
+\par\vspace{2pt}
+Callaway, B.; Sant'Anna, P.H.C. \textit{Difference-in-differences with multiple time
+periods.} Journal of Econometrics, 225(2), 2021.
+
+\bloco{Atos normativos}
+Lei n\textsuperscript{o} 15.269, de 2025 --- compensação por \textit{constrained-off}
+de fontes eólica e solar. \par\vspace{2pt}
+Portaria MME n\textsuperscript{o} 140 --- procedimentos de compensação para cortes
+entre 1/9/2023 e 25/11/2025. \par\vspace{2pt}
+Lei n\textsuperscript{o} 14.300, de 2022 --- marco legal da microgeração e
+minigeração distribuída.
+
+\bloco{Bases de dados}
+EPE, webmap institucional (serviço ArcGIS REST): camadas de linhas de transmissão e
+subestações em operação, com geometria. Alternativa tabular: ANEEL, SIGET ---
+\textit{Contrato Módulo Linha Transmissão Subestação Origem Subestação Destino}.
+\par\vspace{2pt}
+ONS, Portal de Dados Abertos (\texttt{dados.ons.org.br}): restrição por
+\textit{constrained-off} fotovoltaico e eólico; geração térmica por motivo de
+despacho; fator de capacidade; curva de carga; intercâmbio nacional; energia
+armazenada por subsistema; CMO semi-horário; relação conjunto--usina.
+\par\vspace{2pt}
+ANEEL: Sistema de Informações de Geração (SIGA); relação de empreendimentos de
+geração distribuída e informações técnicas fotovoltaicas. \par\vspace{2pt}
+ESA/Copernicus: Sentinel-2 L2A, via catálogo STAC público da AWS
+(\texttt{earth-search.aws.element84.com}). \par\vspace{2pt}
+NASA POWER: irradiância diária (MERRA-2 e SYN1DEG). \par\vspace{2pt}
+IBGE: malhas territoriais das unidades da federação.
+
+\bloco{Fontes de imprensa setorial}
+Taxas de \textit{curtailment} de Chile, Espanha e Europa e estimativa de perda
+financeira no Brasil: \textit{pv magazine}, Rystad Energy, Canal Solar, EIA
+\textit{Today in Energy}. Usadas como ordem de grandeza.
+\end{minipage}
+\clearpage
+
+
+%================================================================ SÍNTESE
+\cab{SÍNTESE}{Resultados estabelecidos, revisados e em aberto}{Balanço ao fim de doze análises.}
+
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Estabelecido}
+\textbf{O corte é de grande magnitude e origem sistêmica.} 21,6\% no parque com
+apuração, dois terços por razão energética, incidindo sobre toda a janela solar.
+
+\textbf{A referência do ONS é calibrada.} Viés mediano 1,02 em 74 usinas, sem
+degradação onde o corte é mais intenso. O agregado da Fig.\,1 permanece válido.
+
+\textbf{A perda de Sol do Cerrado é de rede, não de recurso.} Nove décimos da queda de
+29\% no fator de capacidade não se explicam pela irradiância.
+
+\textbf{A MMGD é sub-pixel.} 91\% abaixo de um pixel Sentinel-2; a verificação por
+imagem exige 2\,m ou melhor e coordenada por instalação, que não existe no registro.
+
+\textbf{A construção é detectável e datável; a operação não.} +34\% de brilho relativo
+na construção ($p=1{,}2\times10^{-5}$) contra ausência de sinal na operação
+($p=0{,}09$).
+
+\textbf{O piso térmico inflexível está no Sudeste.} 1.739\,MWmed de inflexibilidade
+pura, contra 36 no Nordeste.
+
+\textbf{O grau do nó está associado ao corte eólico.} $\rho = +0{,}35$, único dos quatro
+resultados de rede a passar em bootstrap, partição estrutural e troca de grafo
+(Fig.\,12).
+
+\textbf{O preditor acompanha a origem do corte.} Solar é 91\% sistêmico e responde à
+distância à demanda; eólica tem 24\% de corte local e responde a aglomeração no nó
+($\rho = +0{,}47$). A dissociação se mantém sob controle de geografia.
+
+\textbf{O corte pode ser estimado sem a referência do operador.} Irradiância mais razão
+de desempenho calibrada estimam 33,5\% de perda em Sol do Cerrado em 2025 (Fig.\,6) e
+34,4\% com o passo de área acoplado, contra 32,8\% apurados pelo ONS --- 1,6 ponto de
+diferença. A independência é \textbf{parcial}: dispensa a geração de referência, mas usa
+a apuração do ONS para selecionar os dias de calibração.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Conclusões revisadas}
+\textbf{``A referência do ONS superestima o corte''} (Fig.\,5). Artefato do
+contrafactual: 2023 já era um ano com restrição. Revisto na Fig.\,6, que \textit{reforça}
+a conclusão principal --- corte implícito de 33\%, não 26\%.
+
+\textbf{``A térmica inflexível desloca a geração solar''} (Fig.\,8). A decomposição da
+Fig.\,9 mostra que essa térmica se associa igualmente ao corte a dois mil quilômetros:
+é marcador sistêmico, e o desenho não separa as hipóteses.
+
+\textbf{``O Nordeste é cortado porque o corredor satura''.} Nas horas de corte alto o
+fluxo NE$\rightarrow$SE é menor que nas demais.
+
+\textbf{``A térmica não abre espaço para a solar''.} Não sobrevive ao controle de carga:
+a carga líquida diária é plana.
+
+\textbf{``Explicações locais do corte generalizam''} (Fig.\,3). Nenhuma das cinco
+covariáveis testadas se reproduz no parque.
+
+\textbf{``A distância à demanda é sobre posição na rede, não sobre tecnologia''}
+(Fig.\,10). A Fig.\,11 restringe o enunciado a fonte de corte sistêmico, e a Fig.\,12
+mede sua fragilidade: cai de 0,62 para 0,11 conforme a metade da amostra e não aparece
+no grafo por barra.
+
+\textbf{``Impedância e limite de linha não estão em dado aberto''} (Figs.\,3, 10, 11 e
+aplicação). Estão, no pacote \texttt{linha-transmissao} do ONS: reatância em 100\% das
+linhas e capacidade em MVA em 87\%. A afirmação incorreta aparecia em quatro pontos das
+versões anteriores.
+
+\textbf{``Detectar painéis por satélite audita política de MMGD''} --- a premissa
+original, encerrada pela Fig.\,2.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.315\linewidth}\vspace{0pt}\small
+\bloco{Em aberto}
+\textbf{Alocação do corte entre usinas, parcialmente respondida.} A Fig.\,10 identificou
+duas covariáveis que sobrevivem à correção de multiplicidade: distância de rede à demanda
+e capacidade da usina. Sob os critérios da Fig.\,12 é a \textbf{segunda} que resiste, e é
+a que não tem explicação testada. A variância explicada é pequena, e a maior parte da
+dispersão da taxa de corte permanece sem explicação.
+
+\textbf{Causa do corte no Nordeste.} Nem piso térmico local, nem escoamento. Resta
+ausência de demanda no destino, obtida por eliminação.
+
+\textbf{Correspondência entre inflexibilidade declarada e mínimo técnico real.} É a
+grandeza que uma auditoria exigiria, e não está publicada.
+
+\bloco{Trabalho futuro, em ordem de retorno esperado}
+\textbf{1. Reconstruir o corte anterior a abr/2024.} A maquinaria da Fig.\,6 já existe;
+um modelo treinado nos intervalos sem restrição, aplicado retroativamente, viabiliza o
+teste temporal da Fig.\,4. Há verdade de campo para validar.
+
+\textbf{2. Medir o resíduo não explicado.} No nível de intervalo, a diferença de
+desempenho entre um modelo só com observáveis sistêmicos e outro com identidade de usina
+quantifica o que as Figs.\,10 e 11 deixaram sem explicação. A série eólica acrescenta
+1,4\,GB e três anos de painel.
+
+\textbf{3. Substituir NASA POWER por NSRDB.} De célula de $\sim$50\,km e passo diário
+para 2\,km e 10 minutos, gratuito. Atende três limitações já registradas.
+
+\textbf{4. Delinear o arranjo por segmentação.} Substitui os círculos de 400\,m da
+Fig.\,7 e aumenta a precisão da datação.
+
+\bloco{Regra de método para as Figs.\,1 e 2}
+Qualquer saída de modelo que entre em inferência a jusante enviesa o ponto e o erro
+padrão. A predição deve entrar como distribuição, não como valor pontual.
+\end{minipage}
+
+\vfill
+{\color{claro}\rule{\linewidth}{0.4pt}}\par\vspace{3pt}
+{\color{claro}\scriptsize
+Todas as análises usam exclusivamente dados abertos e sem autenticação. Cada figura
+exporta seus dados-fonte em CSV e passa por auditoria de tamanho mínimo de glifo e de
+colisão de elementos antes de ser considerada pronta. Notebooks e scripts geradores
+estão em \texttt{notebooks/}; figuras em \texttt{../figures/}; dados-fonte em
+\texttt{data/processed/}.}
+
+\end{document}

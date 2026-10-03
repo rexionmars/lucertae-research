@@ -1,0 +1,417 @@
+% =====================================================================
+% estilo-reporte.sty -- identidade do relatorio de andamento
+%
+% MANCHA. A4, margens de 1,9 cm nas laterais e 2,0/2,2 cm no topo e no
+% pe. A mancha fica com 17,2 cm, ou 82% da largura da folha, contra os
+% 12,5 cm (60%) dos documentos de estudo da linha. Com 0,7 cm de
+% medianiz, cada coluna tem 8,25 cm.
+%
+% MEDIDA DE LINHA. Medida, e nao estimada: uma frase de 139 caracteres,
+% composta em IBM Plex Serif a 10 pt, ocupa 659,12 pt, o que da 4,742 pt
+% por caractere. A 8,25 cm a coluna corre a 49,5 caracteres por linha.
+% A faixa confortavel de coluna de periodico vai de 45 a 60.
+%
+% Duas colunas resolvem a exigencia de aproveitar a folha sem alongar a
+% linha: a mancha cresce 38% em largura e a medida de leitura encolhe de
+% ~73 para ~50 caracteres. E a razao de o corpo ficar a 10 pt e nao a
+% 11 pt, que daria 45 caracteres e quebraria palavra longa a cada linha.
+%
+% TABELA DEITADA. Tabela larga nao cabe em coluna de 8,25 cm nem em
+% mancha de 17,2 cm. Os apendices saem do regime de duas colunas e
+% entram em `landscape`, que gira a pagina tambem no leitor de PDF. A
+% largura util ali e a altura da mancha em pe, 25,3 cm.
+%
+% PALETA. Derivada da `terra-mark.png`. O destaque e o verde medio da
+% marca, #658637, terceira cor mais usada dela. A fechada nao vem da
+% marca: nenhum verde dela e escuro o bastante, entao e o mesmo matiz e
+% saturacao rebaixados ate a separacao de claridade que a paleta anterior
+% usava. A tinta2 sai do quase-preto quente #24201B, clareado ate o
+% contraste que a cinza anterior tinha.
+%
+% Sobre papel branco, destaque 4,18:1 e fechada 11,21:1; entre si, 2,68.
+% Os papeis se distinguem por claridade, e nao por matiz.
+%
+% Sem dependencia de pacote externo a este diretorio: um relatorio que
+% nao compila num clone limpo nao e um relatorio.
+% =====================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{estilo-reporte}[2026/09/01 Relatorio de andamento TERRA-Simulation]
+
+% FAMILIAS. Dependem do motor, porque a Urbanist nao existe empacotada
+% no CTAN: e um TTF do Google Fonts, e so `fontspec` le TTF solto. Um
+% pacote CTAN traria a fonte tambem em Type 1 com codificacao T1, que e
+% o que o pdflatex consome; o TTF nao serve para ele.
+%
+%   pdflatex           -> IBM Plex Serif + IBM Plex Sans (antigo)
+%   lualatex/xelatex   -> Urbanist no corpo e nos titulos
+%
+% O `reporte.tex` continua saindo em pdflatex sem alteracao; quem quiser
+% Urbanist troca o motor no proprio documento. `Path` e relativo ao
+% diretorio de compilacao, entao compile de dentro de `report/`.
+%
+% A monoespacada e Plex Mono nos dois casos. Sem serifa vizinha ela
+% destoa mais do que destoava, e isso e aceito: o `\texttt` aqui marca
+% nome de arquivo e de coluna, e destacar e a funcao dele.
+%
+% ESCALAS. Casadas pela altura-x, e nao pelo corpo nominal, e as duas
+% saem da mesma conta. Plex Serif e Plex Sans tem altura-x de 0,516 em;
+% a sans rodava a .96, logo 0,4954 efetivo contra 0,516 do corpo. A
+% Urbanist tem 0,500, entao precisa de 0,516/0,500 = 1,032 no corpo e de
+% 0,4954/0,500 = 0,99 na sans. A razao entre as duas fica em 0,959, que
+% reproduz o .96 anterior: a hierarquia optica nao se mexe.
+%
+% MEDIDA DE LINHA. Medida nos dois, sobre a mesma frase de 134
+% caracteres: Plex Serif da 4,891 pt por caractere e Urbanist a 1,032 da
+% 4,727. Na coluna de 8,25 cm sao 48,0 e 49,7 caracteres por linha. A
+% troca alarga a linha em 3,4% e continua dentro da faixa de 45 a 60.
+%
+% RESSALVA. Urbanist e geometrica de altura-x baixa, desenhada para
+% display. Em duas colunas densas ela cansa mais que a Plex Serif ao
+% longo de muitas paginas. Cabe num registro de execucao de duas ou tres
+% paginas; se este documento crescer, a escolha merece ser revista.
+\RequirePackage{iftex}
+\ifPDFTeX
+  \RequirePackage[T1]{fontenc}
+  \RequirePackage{plex-serif}
+  \RequirePackage[scale=.96]{plex-sans}
+  \RequirePackage[scale=.92]{plex-mono}
+\else
+  \RequirePackage[scale=.92]{plex-mono}
+  \RequirePackage{fontspec}
+  % A Urbanist chega como fonte variavel; `fontes/urbanist/` guarda as
+  % instancias estaticas geradas do eixo `wght`, mais os dois arquivos
+  % variaveis de origem e a licenca OFL, que a licenca exige distribuir.
+  \defaultfontfeatures[Urbanist]{
+    Path            = fontes/urbanist/,
+    Extension       = .ttf,
+    UprightFont     = *-Regular,
+    ItalicFont      = *-Italic,
+    BoldFont        = *-Bold,
+    BoldItalicFont  = *-BoldItalic,
+    FontFace        = {l}{n}{*-Light},
+    FontFace        = {l}{it}{*-LightItalic},
+    FontFace        = {mb}{n}{*-Medium},
+    FontFace        = {mb}{it}{*-MediumItalic},
+    FontFace        = {sb}{n}{*-SemiBold},
+    FontFace        = {sb}{it}{*-SemiBoldItalic},
+  }
+  \setmainfont{Urbanist}[Scale=1.032]
+  \setsansfont{Urbanist}[Scale=0.99]
+\fi
+
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{array}
+\RequirePackage{booktabs}
+\RequirePackage{longtable}
+\RequirePackage{pdflscape}
+\RequirePackage{enumitem}
+% MATEMATICA. Com o corpo serifado, o Computer Modern da matematica
+% passava despercebido. Contra a Urbanist ele denuncia: na tabela de
+% resultado os numeros com sinal, que sao matematica, saiam serifados, e
+% os sem sinal, que sao texto, nao. Lado a lado na mesma linha.
+%
+% A matematica daqui nao passa de numero com sinal, `\cdot`, `\le` e uma
+% barra: nada que exija `amssymb`. Entao no motor unicode o `unicode-math`
+% entra no lugar dele e traz digito e letra da propria Urbanist, deixando
+% operador e delimitador com o Latin Modern Math, neutro o bastante para
+% um menos. Em pdflatex nada muda: o corpo ali continua Plex Serif e o
+% Computer Modern nao destoa.
+%
+% `unicode-math` e `amssymb` colidem -- os dois definem `\eth`,
+% `\digamma`, `\backepsilon` --, por isso a carga e exclusiva.
+\ifPDFTeX
+  \RequirePackage{amsmath,amssymb}
+\else
+  \RequirePackage{amsmath}
+  \RequirePackage{unicode-math}
+  \setmathfont{Latin Modern Math}
+  % O nome da familia nao resolve aqui como resolve no `\setmainfont`:
+  % `\setmathfont` nao le as chaves de face, entao o arquivo vai direto.
+  \setmathfont{Urbanist-Regular.ttf}[Path=fontes/urbanist/, Scale=1.032,
+    range={up/{latin,Latin,num}}]
+  \setmathfont{Urbanist-Italic.ttf}[Path=fontes/urbanist/, Scale=1.032,
+    range={it/{latin,Latin}}]
+  % Os quatro simbolos que este documento usa a Urbanist tem, entao o
+  % Latin Modern fica so de rede: menos, mais, ponto medio, `\le` e a
+  % barra saem da propria fonte. O menos importa em particular -- o do
+  % Latin Modern e longo o bastante para se confundir com o travessao
+  % que a tabela usa como "nao se aplica".
+  \setmathfont{Urbanist-Regular.ttf}[Path=fontes/urbanist/, Scale=1.032,
+    range={"2212,"002B,"00B7,"2264,"007C}]
+\fi
+\RequirePackage{microtype}
+\RequirePackage{caption}
+\RequirePackage{tocloft}
+% Enchimento da maquete. Sai quando o texto entrar; enquanto estiver
+% carregado, o PDF mostra a forma do documento e nao o conteudo dele.
+\RequirePackage{lipsum}
+
+% --- cores -----------------------------------------------------------
+\definecolor{destaque}{HTML}{658637}
+\definecolor{fechada}{HTML}{30401A}
+\definecolor{tinta2}{HTML}{595043}
+
+% --- fios e tinta de tabela ------------------------------------------
+\setlength{\heavyrulewidth}{0.6pt}
+\setlength{\lightrulewidth}{0.4pt}
+\setlength{\aboverulesep}{0.35ex}
+\setlength{\belowrulesep}{0.45ex}
+
+% A barra do rotulo em texto, e nao em modo matematico: dentro de
+% tabela a 7,4 pt o modo matematico pede corpo 3,7 e o TeX substitui.
+\DeclareCaptionLabelFormat{natureza}{\textbf{#1~#2~\textbar}}
+\captionsetup{labelformat=natureza, labelsep=space, font={small,sf},
+              labelfont={bf}, justification=raggedright,
+              singlelinecheck=false, skip=4pt}
+
+% --- titulos ---------------------------------------------------------
+% Em coluna de 8,25 cm o titulo nao e justificado nem hifenizado: a
+% justificacao abre buracos e o hifen quebra a palavra no meio.
+\RequirePackage[raggedright]{titlesec}
+
+\titleformat{\part}[display]
+  {\sffamily\bfseries\Huge\filright}
+  {\normalsize\normalfont\sffamily\bfseries\color{destaque}PARTE \thepart}
+  {0.6em}{}
+\titleformat{\chapter}[display]
+  {\sffamily\bfseries\LARGE}
+  % `\chaptertitlename` vira Apêndice depois do `\appendix`, e o rótulo
+  % acompanha sem intervenção.
+  {\normalsize\normalfont\sffamily\color{tinta2}\chaptertitlename\ \thechapter}
+  {0.4em}{\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
+\titlespacing*{\chapter}{0pt}{0pt}{1.2em}
+\titleformat*{\section}{\sffamily\large\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
+\titleformat*{\subsection}{\sffamily\normalsize\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
+\titleformat*{\subsubsection}{\sffamily\small\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
+\titlespacing*{\section}{0pt}{1.4em}{.5em}
+\titlespacing*{\subsection}{0pt}{1.0em}{.4em}
+\titlespacing*{\subsubsection}{0pt}{0.8em}{.3em}
+
+% O sumario acompanha os titulos: sem serifa. Sem isto ele sai na
+% serifada da classe, e e a unica peca do documento fora do padrao.
+\renewcommand{\cfttoctitlefont}{\sffamily\bfseries\Huge}
+\renewcommand{\cftpartfont}{\sffamily\bfseries}
+\renewcommand{\cftpartpagefont}{\sffamily\bfseries}
+\renewcommand{\cftchapfont}{\sffamily\bfseries}
+\renewcommand{\cftchappagefont}{\sffamily\bfseries}
+\renewcommand{\cftsecfont}{\sffamily}
+\renewcommand{\cftsecpagefont}{\sffamily}
+\renewcommand{\cftsubsecfont}{\sffamily}
+\renewcommand{\cftsubsecpagefont}{\sffamily}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforechapskip}{.35em}
+\setlength{\cftsecnumwidth}{2.9em}
+
+% --- abertura -------------------------------------------------------
+% A abertura de um documento avulso da linha: marca a esquerda, titulo e
+% linha de contexto a direita, e um fio da cor de destaque fechando.
+%
+% Fica aqui, e nao no corpo de cada `.tex`, porque e o que faz destes
+% arquivos um modelo e nao quatro aberturas parecidas. Um documento novo
+% preenche os tres campos e nao decide mais nada de forma.
+%
+% A marca e brasao hexagonal escuro, e nao logotipo horizontal. Abaixo de
+% uns 12 mm o "EARTH OBSERVATION" fecha e vira mancha; os 15 mm de
+% `\marcalargura` sao o menor tamanho em que a palavra TERRA ainda se le,
+% que e o que precisa ser lido. Nao encolha sem olhar impresso.
+%
+%   \marca{../docs/img/terra-mark.png}   % ja e o valor de fabrica
+%   \autoria{Nome}{correio@dominio}    % opcional; sem isso a linha some
+%   \abertura{Titulo}{Registro de ... \textbackslash{} data \textbackslash{} arquivo}
+%
+% `\abertura` ja embute o `\twocolumn[...]`, entao chame-a no lugar dele,
+% logo depois do `\begin{document}`.
+%
+% DUAS COLUNAS OU UMA. `\abertura` serve o documento em pe, de duas
+% colunas, que e o caso comum. Documento deitado -- `tarefas-dados.tex`,
+% `modelos-metodos.tex` -- corre em uma coluna dentro de `landscape`, e
+% ali `\twocolumn` nao cabe: use `\aberturaunica`, que imprime o mesmo
+% bloco sem trocar o numero de colunas. Os dois campos sao os mesmos, e a
+% forma sai daqui nos dois casos -- o que muda e so o invólucro.
+%
+% O corpo do bloco fica em `\re@aberturacorpo` para que as duas versoes
+% nao se separem: mexer na marca, no fio ou na assinatura de uma mexe na
+% outra.
+\newlength{\marcalargura}\setlength{\marcalargura}{15mm}
+\newlength{\marcarespiro}\setlength{\marcarespiro}{5mm}
+
+\newcommand{\re@marca}{../docs/img/terra-mark.png}
+\newcommand{\marca}[1]{\renewcommand{\re@marca}{#1}}
+
+\newcommand{\re@autor}{}
+\newcommand{\re@correio}{}
+\newcommand{\autoria}[2]{\renewcommand{\re@autor}{#1}\renewcommand{\re@correio}{#2}}
+
+% O correio vira `mailto:`. `hyperref` entra com `hidelinks`, entao ele
+% clica sem pintar de azul nem emoldurar, e o PDF impresso nao muda.
+\newcommand{\re@assinatura}{%
+  \ifx\re@autor\@empty\else
+    {\sffamily\fontsize{8.4}{10.4}\selectfont\color{tinta2}%
+     \re@autor
+     \ifx\re@correio\@empty\else
+       \ \textperiodcentered\ \href{mailto:\re@correio}{\texttt{\re@correio}}%
+     \fi\par}%
+  \fi}
+
+% A largura da mancha entra como argumento, e nao como `\textwidth` lido
+% de dentro, porque `lscape` NAO mexe em `\textwidth`: ele troca `\hsize`,
+% `\linewidth` e `\columnwidth`, e `\textwidth` continua valendo a largura
+% da pagina em pe. Um fio de `\textwidth` dentro de `landscape` para a dois
+% tercos da mancha -- fica curto, e parece descuido de desenho.
+\newcommand{\re@aberturacorpo}[3]{%
+  \vspace*{-0.4em}%
+  \noindent
+  % A marca alinha pelo pe do bloco de texto, e nao pelo topo: o titulo
+  % pode ocupar uma ou duas linhas e o conjunto nao balanca.
+  \begin{minipage}[b]{\marcalargura}%
+    \includegraphics[width=\marcalargura]{\re@marca}%
+  \end{minipage}%
+  \hspace{\marcarespiro}%
+  \begin{minipage}[b]{\dimexpr#1-\marcalargura-\marcarespiro\relax}%
+    {\sffamily\bfseries\LARGE\hyphenpenalty=10000\exhyphenpenalty=10000
+     \raggedright #2\par}%
+    \vspace{0.35em}%
+    {\sffamily\fontsize{9}{11}\selectfont\color{tinta2}\raggedright #3\par}%
+    \vspace{0.25em}%
+    \re@assinatura
+  \end{minipage}%
+  \vspace{0.7em}\par
+  \noindent{\color{destaque}\rule{#1}{0.6pt}}%
+  \vspace{1.0em}%
+}
+
+\newcommand{\abertura}[2]{\twocolumn[{\re@aberturacorpo{\textwidth}{#1}{#2}}]}
+
+% Deitado, em uma coluna. A mancha e `\linewidth` -- 25,3 cm contra os
+% 16,8 cm da pagina em pe -- entao a marca fica do mesmo tamanho e o fio
+% fecha a mancha inteira, que e o que ele existe para fazer.
+\newcommand{\aberturaunica}[2]{\re@aberturacorpo{\linewidth}{#1}{#2}\par}
+
+% --- marcacoes de texto ----------------------------------------------
+% Nome do experimento. Nem Plex Serif nem Plex Sans trazem versalete, e
+% `\textsc` cairia em silencio na caixa normal. A marca e o semibold da
+% familia serifada, que existe nas duas larguras e nao colide com o
+% negrito, reservado a enfase.
+\newcommand{\exper}[1]{{\rmfamily\fontseries{sb}\selectfont #1}}
+\newcommand{\termo}[1]{\textbf{\textcolor{destaque}{#1}}}
+\newcommand{\campo}[1]{\par\smallskip\noindent\textbf{\textcolor{destaque}{#1.}}\space}
+
+% O corpo 7,4 da tabela e o 6,8 da nota fazem o LaTeX pedir matematica
+% a 3,7 pt, que a familia nao tem. As duas linhas abaixo fixam o piso em
+% 5 pt e deixam o log limpo.
+\DeclareMathSizes{7.4}{7.4}{6}{5}
+\DeclareMathSizes{6.8}{6.8}{6}{5}
+\newcommand{\tabfont}{\sffamily\fontsize{7.4}{9}\selectfont}
+\newcommand{\tabfontw}{\sffamily\fontsize{8}{10}\selectfont}
+% Coluna a esquerda que NAO desliga o diagnostico de caixa larga: com
+% `\rightskip` em `plus 1fil` o TeX nunca acusa Overfull, e conteudo
+% inquebravel vaza sobre a coluna vizinha em silencio.
+\newcommand{\rag}{\raggedright\rightskip=0pt plus 2em\relax\hbadness=10000 }
+\newcommand{\cab}[1]{\textbf{#1}}
+% Texto no fluxo vertical, e nao `minipage`. A nota estava numa `minipage`
+% posta em modo horizontal: a caixa ancorava pela linha de base, e o que
+% passasse dela descia sobre o que viesse depois. `[t]` nao resolve, porque
+% o bloco seguinte destes documentos e uma `promancha`, e `multicols` zera
+% `\prevdepth` -- a cola entre linhas some e a coluna comeca na ultima linha
+% de base da nota. Medido em `tarefas-dados.tex`: com nota de quatro linhas,
+% o paragrafo seguinte imprimia por cima de duas delas.
+% Estreitar `\hsize` da a mesma medida de 96% sem caixa nenhuma, e as linhas
+% da nota entram na lista vertical como qualquer paragrafo.
+\newcommand{\notas}[1]{%
+  \par\vspace{0.4em}%
+  \begingroup
+    \advance\hsize by -0.04\hsize
+    \linewidth=\hsize
+    \parindent=0pt
+    \sffamily\fontsize{6.8}{8.6}\selectfont\color{tinta2}%
+    \noindent #1\par
+  \endgroup
+  \vspace{0.3em}}
+
+\newlist{ficha}{description}{1}
+\setlist[ficha]{font=\normalfont\sffamily\fontsize{7.4}{9}\selectfont\bfseries,
+  leftmargin=1.9cm, labelwidth=1.6cm, labelsep=0.3cm, itemsep=0.1em,
+  topsep=0.45em, before=\sffamily\fontsize{7.4}{9}\selectfont}
+
+% Conclusao copiada do registro do experimento, nunca reescrita.
+\newcommand{\conclusao}[1]{%
+  \par\vspace{0.3em}\noindent
+  \begin{tabular}{@{}p{0.4em}@{\hspace{0.7em}}p{\dimexpr\linewidth-2.1em}@{}}
+  \textcolor{destaque}{\rule{0.35em}{1.6em}} &
+  \footnotesize\itshape #1\end{tabular}\par\vspace{0.5em}}
+
+% Objecao: o que limita ou contradiz o que se acabou de afirmar.
+\newenvironment{objecao}
+  {\par\smallskip\noindent\begin{tabular}{@{}p{0.4em}@{\hspace{0.7em}}p{\dimexpr\linewidth-2.1em}@{}}
+   \textcolor{fechada}{\rule{0.35em}{1.6em}} & \footnotesize}
+  {\end{tabular}\par\smallskip}
+
+% --- marca de vaga ----------------------------------------------------
+% O esqueleto compila e imprime o que falta. Ao preencher, o comando
+% sai inteiro. Uma varredura por `\pe` diz quanto do relatorio existe.
+\newcommand{\pe}[2][]{%
+  {\sffamily\fontsize{8}{10}\selectfont\color{tinta2}%
+   $\langle$\,\ifx\relax#1\relax\else\textbf{#1}: \fi #2\,$\rangle$}}
+\newcommand{\pepar}[2][]{\par\noindent\pe[#1]{#2}\par}
+
+% --- apendice deitado -------------------------------------------------
+% Prosa dentro do apendice deitado. A mancha tem 25,3 cm, que numa coluna
+% so dariam 145 caracteres por linha -- ilegivel.
+%
+% A versao anterior resolvia isso fixando o bloco em 15 cm, o que acerta a
+% medida de linha e erra o resto: sobravam 10 cm de branco a direita de
+% toda prosa, e a altura do bloco ficava 1,7 vez maior do que precisava.
+% Num documento que alterna prosa e tabela larga isso se acumula --- a
+% prosa que segue cada tabela nao cabia na pagina dela e caia sozinha na
+% seguinte, e o `\clearpage` da secao seguinte congelava a pagina de cauda
+% com cinco linhas de texto. Eram tres paginas assim.
+%
+% Duas colunas resolvem os dois de uma vez: 12,05 cm de coluna dao ~70
+% caracteres por linha, dentro da faixa de 45 a 60 a 75 que o cabecalho
+% desta folha discute, e a altura cai pela metade.
+%
+% Medido nos dois documentos que usam o ambiente: `tarefas-dados.tex` cai de
+% 9 para 6 paginas e `reporte.tex` de 38 para 37.
+%
+% BLOCO CURTO fica 2+1: `multicols` balanceia por altura, e tres linhas nao
+% dividem bem. Chegou a existir aqui uma opcao `[1]` que devolvia a mancha
+% de 15 cm para esses casos, e ela foi retirada depois de medida: as duas
+% `promancha` curtas de `modelos-metodos.tex` ganham uma linha cada em 15 cm,
+% a linha empurra a tabela e o documento vai de 2 para 3 paginas. Uma linha
+% solta na segunda coluna custa menos que uma pagina.
+%
+% OS COMPRIMENTOS FICAM DENTRO DO AMBIENTE, e nao no preambulo desta folha.
+% `\columnsep` e o mesmo registro que o `twocolumn` do documento em pe usa,
+% e o `geometry` de `modelo.tex` ja o fixa em 0,7 cm; setado fora, ele
+% vazava para os documentos de duas colunas e repaginava os `execucao-*` --
+% `execucao-cmo` foi de 2 para 3 paginas so por isso. O grupo do ambiente
+% devolve o valor no `\end`.
+%
+% O ambiente NAO pode depender de `\if@twocolumn` para decidir nada: essa
+% chave e a opcao da classe, fixa no preambulo, e o `reporte.tex` e
+% `twocolumn` na classe mas entra nos apendices deitados via `\onecolumn`.
+% Testado: condicionar a definicao a ela derruba a compilacao do relatorio.
+\RequirePackage{multicol}
+\newenvironment{promancha}
+  {\par
+     \setlength{\columnsep}{1.2cm}%
+     % `multicols` empurra o bloco inteiro para a pagina seguinte quando
+     % sobra menos que `\premulticols` -- 50 pt de fabrica, quase duas
+     % linhas. Num documento deitado que alterna tabela e prosa e isso que
+     % fabrica pagina de cauda: sobra meia pagina e o bloco pula assim
+     % mesmo. Zerados, a prosa quebra onde a pagina acaba.
+     \setlength{\premulticols}{0pt}%
+     \setlength{\postmulticols}{0pt}%
+     \setlength{\multicolsep}{0pt}%
+     \begin{multicols}{2}}
+  {\end{multicols}\par\medskip}
+
+\RequirePackage{siunitx}
+\sisetup{output-decimal-marker={,},group-separator={\,},
+         group-minimum-digits=4,separate-uncertainty=true}
+
+\RequirePackage[hidelinks]{hyperref}
+
+\setlength{\emergencystretch}{2.5em}
+\endinput

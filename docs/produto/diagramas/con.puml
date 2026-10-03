@@ -1,0 +1,325 @@
+' Módulo CON · Continuidade e qualidade
+' Diagramas do módulo (features-energia.tex, seção de pesquisa de RED e CON)
+'
+' Renderizar: plantuml -charset UTF-8 -tsvg -tpng con.puml
+
+' ===========================================================================
+' 1. Camadas: em que entidade cada feature do módulo é desenhada
+' ===========================================================================
+@startuml con-camadas
+title CON — camadas por entidade e dados que as alimentam
+
+top to bottom direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam ArrowColor #444444
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+  HeaderBackgroundColor #EAF1F8
+}
+skinparam class<<fonte>> {
+  BackgroundColor #FFFFFF
+  BorderColor #8AA9C7
+}
+skinparam class<<agregada>> {
+  BackgroundColor #FFF8E6
+  BorderColor #B07A1A
+}
+hide circle
+hide methods
+hide empty members
+
+package "Fontes" {
+  class "ANEEL · DEC e FEC\npor conjunto e mês" as f_decfec <<fonte>> {
+    apurado e limite
+    parcelas e expurgos
+    compensações pagas
+  }
+  class "ANEEL · Interrupções\npor evento, desde 2017" as f_int <<fonte>> {
+    código do alimentador e da SE
+    causa, expurgo, afetados
+  }
+  class "BDGD" as f_bdgd <<fonte>> {
+    rede e conjuntos
+    DIC e FIC mensais por unidade
+  }
+  class "Previsão do tempo\n(CLI-01)" as f_nwp <<fonte>> {
+    rajada, chuva, convecção
+  }
+  class "Raios (CLI-03)" as f_raios <<fonte>> {
+    GLM aberto ou BrasilDAT
+  }
+  class "Vegetação (ATV-03)" as f_veg <<fonte>> {
+    altura de dossel por vão
+  }
+}
+
+package "Entidades e camadas do módulo" {
+  class "Conjunto elétrico" as conj {
+    CON-01 · DEC e FEC previstos
+    probabilidade de violar o limite anual
+  }
+  class "Alimentador" as al {
+    CON-02 · compensação esperada em R$
+    CON-03 · interrupções previstas no evento
+  }
+  class "Trecho de alimentador" as tr {
+    CON-03 · risco por trecho no evento
+    CON-04 · localização provável de falta, V4
+  }
+  class "Transformador" as trafo {
+    CON-02 · compensação esperada, agregada
+  }
+  class "Unidades consumidoras" as uc <<agregada>> {
+    DIC, FIC e DMIC simulados
+    usados no cálculo, nunca exibidos um a um
+  }
+}
+
+conj "1" o-- "n" al : agrupa
+al "1" *-- "n" tr
+al "1" *-- "n" trafo
+trafo "1" *-- "n" uc
+
+f_decfec ..> conj
+f_int ..> conj
+f_int ..> al
+f_bdgd ..> uc
+f_bdgd ..> tr
+f_nwp ..> tr
+f_raios ..> tr
+f_veg ..> tr
+
+legend right
+  Tudo em nível 0 (dado público), exceto
+  CON-04, que exige eventos de religadores
+  e medição inteligente do cliente (nível 3).
+  Os expurgos são modelados à parte:
+  o alvo regulado é a parcela sem expurgo.
+end legend
+@enduml
+
+' ===========================================================================
+' 2. Casos de uso do módulo
+' ===========================================================================
+@startuml con-casos-de-uso
+title CON — casos de uso
+
+left to right direction
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F4F8FC
+  BorderColor #1C568C
+  BackgroundColor<<V4>> #FFFFFF
+  BorderColor<<V4>> #8AA9C7
+}
+skinparam rectangle {
+  BorderColor #1C568C
+}
+
+actor "Gestor de continuidade" as gestor
+actor "Operador do centro\nde operação (COD)" as operador
+actor "Engenheiro de\nplanejamento" as planejador
+actor "Equipe de campo" as campo
+actor "Agendador" as agenda <<sistema>>
+
+rectangle "Módulo CON" {
+  package "Acompanhamento regulatório (mensal)" {
+    usecase "Ver DEC e FEC previstos\ncontra o limite" as UC_dec
+    usecase "Ver conjuntos em risco\nde violar o limite anual" as UC_risco
+    usecase "Ver compensação esperada\npor alimentador" as UC_comp
+    usecase "Priorizar ações de melhoria\nsob orçamento" as UC_prio
+  }
+  package "Evento climático (horas a dias)" {
+    usecase "Receber alerta de\nevento climático" as UC_alerta
+    usecase "Ver trechos em risco\nno evento" as UC_trechos
+    usecase "Gerar plano de\npré-posicionamento" as UC_plano
+    usecase "Informar equipes\ndisponíveis" as UC_equipes
+    usecase "Localizar falta provável" as UC_falta <<V4>>
+  }
+  package "Aprendizado" {
+    usecase "Registrar interrupção\ne causa" as UC_reg
+    usecase "Avaliar alerta\n(útil / falso)" as UC_aval
+  }
+  package "Interno" {
+    usecase "Rodar previsão a cada\nrodada de tempo" as UC_rodada
+    usecase "Atualizar indicadores\ncom o mês fechado" as UC_mes
+  }
+}
+
+gestor --> UC_dec
+gestor --> UC_risco
+gestor --> UC_comp
+planejador --> UC_prio
+operador --> UC_alerta
+operador --> UC_trechos
+operador --> UC_plano
+operador --> UC_falta
+operador --> UC_aval
+campo --> UC_reg
+agenda --> UC_rodada
+agenda --> UC_mes
+
+UC_risco ..> UC_dec : <<include>>
+UC_prio ..> UC_comp : <<include>>
+UC_trechos .> UC_alerta : <<extend>>
+UC_plano ..> UC_equipes : <<include>>
+UC_alerta ..> UC_rodada : <<include>>
+
+legend right
+  <<V4>>: roadmap (exige dados de religadores
+  e medição inteligente do cliente)
+end legend
+@enduml
+
+' ===========================================================================
+' 3. Máquina de estados: um evento climático
+' ===========================================================================
+@startuml con-estados-evento
+title CON — ciclo de vida de um evento climático
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 55
+skinparam roundcorner 12
+skinparam ArrowColor #333333
+skinparam state {
+  BackgroundColor #FFE066
+  BorderColor #333333
+  StartColor #111111
+  EndColor #111111
+}
+hide empty description
+
+state "Monitorando" as Monit
+state "Alerta\nemitido" as Alerta
+state "Equipes\nposicionadas" as Posic
+state "Em curso" as Curso
+state "Recomposição" as Recomp
+state "Apuração" as Apur
+state "Encerrado sem\nocorrência" as SemOc
+state "Rotulado" as Rot
+
+[*] --> Monit
+Monit --> Alerta : Rodada de tempo com\nrisco acima do limiar
+Alerta --> Monit : Rodada seguinte\nrebaixa o risco
+Alerta --> Posic : Operador aprova\nplano de equipes
+Alerta --> Curso : Evento começa\nsem ação
+Posic --> Curso : Raios ou rajadas\nobservados na área
+Posic --> SemOc : Janela passa\nsem evento
+Curso --> Recomp : Interrupções\nregistradas
+Curso --> SemOc : Evento passa\nsem interrupção
+Recomp --> Apur : Todas as unidades\nrestabelecidas
+Apur --> Rot : Interrupções casadas ao evento,\nexpurgo classificado
+SemOc --> Rot : Falso alarme\nregistrado
+Rot --> [*]
+@enduml
+
+' ===========================================================================
+' 4. Máquina de estados: um conjunto elétrico no ano regulatório
+' ===========================================================================
+@startuml con-estados-conjunto
+title CON — um conjunto elétrico ao longo do ano regulatório
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 55
+skinparam roundcorner 12
+skinparam ArrowColor #333333
+skinparam state {
+  BackgroundColor #FFE066
+  BorderColor #333333
+  StartColor #111111
+  EndColor #111111
+}
+hide empty description
+
+state "Dentro da\ntrajetória" as Dentro
+state "Em risco" as Risco
+state "Ação\nplanejada" as Acao
+state "Violação\nprovável" as Provavel
+state "Fechado dentro\ndo limite" as FechadoOk
+state "Fechado com\nviolação" as FechadoViol
+
+[*] --> Dentro : Início do ano,\nlimite vigente
+Dentro --> Risco : P(violar limite anual)\nacima do corte
+Risco --> Dentro : Meses seguintes\nreduzem o risco
+Risco --> Acao : Gestor aprova ações\n(poda, reforço, equipes)
+Acao --> Dentro : Ações reduzem\no risco previsto
+Acao --> Provavel : Risco persiste
+Risco --> Provavel : Acumulado já compromete\no limite anual
+Provavel --> FechadoViol : Mês de dezembro\napurado
+Dentro --> FechadoOk : Mês de dezembro\napurado
+Risco --> FechadoOk : Mês de dezembro\napurado
+FechadoOk --> [*]
+FechadoViol --> [*]
+
+note right of Provavel
+  Mesmo aqui a camada segue útil:
+  prioriza ações que reduzem a
+  compensação DIC e FIC (CON-02).
+end note
+@enduml
+
+' ===========================================================================
+' 5. Fluxo: ciclo mensal e ciclo de evento
+' ===========================================================================
+@startuml con-fluxo
+title CON — fluxo de dados, modelos e decisões
+
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceMessageAlign left
+skinparam ParticipantBorderColor #1C568C
+skinparam ParticipantBackgroundColor #F4F8FC
+skinparam DatabaseBorderColor #1C568C
+skinparam DatabaseBackgroundColor #EAF1F8
+skinparam NoteBackgroundColor #FFF8E6
+
+participant "Fontes\n(ANEEL, BDGD,\ntempo, raios)" as fontes
+database "Modelo canônico\n(séries e rótulos)" as mc
+participant "Modelos CON\n(01, 02, 03)" as mod
+database "Camadas" as cam
+participant "Engine" as eng
+actor "Gestor" as gestor
+actor "Operador" as op
+actor "Equipe\nde campo" as campo
+
+== Ciclo mensal (CON-01, CON-02) ==
+fontes -> mc : indicadores e interrupções\ndo mês fechado
+mc -> mod : histórico sem vazamento\n(o que era conhecido em cada data)
+mod -> cam : DEC e FEC previstos por conjunto\ncompensação esperada por alimentador
+cam -> eng : detectores de tendência\ne limiar
+eng --> gestor : "Conjunto X: 62% de chance\nde violar o DEC anual"
+gestor -> cam : abre o conjunto, desce aos\nalimentadores de maior compensação
+gestor -> eng : aprova ações de melhoria
+
+== Ciclo de evento (CON-03) ==
+fontes -> mod : nova rodada de previsão do tempo
+mod -> cam : interrupções previstas por\nalimentador e trecho
+cam -> eng : risco acima do limiar
+eng --> op : alerta: tempestade em 18 h,\n40 a 90 interrupções na região Norte
+op -> eng : informa equipes disponíveis
+eng --> op : plano de pré-posicionamento no mapa
+op -> campo : posiciona equipes
+campo -> fontes : interrupções e causas\nregistradas no evento
+
+== Fechamento ==
+fontes -> mc : evento apurado\n(expurgo, dia crítico)
+mc -> mod : rótulos do evento
+note right of mod
+  Validação por evento e por região
+  deixados de fora: divisão aleatória
+  infla o desempenho.
+end note
+@enduml

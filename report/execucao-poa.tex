@@ -1,0 +1,170 @@
+% !TEX program = lualatex
+% =====================================================================
+% execucao-poa.tex -- nota tecnica
+%
+% Erro do NASA POWER contra a irradiancia que o ONS publica, e o que a
+% comparacao revela sobre o plano em que essa irradiancia e medida.
+%
+% Nao entra no `reporte.tex`. Compila sozinho:
+%   latexmk -pdf execucao-poa.tex
+% =====================================================================
+
+% A folha de estilo pressupoe `book`: usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`. Em `article` ela nao carrega.
+\documentclass[10pt,a4paper,oneside,twocolumn]{book}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[brazilian]{babel}
+% Mancha e medianiz do `reporte.tex`: 17,2 cm em duas colunas de 8,25 cm.
+\usepackage[a4paper,top=2.0cm,bottom=2.2cm,left=1.9cm,right=1.9cm,
+            columnsep=0.7cm]{geometry}
+\usepackage{estilo-reporte}
+
+\raggedbottom
+\pagestyle{plain}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\marca{../docs/img/terra-mark.png}
+\autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
+
+\begin{document}
+\abertura{Plano de medição da irradiância verificada}
+         {Nota técnica · \today{} ·
+          \texttt{notebooks/br/\_poa\_erro.py}}
+
+\section*{Objetivo}
+
+Medir o erro do NASA POWER contra a irradiância que o ONS publica em
+\texttt{val\_irradianciaverificado}, e determinar em que plano essa irradiância
+é medida.
+
+A etapa~0 atribuiu a diferença entre os dois ao plano: POWER na horizontal, ONS
+no plano do arranjo. A quantificação decide se substituir o POWER por NSRDB
+reduz erro, questão hoje argumentada por resolução de célula e não por erro
+medido.
+
+\section*{Dados}
+
+Janela de 2025. Irradiância medida do \texttt{br.pv\_detail}, agregada ao dia
+com o piso noturno do piranômetro subtraído por usina e mês. Irradiância
+modelada do NASA POWER horário, 62 células. Geometria das usinas do
+\texttt{br.plant}, que casa com o \texttt{pv\_detail} por \texttt{ceg\_core} em
+560 de 560.
+
+\begin{ficha}
+  \item[Amostra]   \num{66917} dias-usina em 237 usinas de 8 UFs.
+  \item[Descartes] 101 usinas com menos de 60 dias válidos; 333 dias-usina
+                   acima do teto físico.
+  \item[Dia]       ao menos 44 dos 48 intervalos, entre 1 kWh/m² e a
+                   irradiação extraterrestre normal do dia.
+\end{ficha}
+
+\section*{Método}
+
+O GHI horário do POWER é decomposto por Erbs e transposto ao plano pelo modelo
+de Perez, com albedo 0,20 e azimute voltado ao equador. Quatro geometrias:
+
+\begin{ficha}
+  \item[0°]          controle.
+  \item[$|$lat$|$]   regra a priori para arranjo fixo.
+  \item[Ajustada]    inclinação fixa de menor erro absoluto médio na usina,
+                     em grade de 0 a 45° com passo de 2,5°.
+  \item[Rastreador]  eixo único horizontal norte-sul, faixa de 60°,
+                     \textit{backtracking}, GCR 0,35.
+\end{ficha}
+
+\campo{Componentes} O DNI e a DHI publicados pelo POWER não fecham no GHI
+publicado: $\mathrm{DNI}\cdot\cos(z)+\mathrm{DHI}$ dá 0,9565 dele, com p10 de
+0,9547 e p90 de 0,9590. Reescalar não resolve, porque o fator satura em mais de
+um quarto dos intervalos com sol. Por isso o GHI é decomposto, e as componentes
+publicadas entram como diagnóstico.
+
+\campo{Controle} A transposição a 0° tem de devolver o GHI de entrada. Medido:
+0,9999, com faixa de 0,9999 a 1,0000 nas 237 usinas.
+
+\section*{Resultados}
+
+\vspace{0.2em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.4cm}rr@{}}
+\toprule
+\cab{Geometria} & \cab{MAE} & \cab{Medido/modelo} \\
+\midrule
+Horizontal        & 1,442 & 1,229 \\
+Fixo em $|$lat$|$ & 1,255 & 1,159 \\
+Fixo ajustado     & 1,234 & 1,148 \\
+Rastreador        & \textbf{0,841} & \textbf{1,000} \\
+\bottomrule
+\end{tabular}
+\notas{Mediana entre 237 usinas. MAE em kWh/m²/dia. Intervalos interquartis no
+texto.}
+
+\vspace{0.6em}
+A transposição a inclinação fixa reduz a razão de 1,229 para 1,148. O
+rastreador a leva a 1,000. Os intervalos interquartis das três primeiras linhas
+se sobrepõem --- 1,019 a 1,292 na horizontal contra 1,008 a 1,195 na ajustada
+--- e só o rastreador sai da faixa, com 0,835 a 1,031.
+
+\campo{A frota se divide em duas populações} A razão entre o medido e o GHI
+horizontal é bimodal: um modo em 1,00 e outro em 1,28, com o vale entre 1,10 e
+1,20 quase vazio.
+
+\vspace{0.3em}
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{2.9cm}rrr@{}}
+\toprule
+\cab{Classe} & \cab{$n$} & \cab{Med/mod} & \cab{Med/GHI} \\
+\midrule
+Sensor horizontal &  96 & 1,003 & 1,009 \\
+Rastreador        & 139 & 1,024 & 1,284 \\
+Fixo              &   2 & 1,100 & 1,149 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.6em}
+Razão 1,00 contra o GHI horizontal indica sensor no plano horizontal. Nessas 96
+usinas não há geometria de arranjo a inferir: qualquer inclinação positiva piora
+o ajuste e o ótimo encosta em 0°.
+
+\campo{Verificação independente} A forma do dia medido separa as duas
+populações por outra via. Largura a meia altura de 7,25 h nas de sensor
+horizontal contra 9,25 h nas rastreadoras, distribuições disjuntas, e 96,6\% de
+concordância com a classificação por ajuste em 236 usinas.
+
+\section*{Limitações}
+
+\campo{O controle não distingue decomposições} A 0°, sob Perez, a razão $a/b$
+vale 1 para zênite abaixo de 85°. O controle é exato por construção e testa
+apenas se a decomposição fecha. Erbs, DISC e DIRINT passam entre 0,9998 e
+0,9999, e entregam razão do rastreador de 0,976, 0,998 e 0,984. O terceiro
+dígito do resultado depende da escolha.
+
+\campo{A inclinação é censurada} 51 das 237 usinas ajustam num extremo da grade,
+50 em 0° e 1 em 45°. Onde o sensor lê o horizontal a inclinação ajustada não
+estima geometria de arranjo, e a diferença entre ela e a latitude é estatística
+censurada. Sobram 2 usinas onde a inclinação é estimável.
+
+\campo{A inferência de montagem vale para 59\% da frota} Nas 139 rastreadoras o
+sensor acompanha o plano, e a geometria que o ajusta é a do arranjo. Nas 96 de
+sensor horizontal o arranjo não é observável --- pode ser fixo ou rastreador.
+
+\begin{objecao}
+A conclusão da etapa~0, de que \texttt{val\_irradianciaverificado} é medida no
+plano do arranjo, vale para 59\% da frota. Para 41\% a medida é horizontal, e o
+grupo não corresponde ao conjunto Janaúba, que a etapa~0 usara como controle
+interno: 3 das 27 usinas de Janaúba estão nele, contra 44 distribuídas por outros
+doze conjuntos.
+\end{objecao}
+
+\section*{Artefatos}
+
+\begin{ficha}
+  \item[Código] \texttt{notebooks/br/\_poa\_medida.py} e
+                \texttt{\_poa\_erro.py}.
+  \item[Saídas] \texttt{data/processed/poa\_erro\_por\_usina.csv} e
+                \texttt{poa\_erro\_pareado.parquet}.
+\end{ficha}
+
+\end{document}

@@ -2,7 +2,7 @@
 
 Files: `data/processed/curtailment_halfhour.parquet` (solar) and
 `curtailment_wind_halfhour.parquet` (wind), built by
-`uv run python -m terra_energy_research.dataset [--tech wind]` from the `clean` layer.
+`uv run python -m lucertae.corte.dataset [--tech wind]` from the `clean` layer.
 
 Differences in the wind version: it uses `clean.wind_curtail`, covers all 24 hours (the solar one runs from
 05:00 to 19:30), has no irradiance or per-plant aggregates (`poa_mean`, `n_plants`, `oracle_poa_mean`), and
@@ -89,7 +89,7 @@ at the same instant.
   seasonal for ~2 years of data and act as a date marker.
 
 **Archived weather forecast (ex-ante)** — `add_weather`; ECMWF IFS 0.25° via the Open-Meteo
-Previous Runs API (`terra_energy_research.weather`). `wx1_*` comes from the run issued 24h before the
+Previous Runs API (`lucertae.corte.weather`). `wx1_*` comes from the run issued 24h before the
 valid time and `wx2_*` from the one issued 48h before. Hourly values are repeated in both 30 min intervals.
 - `wx{1,2}_ghi`, `wx{1,2}_cloud`: global horizontal irradiance (W/m²) and cloud cover (%) in the cluster's cell.
 - `wx{1,2}_sin_solar_ghi`: mean irradiance of the solar clusters, weighted by capacity.

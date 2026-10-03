@@ -1,0 +1,95 @@
+' Gerado por features/gerar.py a partir de features/catalogo.csv. Não edite.
+@startmindmap features
+title Features de energia — módulos e fases
+<style>
+mindmapDiagram {
+  node { FontName Helvetica; FontSize 11; Padding 4; Margin 3; RoundCorner 8; LineColor #1C568C }
+  :depth(0) { FontSize 15; FontStyle bold; BackgroundColor #1d2733; FontColor #ffffff }
+  :depth(1) { FontSize 12; FontStyle bold; BackgroundColor #FFF8E6; LineColor #B07A1A }
+}
+</style>
+* Features de energia
+** BAS · Base espacial da rede
+***[#1C568C] <color:#FFFFFF>BAS-01  Hierarquia elétrica georreferenciada</color>
+***[#1C568C] <color:#FFFFFF>BAS-02  Recortes administrativos e regulatórios</color>
+***[#1C568C] <color:#FFFFFF>BAS-03  Qualidade e cobertura de dados por entidade</color>
+***[#A9C4DD] BAS-04  Correção de topologia e fase
+***[#A9C4DD] BAS-05  Auditoria de plausibilidade do registro
+** PER · Perdas não técnicas
+***[#1C568C] <color:#FFFFFF>PER-01  Perda estimada por transformador e alimentador</color>
+***[#1C568C] <color:#FFFFFF>PER-02  Probabilidade de irregularidade (exibida agregada)</color>
+***[#1C568C] <color:#FFFFFF>PER-03  Energia recuperável estimada</color>
+***[#1C568C] <color:#FFFFFF>PER-04  Plano de inspeção com rotas</color>
+***[#5B8BB5] <color:#FFFFFF>PER-05  Avaliação do método por região (A/B)</color>
+***[#5B8BB5] <color:#FFFFFF>PER-06  Monitor de viés geográfico e socioeconômico</color>
+** CAR · Carga e demanda
+***[#5B8BB5] <color:#FFFFFF>CAR-01  Carga prevista por subestação e alimentador (P10–P90)</color>
+***[#5B8BB5] <color:#FFFFFF>CAR-02  Carregamento previsto de transformadores</color>
+***[#5B8BB5] <color:#FFFFFF>CAR-03  Pico de demanda previsto</color>
+***[#5B8BB5] <color:#FFFFFF>CAR-04  Demanda espacializada (densidade de carga)</color>
+***[#A9C4DD] CAR-05  Sensibilidade climática da carga
+***[#A9C4DD] CAR-06  Crescimento de carga de longo prazo
+***[#DDE7F0] CAR-07  Perfis de consumo por área (agregados)
+***[#F0E0BC] CAR-08  Carga prevista por submercado
+** MMG · MMGD e recursos distribuídos
+***[#5B8BB5] <color:#FFFFFF>MMG-01  MMGD instalada por alimentador (normalizada)</color>
+***[#5B8BB5] <color:#FFFFFF>MMG-02  Geração distribuída prevista (injeção)</color>
+***[#5B8BB5] <color:#FFFFFF>MMG-03  Decomposição carga bruta × MMGD</color>
+***[#5B8BB5] <color:#FFFFFF>MMG-04  Crescimento previsto da MMGD</color>
+***[#A9C4DD] MMG-05  MMGD não cadastrada
+***[#A9C4DD] MMG-06  Capacidade de hospedagem por alimentador
+***[#A9C4DD] MMG-07  Risco de fluxo reverso e sobretensão
+***[#DDE7F0] MMG-08  Adoção prevista de veículos elétricos
+** RED · Operação e planejamento da rede
+***[#5B8BB5] <color:#FFFFFF>RED-01  Pontos quentes de carregamento previstos</color>
+***[#A9C4DD] RED-02  Violação de tensão prevista
+***[#A9C4DD] RED-03  Priorização de obras de reforço
+***[#A9C4DD] RED-04  Restrição e curtailment por região
+***[#DDE7F0] RED-05  Recomendação de reconfiguração
+***[#DDE7F0] RED-06  Triagem de contingências N-1 (transmissão)
+** ATV · Ativos e manutenção
+***[#A9C4DD] ATV-01  Índice de saúde de transformadores de potência
+***[#A9C4DD] ATV-02  Risco de falha por equipamento
+***[#A9C4DD] ATV-03  Vegetação próxima à rede
+***[#DDE7F0] ATV-04  Defeitos em imagens de inspeção
+***[#A9C4DD] ATV-05  Estruturação de ordens de serviço e causas
+***[#DDE7F0] ATV-06  Vida útil remanescente e plano de manutenção
+left side
+** CON · Continuidade e qualidade
+***[#5B8BB5] <color:#FFFFFF>CON-01  DEC e FEC previstos por conjunto</color>
+***[#5B8BB5] <color:#FFFFFF>CON-02  Risco de violação de DIC e FIC (compensação)</color>
+***[#A9C4DD] CON-03  Risco de interrupção por evento climático
+***[#DDE7F0] CON-04  Localização provável de falta
+** GER · Geração renovável
+***[#5B8BB5] <color:#FFFFFF>GER-01  Geração prevista por parque (P10–P90)</color>
+***[#5B8BB5] <color:#FFFFFF>GER-02  Alertas de rampa</color>
+***[#A9C4DD] GER-03  Nowcasting por satélite (0 a 6 h)
+***[#5B8BB5] <color:#FFFFFF>GER-04  Curtailment detectado e marcado</color>
+***[#A9C4DD] GER-05  Desempenho real × esperado
+***[#A9C4DD] GER-06  Saúde de turbinas
+***[#DDE7F0] GER-07  Sujidade e programação de limpeza solar
+***[#F0E0BC] GER-08  Geração agregada prevista por submercado
+** MER · Mercado e preço
+***[#F0E0BC] MER-01  PLD previsto por submercado (quantis)
+***[#F0E0BC] MER-02  Cenários conjuntos de geração, carga e preço
+***[#F0E0BC] MER-03  Otimização de oferta e despacho de baterias
+** CLI · Contexto climático
+***[#5B8BB5] <color:#FFFFFF>CLI-01  Tempo previsto</color>
+***[#5B8BB5] <color:#FFFFFF>CLI-02  Satélite e radar observados</color>
+***[#A9C4DD] CLI-03  Raios e eventos severos
+** DRE · Resposta da demanda e consumidor
+***[#DDE7F0] DRE-01  Alvos de resposta da demanda por alimentador
+***[#EEEEEE] DRE-02  Desagregação de consumo (NILM)
+***[#EEEEEE] DRE-03  Recomendação tarifária e de eficiência
+** ENG · Engine de análise e modelos
+***[#1C568C] <color:#FFFFFF>ENG-01  Feed de insights consolidado</color>
+***[#1C568C] <color:#FFFFFF>ENG-02  Explicação por entidade</color>
+***[#1C568C] <color:#FFFFFF>ENG-03  Erro dos modelos por entidade</color>
+***[#5B8BB5] <color:#FFFFFF>ENG-04  Deriva de dados por região</color>
+***[#5B8BB5] <color:#FFFFFF>ENG-05  Simulação de cenário</color>
+***[#5B8BB5] <color:#FFFFFF>ENG-06  Pergunta em texto livre</color>
+legend right
+  Cor da feature = fase:
+  <back:#1C568C><color:#FFFFFF> MVP </color></back> <back:#5B8BB5><color:#FFFFFF> V2 </color></back> <back:#A9C4DD> V3 </back> <back:#DDE7F0> V4 </back> <back:#F0E0BC> cond </back> <back:#EEEEEE> fora </back>
+endlegend
+@endmindmap

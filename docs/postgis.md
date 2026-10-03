@@ -122,12 +122,12 @@ again therefore only downloads and reloads the months that the ONS republished.
 uv sync
 
 # ~400 MB in data/raw/ons; load ~10 min. The load creates the tables from sql/05_ons_system.sql.
-uv run python -m terra_energy_research.ons download --start 2024-04-01 --end 2026-08-31
-uv run python -m terra_energy_research.ons load --start 2024-04-01 --end 2026-08-31
+uv run python -m lucertae.corte.ons download --start 2024-04-01 --end 2026-08-31
+uv run python -m lucertae.corte.ons load --start 2024-04-01 --end 2026-08-31
 
 # archived ECMWF: download ~11 min (~110 MB), load ~5 min (~1.2 GB in the database)
-uv run python -m terra_energy_research.weather download
-uv run python -m terra_energy_research.weather load
+uv run python -m lucertae.corte.weather download
+uv run python -m lucertae.corte.weather load
 ```
 
 `ons load` accepts `--parts` to load only some of the sources (default:
@@ -194,7 +194,7 @@ Registers: `br.plant` 25,130, `br.ons_unit` 236, `br.substation` 1,677, `br.tran
    `refresh_rollup`. If the register changed, reload `load_units` with the most recent month.
 2. This project: `ons download` and `ons load` with the new interval; `weather download` and `weather load`.
 3. `sql/10_clean.sql` and `sql/20_clean_system.sql` again, to refresh the materialized views.
-4. Regenerate the datasets (`python -m terra_energy_research.dataset`, with and without `--tech wind`).
+4. Regenerate the datasets (`python -m lucertae.corte.dataset`, with and without `--tech wind`).
 
 ## Objects that are not part of the workflow
 
