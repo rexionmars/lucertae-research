@@ -14,16 +14,16 @@ fica registrada para que a decisão, quando vier, não recomece do zero.
 \end{nota}
 
 \begin{nota}
-\textbf{Correção sobre a CCEE.} O portal Dados Abertos da CCEE tem um bloqueio
+\textbf{Acesso aos dados da CCEE.} O portal Dados Abertos da CCEE tem um bloqueio
 de segurança (firewall de aplicação) que barra clientes fora da política de
-acesso e orienta a abrir chamado com o código do erro e o IP [1,2]. A própria
+acesso e orienta a abrir chamado com o código do erro e o IP [1,2]. A
 CCEE divulga tutoriais de automação por API, e o download de um endpoint
-CKAN (\texttt{/datastore/dump/<id>}) funcionou sem bloqueio. Coleta
-automatizada é viável com boas práticas: poucas requisições, user-agent
+CKAN (\texttt{/datastore/dump/<id>}) funcionou sem bloqueio em 23/09/2026. A
+coleta automatizada foi possível com poucas requisições, user-agent
 identificável, cache local e download dos CSVs anuais em vez de raspagem.
 \end{nota}
 
-\begin{ficha}{MER-01 \textperiodcentered{} PLD previsto por submercado (quantis)}{V3}
+\begin{ficha}{MER-01 \textperiodcentered{} PLD previsto por submercado (quantis)}{cond}
 \campo{Dados} \emph{PLD\_HORARIO} da CCEE: um CSV por ano, horário de 2021 a
 2026 e semanal de 2001 a 2020, licença CC-BY 4.0, atualização diária [3].
 Limites regulatórios de 2026: piso R\$~57,31/MWh, teto estrutural
@@ -32,10 +32,10 @@ R\$~785,27/MWh e teto horário R\$~1.611,04/MWh (Despacho ANEEL 3.850/2025)
 decks do DESSEM também no ONS [7]. ONS Dados Abertos: carga semi-horária,
 geração por usina e CMO semi-horário [8].
 \campo{Abordagens} Linha de base: ingênuo sazonal e LEAR (autorregressivo
-com LASSO), referência da literatura, implementado no \emph{epftoolbox} [10].
+com LASSO), usado como referência e implementado no \emph{epftoolbox} [10].
 Recomendada: gradient boosting com perda quantílica sobre CMO, carga e
 renováveis previstas, armazenamento dos reservatórios e deck vigente, com
-calibração conformal (a confirmar). Estado da arte: emulação do DESSEM por
+calibração conformal (a confirmar). Literatura recente: emulação do DESSEM por
 modelo substituto e redes que preveem distribuições paramétricas [10].
 \campo{Métricas} Pinball e CRPS, cobertura e largura dos intervalos, MAE
 relativo ao ingênuo, teste de Diebold--Mariano.
@@ -44,16 +44,16 @@ calculado pelo DESSEM) [4]; nova função de custo futuro em 12/10/2025 [6];
 distribuição censurada no piso e no teto; séries do ONS revisadas depois de
 publicadas, o que exige guardar o que era conhecido em cada data [8]. O
 Projeto Meta II propõe preço por oferta e dois PLDs (ex-ante e ex-post), com
-implantação prevista para junho de 2028 [9]: deriva estrutural garantida.
+implantação prevista para junho de 2028 [9], o que quebrará a série se implantado.
 \end{ficha}
 
-\begin{ficha}{MER-02 \textperiodcentered{} Cenários conjuntos de geração, carga e preço}{V3}
+\begin{ficha}{MER-02 \textperiodcentered{} Cenários conjuntos de geração, carga e preço}{cond}
 \campo{Dados} Saídas probabilísticas de GER-01, CAR-08 e MER-01; histórico
 conjunto do ONS e da CCEE [3,8].
 \campo{Abordagens} Linha de base: cenários independentes ou bootstrap de
 blocos históricos. Recomendada: cópula gaussiana sobre as marginais
 preditivas (Pinson et al.\ 2009) [11]; alternativa com a ordem dos membros do
-ensemble meteorológico (ECC e dual-ECC) [12]. Estado da arte: cópulas vine e
+ensemble meteorológico (ECC e dual-ECC) [12]. Literatura recente: cópulas vine e
 geradores profundos (a confirmar).
 \campo{Métricas} Energy score e variogram score, histogramas de posto
 multivariados, CRPS por marginal (biblioteca \emph{scoringrules}) [13].
@@ -61,7 +61,7 @@ multivariados, CRPS por marginal (biblioteca \emph{scoringrules}) [13].
 estacionária subestima eventos conjuntos extremos (seca com pico de carga).
 \end{ficha}
 
-\begin{ficha}{MER-03 \textperiodcentered{} Otimização de oferta e despacho de baterias}{V4}
+\begin{ficha}{MER-03 \textperiodcentered{} Otimização de oferta e despacho de baterias}{cond}
 \campo{Dados} Cenários de MER-02, PLD horário e parâmetros técnicos da
 bateria. Contexto: Portaria MME 136/2026 define o primeiro leilão de reserva
 de capacidade em baterias (dezembro de 2026, contratos de 15 anos a partir
@@ -69,7 +69,7 @@ de agosto de 2028), com receita de disponibilidade e não de arbitragem livre
 [14].
 \campo{Abordagens} Linha de base: otimização determinística sobre a previsão
 pontual. Recomendada: programação estocástica em dois estágios ou CVaR,
-em janela móvel. Estado da arte: aprendizado focado na decisão; minimizar o
+em janela móvel. Literatura recente: aprendizado focado na decisão; minimizar o
 CRPS não garante a melhor oferta [15].
 \campo{Métricas} Receita contra o ótimo com informação perfeita (regret),
 CVaR da receita, custo de degradação.
@@ -91,7 +91,7 @@ com citação exigida [19]. INMET: estações automáticas horárias (portal com
 90 dias) e BDMEP para o histórico, com defasagem de 1 a 3 meses [20].
 \campo{Abordagens} Linha de base: previsão bruta interpolada para as
 entidades. Recomendada: pós-processamento estatístico por entidade (MOS,
-EMOS, regressão quantílica) com downscaling. Estado da arte: modelos globais
+EMOS, regressão quantílica) com downscaling. Literatura recente: modelos globais
 de ML (AIFS, GraphCast-GFS) [16,18]. Ferramentas: \emph{herbie},
 \emph{xarray}/\emph{cfgrib}, \emph{xskillscore} [17].
 \campo{Métricas} RMSE e MAE por variável e horizonte, CRPS do ensemble,
@@ -111,7 +111,7 @@ de dupla polarização, com dados volumétricos sob solicitação (a confirmar)
 [23].
 \campo{Abordagens} Linha de base: exibir mosaicos. Recomendada: nowcasting de
 precipitação de 0 a 6 h com \emph{pysteps} (fluxo óptico e ensembles
-estocásticos) [24]. Estado da arte: nowcasting profundo (ConvGRU, difusão).
+estocásticos) [24]. Literatura recente: nowcasting profundo (ConvGRU, difusão).
 \campo{Métricas} CSI, POD e FAR por limiar; FSS; CRPS [24].
 \campo{Armadilhas} Cobertura de radar desigual no território; lacunas e
 latência do GOES.
@@ -143,7 +143,7 @@ do SIN; resposta da demanda por alimentador é caso da distribuidora e depende
 de medição própria (a confirmar).
 \campo{Abordagens} Linha de base de medição: regras ``X de Y dias'' (a
 confirmar). Recomendada: baseline contrafactual por ML, avaliada como
-contrafactual porque define pagamento; estado da arte: controle sintético
+contrafactual porque define pagamento; literatura recente: controle sintético
 generalizado e baselines probabilísticos [29]. Alvos: alimentadores com
 carregamento previsto acima do limite (CAR-01, RED-01), ordenados por alívio
 esperado por custo.
@@ -171,7 +171,7 @@ pública, desfecho não verificado [32]. Tarifas homologadas por distribuidora
 nos dados abertos da ANEEL [33].
 \campo{Por que fica fora} Sem curva horária medida a recomendação é
 especulativa, e a decisão é da unidade consumidora, não de uma entidade do
-mapa. Se a Tarifa Branca automática vingar, a versão agregada (quantas
+mapa. Se a Tarifa Branca automática for aprovada, a versão agregada (quantas
 unidades de um alimentador seriam afetadas) pode voltar como insight.
 \end{ficha}
 
@@ -234,7 +234,8 @@ teste por região e procurar agrupamentos de deriva com LISA (proposta, a
 confirmar como prática).
 \campo{Armadilhas} \textbf{Licença}: o \emph{alibi-detect} mudou de Apache 2.0
 para Business Source License 1.1 em janeiro de 2024, com restrição a uso
-comercial em produção [44]. Com amostras grandes tudo ``deriva'': usar
+comercial em produção [44]. Com amostras grandes, diferenças pequenas ficam estatisticamente
+significativas: usar
 tamanho de efeito e FDR; comparar com a mesma estação do ano.
 \end{ficha}
 
@@ -244,7 +245,7 @@ forma coerente variáveis correlacionadas e sinalizando extrapolação fora do
 domínio de treino. Onde houver cenários conjuntos (MER-02, na trilha
 condicional), propagar a incerteza sobre eles; sem eles, perturbar as
 marginais e declarar que a dependência não está modelada.
-Estado da arte: modelos causais estruturais (a confirmar: DoWhy, EconML).
+Literatura recente: modelos causais estruturais (a confirmar: DoWhy, EconML).
 \campo{Métricas} Backtest em choques históricos conhecidos; cobertura dos
 intervalos.
 \campo{Armadilhas} Modelos preditivos não são causais; o usuário pode ler o
@@ -253,7 +254,7 @@ cenário como previsão.
 
 \begin{ficha}{ENG-06 \textperiodcentered{} Pergunta em texto livre}{V2}
 \campo{Estado da técnica} Em text-to-SQL sobre bancos reais (BIRD), o melhor
-sistema chega a cerca de 82\% de acurácia de execução contra 93\% de humanos
+sistema reportado em 2025 chega a cerca de 82\% de acurácia de execução contra 93\% de humanos
 [47]. Em tarefas geoespaciais, agentes frequentemente ``alucinam'' relações
 espaciais em vez de computá-las [48]. No DataGemma, mesmo com recuperação de
 dados, parte relevante das estatísticas citadas saiu errada [49]: o modelo de

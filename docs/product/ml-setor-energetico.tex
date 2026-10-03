@@ -1,25 +1,18 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,a4paper,oneside]{article}
 
 % ---------------------------------------------------------------------------
-% Pacotes
+% Preâmbulo base do repositório: fonte, mancha, pacotes, legenda, título e
+% cabeçalho. Compile de dentro de `docs/product/`.
 % ---------------------------------------------------------------------------
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage{lmodern}
-\usepackage{microtype}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{array}
-\usepackage{enumitem}
-\usepackage[table]{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage[hidelinks]{hyperref}
+\input{../../report/config/preambulo}
+\renewcommand{\doctitulo}{Aprendizado de máquina e aprendizado profundo no setor energético}
+\renewcommand{\docsubtitulo}{Aplicações, fundamentos técnicos e visão de produto}
+\renewcommand{\docresponsavel}{Mapeamento Energético}
+\renewcommand{\docdata}{2026-09}
 
-\setlist{itemsep=2pt,topsep=4pt}
-\renewcommand{\arraystretch}{1.25}
+% `L` aqui é coluna `X` alinhada à esquerda, e as tabelas deste documento
+% a usam assim; sobrepõe o `L{largura}` do preâmbulo base.
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
 \definecolor{prodcolor}{RGB}{28,86,140}
@@ -33,23 +26,12 @@
   left=8pt, right=8pt, top=6pt, bottom=6pt
 }
 
-% Caixa para observações
-\newtcolorbox{nota}{
-  enhanced, breakable,
-  colback=notecolor!6, colframe=notecolor!60,
-  left=6pt, right=6pt, top=4pt, bottom=4pt
-}
 
 \newcommand{\prodsec}[1]{\par\medskip\noindent\textbf{\color{prodcolor}#1}\par\smallskip}
 
-\title{Aprendizado de Máquina e Aprendizado Profundo\\no Setor Energético\\[4pt]
-\large Aplicações, fundamentos técnicos e visão de produto}
-\author{Mapeamento Energético}
-\date{Setembro de 2026}
-
 \begin{document}
 
-\maketitle
+\rosto
 
 \begin{abstract}
 Este documento aprofunda quatro frentes de aplicação de aprendizado de máquina
@@ -134,6 +116,7 @@ energia eólica~\cite{deepmindwind}.
 
 \begin{table}[h]
 \centering
+\caption{Horizontes de previsão e seus usos.}
 \begin{tabularx}{\textwidth}{l l L}
 \toprule
 \textbf{Horizonte} & \textbf{Faixa típica} & \textbf{Uso principal} \\
@@ -148,7 +131,6 @@ Longo prazo & anos & expansão da geração e da transmissão, leilões,
   planejamento tarifário \\
 \bottomrule
 \end{tabularx}
-\caption{Horizontes de previsão e seus usos.}
 \end{table}
 
 Cada horizonte tem dados, modelos e métricas diferentes. Nos horizontes muito
@@ -308,9 +290,10 @@ Isso abre duas estratégias de ML:
 \subsection{Famílias de modelos}
 
 \begin{table}[h]
-\centering
 \small
-\begin{tabularx}{\textwidth}{l L L}
+\caption{Famílias de modelos para previsão em energia.}
+\begin{tabelalarga}
+\begin{tabularx}{\linewidth}{l L L}
 \toprule
 \textbf{Família} & \textbf{Pontos fortes} & \textbf{Limitações} \\
 \midrule
@@ -332,7 +315,7 @@ Foundation models (Chronos, TimesFM, Moirai) & previsão \textit{zero-shot}
   custo de inferência \\
 \bottomrule
 \end{tabularx}
-\caption{Famílias de modelos para previsão em energia.}
+\end{tabelalarga}
 \end{table}
 
 \paragraph{Foundation models de séries temporais.} São modelos pré-treinados
@@ -1205,9 +1188,10 @@ financiar os módulos de rede mais inovadores.
 % ===========================================================================
 
 \begin{table}[h]
-\centering
 \small
-\begin{tabularx}{\textwidth}{l L L L l}
+\caption{Comparação entre as quatro frentes.}
+\begin{tabelalarga}
+\begin{tabularx}{\linewidth}{l L L L l}
 \toprule
 \textbf{Frente} & \textbf{Técnicas centrais} & \textbf{Produto} &
   \textbf{Cliente principal} & \textbf{Maturidade} \\
@@ -1225,7 +1209,7 @@ Distribuição e consumidor & GBM, PU learning, NILM, MPC &
   média (rede) \\
 \bottomrule
 \end{tabularx}
-\caption{Comparação entre as quatro frentes.}
+\end{tabelalarga}
 \end{table}
 
 \paragraph{Padrões comuns entre as quatro frentes.}

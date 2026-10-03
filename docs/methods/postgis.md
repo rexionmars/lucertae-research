@@ -5,12 +5,12 @@ schemas, filled by two different projects:
 
 | schema | what it contains | who creates and loads it |
 |---|---|---|
-| `br` (base) | ANEEL plant register, ONS network, ONS units, photovoltaic curtailment and detail | the **TERRA** project (`sidecar/terra/grid/store.py`) |
+| `br` (base) | ANEEL plant register, ONS network, ONS units, photovoltaic curtailment and detail | the **Solara** project (`sidecar/terra/grid/store.py`) |
 | `br` (system) | load, energy balance, daily schedule, CMO, hydrology, interchange, wind curtailment, weather forecast | this project (`sql/05_ons_system.sql`, `ons.py`, `weather.py`) |
 | `clean` | cleaning layer and aggregates used by the dataset | this project (`sql/10_clean.sql`, `sql/20_clean_system.sql`) |
 
 The system tables depend on the base tables: `br.source_file`, which records the origin of each row, is
-created by TERRA. For this reason, the order below matters.
+created by Solara. For this reason, the order below matters.
 
 Reference for the database in use (Sep 2026): PostgreSQL 17.11 (Homebrew, macOS arm64), PostGIS 3.6.4,
 9.7 GB in total with data from Apr 2024 to Aug 2026. The largest tables are `br.pv_detail` (3.8 GB),
@@ -44,8 +44,8 @@ psql -d terra_br -c "create extension if not exists postgis;"
 psql -d terra_br -c "select postgis_full_version();"
 ```
 
-TERRA also runs `create extension if not exists postgis` when it opens the database. Creating the extension
-here first makes it possible to check the installation without depending on TERRA.
+Solara also runs `create extension if not exists postgis` when it opens the database. Creating the extension
+here first makes it possible to check the installation without depending on Solara.
 
 ## 3. Connection
 
@@ -54,7 +54,7 @@ Both projects look for the same database by default, but they read different env
 | project | variable | default |
 |---|---|---|
 | this one | `DATABASE_URL`, or `PGHOST`/`PGPORT`/`PGUSER`/`PGDATABASE` (`db.py`) | `postgresql+psycopg://$USER@localhost:5432/terra_br` |
-| TERRA | `TERRA_BR_DSN` | `postgresql:///terra_br` (local socket) |
+| Solara | `TERRA_BR_DSN` | `postgresql:///terra_br` (local socket) |
 
 With a local database owned by the system user, no variable is needed. On another host or
 port, set both, pointing to the same database:
@@ -64,11 +64,11 @@ export DATABASE_URL=postgresql+psycopg://usuario@host:5432/terra_br
 export TERRA_BR_DSN=postgresql://usuario@host:5432/terra_br
 ```
 
-## 4. Base tables (TERRA)
+## 4. Base tables (Solara)
 
-TERRA ([rexionmars/TERRA](https://github.com/rexionmars/TERRA)) maintains the base schema and the
+Solara ([rexionmars/Solara](https://github.com/rexionmars/Solara)) maintains the base schema and the
 loaders in `sidecar/terra/grid/store.py` and `sidecar/terra/grid/ons.py`. They have no command
-line: they are Python functions. The script below, run in the Python environment of the TERRA sidecar, loads
+line: they are Python functions. The script below, run in the Python environment of the Solara sidecar, loads
 what this project uses.
 
 **Input files, downloaded by hand**
@@ -79,7 +79,7 @@ what this project uses.
 | `br.substation`, `br.transmission_line` | ONS, [subestacao](https://dados.ons.org.br/dataset/subestacao) and [linha-transmissao](https://dados.ons.org.br/dataset/linha-transmissao) | `SUBESTACAO.parquet`, `LINHA_TRANSMISSAO.parquet` |
 | `br.ons_unit` | ONS, [fator-capacidade-2](https://dados.ons.org.br/dataset/fator-capacidade-2) | the most recent monthly file (one month is enough) |
 
-The photovoltaic curtailment data (`br.pv_curtail`, `br.pv_detail`) are downloaded by TERRA itself from
+The photovoltaic curtailment data (`br.pv_curtail`, `br.pv_detail`) are downloaded by Solara itself from
 the ONS catalog (`restricao_coff_fotovoltaica` and `restricao_coff_fotovoltaica_detail`), with a cache
 in `~/.cache/geosense/ons` (about 93 MB per month for the detail alone).
 
@@ -110,7 +110,7 @@ conn.commit()
 
 The `load_units` file name above is an example; use the one for the downloaded month. The script uses only public
 functions of `store.py` and `ons.py`, but it has not been run end to end in this form: the current database
-was loaded by TERRA in separate runs.
+was loaded by Solara in separate runs.
 
 `load_period` compares the file revision with the one recorded in `br.source_file`. A revision that was already
 loaded is skipped; a new revision deletes the rows of the previous one before inserting. Running the script
@@ -190,7 +190,7 @@ Registers: `br.plant` 25,130, `br.ons_unit` 236, `br.substation` 1,677, `br.tran
 
 ## 8. Updating with new months
 
-1. TERRA: run the `load_period` loop again with the new end date, then `refresh_clusters` and
+1. Solara: run the `load_period` loop again with the new end date, then `refresh_clusters` and
    `refresh_rollup`. If the register changed, reload `load_units` with the most recent month.
 2. This project: `ons download` and `ons load` with the new interval; `weather download` and `weather load`.
 3. `sql/10_clean.sql` and `sql/20_clean_system.sql` again, to refresh the materialized views.
@@ -202,7 +202,7 @@ Registers: `br.plant` 25,130, `br.ons_unit` 236, `br.substation` 1,677, `br.tran
   remained in the database. No script in this project creates or reads it; for the solar clusters, its contents are identical
   to those of `clean.unit_plan` (1,165,454 rows, checked in Sep 2026).
 - `br.tmp_pr_dia`: temporary table from an old load. No script creates or reads it.
-- `br.load_conflict`: created by TERRA; records duplicate rows (`id_ons`, instant) discarded
+- `br.load_conflict`: created by Solara; records duplicate rows (`id_ons`, instant) discarded
   by `load_period`.
 
 The first two can be removed with `drop materialized view clean.solar_unit_plan;` and

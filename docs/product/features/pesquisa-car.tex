@@ -7,11 +7,12 @@
 
 \begin{table}[H]
 \centering\small
+\caption{Fontes compartilhadas pelos módulos CAR e MMG.}
 \begin{tabularx}{\textwidth}{P{3.2cm} L P{4.2cm}}
 \toprule
 \textbf{Fonte} & \textbf{O que traz} & \textbf{Armadilhas} \\
 \midrule
-BDGD (ANEEL) [1,2] & geodatabase anual por distribuidora, data-base em 31/12, publicado com cerca de 9 meses de defasagem. Nas tabelas de unidades: alimentador, transformador, subestação, município, classe, CNAE, tipologia de curva, energia e demanda mensais, \textbf{DIC e FIC mensais}, código de GD e coordenadas & os CSVs abertos só trazem \textbf{pessoa jurídica}; residencial exige o geodatabase completo. Energia de GD como injeção e potência em kW e W misturados: observado empiricamente num recorte, não confirmado na especificação \\
+BDGD (ANEEL) [1,2] & geodatabase anual por distribuidora, data-base em 31/12, publicado cerca de 8 meses depois da data-base na edição de 2025. Nas tabelas de unidades: alimentador, transformador, subestação, município, classe, CNAE, tipologia de curva, energia e demanda mensais, \textbf{DIC e FIC mensais}, código de GD e coordenadas & os CSVs abertos só trazem \textbf{pessoa jurídica}; residencial exige o geodatabase completo. Energia de GD como injeção e potência em kW e W misturados: observado empiricamente num recorte, não confirmado na especificação \\
 Registro de MMGD (ANEEL) [4,5] & mensal; município, subestação e coordenadas aproximadas, modalidade (local, remoto, compartilhada), classe, fonte, potência em kW & potência é a soma dos \textbf{módulos} (CC), não do inversor; não há alimentador, só subestação \\
 Curvas típicas CTR (ANEEL) [6] & consumidor-tipo e rede-tipo das campanhas de medição das revisões tarifárias, por tipo de dia, em intervalos de 15 minutos & unidade do valor não informada; cada distribuidora tem um ano de campanha; curvas anteriores à expansão da MMGD \\
 ONS, carga verificada e programada [7,8] & semi-horária por área de carga, com componentes, inclusive a \textbf{parcela atendida por MMGD} & quebras em 2021 (carga global) e 2023 (MMGD estimada entra na carga) [9]; o ONS orienta não usar anos anteriores a 2022 [10] \\
@@ -22,7 +23,6 @@ Senatran, frota [16,17] & mensal por município e combustível desde 2003 & frot
 EPE [18--21] & PDE 2035 (MMGD, eletromobilidade, demanda); modelo 4MD e o pacote R \emph{epe4md} & nacional ou por distribuidora; a desagregação é do usuário \\
 \bottomrule
 \end{tabularx}
-\caption{Fontes compartilhadas pelos módulos CAR e MMG.}
 \end{table}
 
 % ---------------------------------------------------------------------------
@@ -37,9 +37,9 @@ temperatura e calendário (estilo Tao Vanilla) [22]. Recomendada: um modelo
 global de boosting quantílico para todos os alimentadores (P10, P50, P90),
 seguido de reconciliação hierárquica transformador, alimentador,
 subestação, área com MinT [23]; versão probabilística como em Ben Taieb et
-al.\ com medidores inteligentes [24]. Estado da arte: TFT [26] e foundation
-models [27--30]; o \textbf{Chronos-2} é o único com covariáveis nativas,
-essencial pelo clima [28]; usar como desafiante e para alimentadores com
+al.\ com medidores inteligentes [24]. Literatura recente: TFT [26] e foundation
+models [27--30]; o \textbf{Chronos-2} aceita covariáveis nativas,
+necessárias para o clima [28]; usar como desafiante e para alimentadores com
 pouco histórico [31,32].
 \campo{Métricas} Pinball e CRPS [33]; cobertura P10--P90 (esperado 80\%);
 WAPE da P50 por horizonte; resíduo de soma zero após reconciliar.
@@ -56,8 +56,8 @@ amostral de transformadores do cliente, quando houver.
 técnicas, que a ANEEL roda no OpenDSS desde 2014 a partir da BDGD, com
 energia mensal × curvas típicas em 24 patamares [34,35]. Recomendada: a linha
 de base mais um fator de calibração aprendido em transformadores medidos
-(boosting com composição de classes, número de unidades, clima e MMGD), que
-corrige a subestimação da diversidade; saída em distribuição do pico e
+(boosting com composição de classes, número de unidades, clima e MMGD), para
+reduzir a subestimação da diversidade; saída em distribuição do pico e
 probabilidade de passar de 100\% ou 120\%. Conversão para OpenDSS:
 \emph{bdgd2dss} [36].
 \campo{Métricas} Erro do pico em transformadores medidos; AUC-PR da
@@ -71,7 +71,7 @@ transformador errado na BDGD; potência nominal não é capacidade térmica.
 Recomendada: previsão de densidade do pico por simulação, alimentando o
 modelo horário com muitos anos de clima reamostrado e extraindo as
 probabilidades de excedência 10, 50 e 90\% (Hyndman e Fan [37]; Hong, Wilson
-e Xie [38]). Estado da arte: valores extremos (GEV, GPD) sobre resíduos.
+e Xie [38]). Literatura recente: valores extremos (GEV, GPD) sobre resíduos.
 \campo{Métricas} Pinball nos quantis altos; erro do valor e do horário do
 pico; acerto de ``dia de pico''.
 \campo{Armadilhas} Com MMGD o pico líquido migra para o início da noite;
@@ -85,7 +85,7 @@ cliente); setores do Censo 2022; Open Buildings 2.5D; Black Marble.
 hexagonal ou setor, onde há coordenada. Recomendada: dasimétrico em estilo
 WorldPop, com random forest que prevê a densidade de consumo a partir de área
 e volume construído, população, luz noturna e uso do solo, redistribuindo o
-total conhecido com restrição de soma [39,40]. Estado da arte:
+total conhecido com restrição de soma [39,40]. Literatura recente:
 downscaling com deep learning a cerca de 130~m [41].
 \campo{Métricas} Validação cruzada espacial (município deixado de fora)
 contra a agregação real; conservação de massa exata.
@@ -121,8 +121,8 @@ avaliado pelos índices de Chicco [46].
 LGPD em agregações pequenas.
 \end{ficha}
 
-\begin{ficha}{CAR-08 \textperiodcentered{} Carga prevista por submercado}{V3}
-\campo{Abordagens} Linha de base natural: a carga programada do ONS [8].
+\begin{ficha}{CAR-08 \textperiodcentered{} Carga prevista por submercado}{cond}
+\campo{Abordagens} Linha de base: a carga programada do ONS [8].
 Recomendada: boosting ou TFT por subsistema com clima ponderado por carga e o
 componente de MMGD modelado à parte [7]; reconciliação área, subsistema, SIN.
 \campo{Armadilhas} Quebras de 2021 e 2023 [9]; revisões retroativas.
@@ -140,7 +140,7 @@ Para a rede conta o local da usina, não a unidade que recebe o crédito
 fator de dimensionamento usado pela EPE [20].
 \campo{Métricas} Taxa de junção; divergência de potência entre fontes por
 alimentador.
-\campo{Armadilhas} BDGD com 9 meses de atraso e registro mensal: usar o
+\campo{Armadilhas} BDGD com 8 a 20 meses de defasagem e registro mensal: usar o
 registro para contagem e a BDGD para topologia; coordenadas aproximadas levam
 ao alimentador errado em áreas densas.
 \end{ficha}
@@ -151,7 +151,7 @@ local e 0,80 remoto, premissas do 4MD) [20]. Recomendada: modelo físico com
 pvlib e upscaling por sistemas de referência, com pós-processamento
 quantílico calibrado na medição do alimentador. O ONS estima a MMGD com a
 capacidade da ANEEL, irradiação do INPE e fator de capacidade próprio [9].
-\campo{Distinção crítica} Geração não é injeção: injeção é geração menos
+\campo{Geração e injeção} Geração não é injeção: injeção é geração menos
 autoconsumo simultâneo, que exige um modelo da carga da unidade.
 \campo{Armadilhas} Orientação desconhecida; capacidade não cadastrada;
 limitação por inversor.
@@ -177,10 +177,10 @@ MMGD em 2035 [18].
 \campo{Abordagens} Linha de base: \emph{epe4md} por distribuidora, alocado
 pela participação atual. Recomendada: Bass hierárquico (distribuidora,
 município, alimentador) com covariáveis espaciais; em Minas Gerais, salário,
-ensino superior e urbanização dominam e há transbordamento espacial [53,54].
-Estado da arte: agentes e dinâmica de sistemas [55]; DeepSolar [56].
+ensino superior e urbanização têm os maiores efeitos e há transbordamento espacial [53,54].
+Literatura recente: agentes e dinâmica de sistemas [55]; DeepSolar [56].
 \campo{Armadilhas} Choques regulatórios (Lei 14.300/2022, REN 1.098/2024) que
-o Bass clássico não captura, como a própria EPE reconhece [20].
+o Bass clássico não captura, como a EPE reconhece [20].
 \end{ficha}
 
 \begin{ficha}{MMG-05 \textperiodcentered{} MMGD não cadastrada}{V3}
@@ -188,7 +188,7 @@ o Bass clássico não captura, como a própria EPE reconhece [20].
 GD e sazonalidade invertida, com ponto de mudança e correlação com a
 irradiância (Zhang e Grijalva 2016) [57]. Recomendada: essa triagem mais
 confirmação por visão computacional nos candidatos, com precedentes
-brasileiros [58,59]; no alimentador, resíduo de MMG-03. Estado da arte: fusão
+brasileiros [58,59]; no alimentador, resíduo de MMG-03. Literatura recente: fusão
 bayesiana de registro e sensoriamento remoto [60]; atenção à baixa
 confiabilidade de detectores fora da escala e região de treino [61].
 \campo{Armadilhas} Queda de consumo por outras causas; indício não é prova;
@@ -201,11 +201,11 @@ inversão de fluxo e uma ordem de soluções antes de negar acesso (redução de
 potência, restrição de horário, mudança de ponto de conexão, obra) [63,64].
 \campo{Abordagens} Determinístico: aumentar PV no pior caso até violar.
 Estocástico: Monte Carlo sobre local e tamanho; Torquato et al.\ (Unicamp,
-2018), em 50.000 redes reais de baixa tensão, acharam a sobretensão como
-limite mais restritivo e hospedagem aproximadamente lognormal [65]. Séries
+2018), em 50.000 redes reais de baixa tensão, identificaram a sobretensão como
+o limite mais restritivo e hospedagem aproximadamente lognormal [65]. Séries
 temporais em 8.760~h [66]. \textbf{Recomendado para escala}: OpenDSS numa
 amostra estratificada de alimentadores e surrogate que prevê a hospedagem por
-atributos do alimentador [67]. Estado da arte: PINN [68].
+atributos do alimentador [67]. Literatura recente: PINN [68].
 \campo{Métricas} Erro do surrogate contra o OpenDSS e acerto do fator
 limitante; concordância com pareceres de acesso.
 \campo{Armadilhas} Fases e impedâncias inconsistentes na BDGD; tap do

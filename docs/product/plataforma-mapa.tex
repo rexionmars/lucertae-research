@@ -1,37 +1,24 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,a4paper,oneside]{article}
 
 % ---------------------------------------------------------------------------
-% Pacotes
+% Preâmbulo base do repositório: fonte, mancha, pacotes, legenda, título e
+% cabeçalho. Compile de dentro de `docs/product/`.
 % ---------------------------------------------------------------------------
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage{lmodern}
-\usepackage{microtype}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{array}
-\usepackage{enumitem}
-\usepackage[table]{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage[hidelinks]{hyperref}
+\input{../../report/config/preambulo}
+\renewcommand{\doctitulo}{Plataforma preditiva baseada em mapa}
+\renewcommand{\docsubtitulo}{Requisitos, modelo de interação, engine de análise e arquitetura}
+\renewcommand{\docresponsavel}{Mapeamento Energético}
+\renewcommand{\docdata}{2026-09}
 
-\setlist{itemsep=2pt,topsep=4pt}
-\renewcommand{\arraystretch}{1.25}
+% `L` aqui é coluna `X` alinhada à esquerda, e as tabelas deste documento
+% a usam assim; sobrepõe o `L{largura}` do preâmbulo base.
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
 \definecolor{prodcolor}{RGB}{28,86,140}
 \definecolor{notecolor}{RGB}{110,110,110}
 \definecolor{markcolor}{RGB}{214,36,110}
 
-\newtcolorbox{nota}{
-  enhanced, breakable,
-  colback=notecolor!6, colframe=notecolor!60,
-  left=6pt, right=6pt, top=4pt, bottom=4pt
-}
 \newtcolorbox{requisito}{
   enhanced, breakable,
   colback=prodcolor!4, colframe=prodcolor,
@@ -40,21 +27,16 @@
 
 \newcommand{\marca}[1]{\tikz[baseline=-0.6ex]{\node[circle,fill=markcolor,text=white,inner sep=1.2pt,font=\scriptsize\bfseries]{#1};}}
 
-\graphicspath{{diagramas/}{mockup/}}
-
-\title{Plataforma preditiva baseada em mapa\\[4pt]
-\large Requisitos, modelo de interação, engine de análise e arquitetura}
-\author{Mapeamento Energético}
-\date{Setembro de 2026}
+\graphicspath{{diagrams/}{mockup/}}
 
 \begin{document}
 
-\maketitle
+\rosto
 
 \begin{abstract}
 Este documento especifica a plataforma que resulta das visões de produto de
 \emph{Aprendizado de Máquina e Aprendizado Profundo no Setor Energético}
-(\texttt{ml-setor-energetico.tex}) quando se impõem dois requisitos: a
+quando se impõem dois requisitos: a
 plataforma é \textbf{baseada em mapa} e produz \textbf{insights} como saída,
 por meio de uma engine de análise. O documento define o que esses requisitos
 significam na prática, como o usuário interage com a plataforma para obter
@@ -90,8 +72,8 @@ ela responde contém um ``onde?''. Se não contém, é um painel com um mapa de
 fundo, e o mapa é decorativo.
 
 \begin{nota}
-\textbf{Relação com o documento de visões.} As quatro visões de produto de
-\texttt{ml-setor-energetico.tex} continuam valendo como catálogo de problemas e
+\textbf{Relação com o documento de visões.} As quatro visões de produto
+continuam valendo como catálogo de problemas e
 técnicas. Aplicado o critério acima, as que se encaixam melhor são
 \emph{inteligência de perdas e de rede} e \emph{saúde de ativos}, cujas
 perguntas centrais são espaciais. A \emph{previsão} entra como camada (carga e
@@ -135,6 +117,7 @@ padrão, a quatro perguntas:
 
 \begin{table}[H]
 \centering
+\caption{As quatro partes do input.}
 \begin{tabularx}{\textwidth}{l l L}
 \toprule
 \textbf{Parte} & \textbf{Pergunta} & \textbf{Como o usuário informa} \\
@@ -149,13 +132,13 @@ Restrição & o que posso fazer? & orçamento de inspeções, equipes, janela,
   limiares \\
 \bottomrule
 \end{tabularx}
-\caption{As quatro partes do input.}
 \end{table}
 
 A saída depende de quantas partes foram informadas:
 
 \begin{table}[H]
 \centering
+\caption{Da quantidade de input ao tipo de saída.}
 \begin{tabularx}{\textwidth}{l L}
 \toprule
 \textbf{O usuário informou} & \textbf{A plataforma devolve} \\
@@ -170,7 +153,6 @@ as quatro partes & \textbf{plano de ação}: alvos e rotas que respeitam a
   restrição \\
 \bottomrule
 \end{tabularx}
-\caption{Da quantidade de input ao tipo de saída.}
 \end{table}
 
 \subsection{O ``onde'': seleção por camadas}
@@ -217,6 +199,8 @@ Essa escolha tem três consequências:
 
 \begin{table}[H]
 \centering
+\caption{Gestos de saída. Os gestos 1, 2, 3, 5 e 7 fecham o ciclo completo de
+valor e formam o MVP.}
 \begin{tabularx}{\textwidth}{c l L c}
 \toprule
 & \textbf{Gesto} & \textbf{Saída} & \textbf{Fase} \\
@@ -234,8 +218,6 @@ Essa escolha tem três consequências:
   resolvido & MVP \\
 \bottomrule
 \end{tabularx}
-\caption{Gestos de saída. Os gestos 1, 2, 3, 5 e 7 fecham o ciclo completo de
-valor e formam o MVP.}
 \end{table}
 
 A pergunta em texto livre fica para depois de propósito. Ela impressiona em
@@ -308,6 +290,7 @@ apenas a legenda de uma camada.
 
 \begin{table}[H]
 \centering
+\caption{Campos obrigatórios de um insight.}
 \begin{tabularx}{\textwidth}{l L}
 \toprule
 \textbf{Campo} & \textbf{Exemplo} \\
@@ -322,7 +305,6 @@ Ação sugerida & plano de inspeção sobre os alvos do topo \\
 Valor & cerca de R\$~85 mil por mês recuperáveis \\
 \bottomrule
 \end{tabularx}
-\caption{Campos obrigatórios de um insight.}
 \end{table}
 
 \subsection{Detectores}
@@ -404,6 +386,8 @@ quatro formas: configuração, não código.
 
 \begin{table}[H]
 \centering
+\caption{Níveis de entrada de dados. O ciclo de faturamento é mensal, então
+o MVP não precisa de streaming.}
 \begin{tabularx}{\textwidth}{c L L}
 \toprule
 \textbf{Nível} & \textbf{Entrada} & \textbf{O que habilita} \\
@@ -417,8 +401,6 @@ quatro formas: configuração, não código.
   em tempo real; previsão intradiária \\
 \bottomrule
 \end{tabularx}
-\caption{Níveis de entrada de dados. O ciclo de faturamento é mensal, então
-o MVP não precisa de streaming.}
 \end{table}
 
 \begin{nota}
@@ -429,7 +411,7 @@ cliente tende a se ligar ao mapa \emph{pela rede} sem geocodificação. Já a
 unidade consumidora vem anonimizada (hash): ligar \emph{por unidade} exige a
 tabela de correspondência da distribuidora. A BDGD pública também chega com 8
 a 20 meses de defasagem, então serve para montar a rede e o piloto, e o dado
-mensal vem do cliente (nível 1). Detalhes em \texttt{features-energia.tex}.
+mensal vem do cliente (nível 1). Detalhes em \emph{Features de energia}.
 \end{nota}
 
 % ===========================================================================
