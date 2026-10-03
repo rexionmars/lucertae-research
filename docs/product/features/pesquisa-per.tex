@@ -19,12 +19,14 @@ compartilhamento pela mesma licença para bases derivadas usadas publicamente:
 validar com o jurídico se as camadas do produto se enquadram (a confirmar).
 
 \paragraph{Defasagem.} Numa BDGD de 2025, o período vai de janeiro a
-dezembro de 2025, com extração em maio e publicação em agosto de 2026: os
-dados públicos chegam de \textbf{8 a 20 meses} depois do fato. Servem para
+dezembro de 2025, com extração em maio e publicação em agosto de 2026: nessa
+edição, a publicação ocorreu de \textbf{8 a 20 meses} depois do mês de
+referência. Os dados públicos servem para
 montar a rede e o piloto, não para operação mensal.
 
 \begin{table}[H]
 \centering\small
+\caption{Entidades da BDGD relevantes para o catálogo.}
 \begin{tabularx}{\textwidth}{P{3.2cm} L}
 \toprule
 \textbf{Entidade} & \textbf{O que traz (verificado nos arquivos)} \\
@@ -37,7 +39,6 @@ CONJ, ARAT, SUB & polígonos de conjunto elétrico, área de atuação e subesta
 SSDMT, SSDBT & segmentos de rede, com pontos de conexão para montar o grafo \\
 \bottomrule
 \end{tabularx}
-\caption{Entidades da BDGD relevantes para o catálogo.}
 \end{table}
 
 \paragraph{Armadilhas verificadas nos dados.}
@@ -47,12 +48,13 @@ SSDMT, SSDBT & segmentos de rede, com pontos de conexão para montar o grafo \\
     tabela há campos em escalas diferentes. Toda razão perda/energia precisa
     normalizar por distribuidora e por campo, ou o cálculo ingênuo dá
     ``perda técnica de 250\%''.
-  \item \textbf{A perda não técnica da BDGD é rateio}: valores redondos que
-    coincidem com a tabela agregada; é alocação contábil, não medição.
+  \item \textbf{A perda não técnica da BDGD parece rateio}: valores redondos
+    que coincidem com a tabela agregada indicam alocação contábil, não
+    medição (a confirmar no Manual).
   \item \textbf{MMGD implausível}: numa distribuidora de SC, energia anual
-    sobre potência instalada chega a 4.470~kWh/kW/ano, impossível para
-    fotovoltaica (mediana 900), o que confirma os problemas de injeção e de
-    unidade já registrados.
+    sobre potência instalada chega a 4.470~kWh/kW/ano, incompatível com
+    geração fotovoltaica (mediana 900), o que é compatível com os problemas de
+    injeção e de unidade.
   \item \textbf{Códigos}: alimentador, transformador e pontos de conexão
     parecem códigos operacionais, mas a unidade consumidora é anonimizada.
     Ligar dado do cliente \emph{por unidade} exige que a distribuidora
@@ -64,7 +66,7 @@ SSDMT, SSDBT & segmentos de rede, com pontos de conexão para montar o grafo \\
 de cerca de 14\% da energia injetada: técnica 7,4\% (44,6~TWh) e não técnica
 6,6\% (40,2~TWh). As dez maiores distribuidoras concentram 74\% da perda não
 técnica; Light e Amazonas Energia, 34\%. O custo da perda não técnica real foi
-estimado em R\$~10,3 bilhões. O limite regulatório sai do PRORET Submódulo
+estimado pela ANEEL em R\$~10,3 bilhões. O limite regulatório sai do PRORET Submódulo
 2.6 por benchmarking de complexidade socioeconômica [9]. \textbf{Desde 2025, a
 perda não técnica passou a ser calculada sobre o mercado medido, não mais o
 faturado} (Despacho 1.220/2025), o que quebra a série histórica. A perda
@@ -126,7 +128,8 @@ de perda não técnica [17].
 \campo{Abordagens} Linha de base: correlação das séries de tensão.
 Recomendada: agrupamento sobre correlação de tensão com restrição de
 capacidade do transformador, gerando candidatos para validação em campo
-(Short 2013 [19]; Hoogsteyn et al.\ 2022, tensão supera potência [20]).
+(Short 2013 [19]; Hoogsteyn et al.\ 2022: séries de tensão superam
+séries de potência [20]).
 \campo{Armadilhas} Cobertura esparsa por transformador; sincronismo entre
 medidores; MMGD altera o perfil de tensão.
 \end{ficha}
@@ -154,17 +157,17 @@ transformador quando houver.
 \campo{Abordagens} \textbf{Linha de base por alimentador, só com dado
 público}: energia do alimentador menos a soma das unidades (BT, MT,
 iluminação pública) menos a geração injetada, comparada com as perdas da
-própria BDGD. Por transformador sem medição: perda técnica pelo ferro mais o
+BDGD. Por transformador sem medição: perda técnica pelo ferro mais o
 cobre proporcional ao quadrado da carga; a não técnica fica como resíduo.
 Recomendada: fluxo de potência no OpenDSS para a técnica (como a ANEEL faz)
 e balanço para a total, com um modelo hierárquico bayesiano que reparte o
 resíduo do alimentador entre os transformadores usando os atributos de
-PER-02. Estado da arte: perda técnica sem fluxo de potência a partir de
+PER-02. Literatura recente: perda técnica sem fluxo de potência a partir de
 tensão esparsa [41]; estimativa de taxas por região numa cidade brasileira
 [43].
 \campo{Métricas} Erro contra transformadores medidos; estabilidade entre
 ciclos; aderência ao total regulatório.
-\campo{Armadilhas} Unidades misturadas; perda não técnica da BDGD é rateio;
+\campo{Armadilhas} Unidades misturadas; perda não técnica da BDGD parece rateio;
 ciclo de faturamento diferente do mês civil; iluminação pública estimada;
 energia injetada pela GD entra no balanço.
 \end{ficha}
@@ -184,8 +187,8 @@ concentradas em bairros e classes tornam os modelos enviesados [22,24].
 Coma-Puig e Carmona propõem medir energia recuperada e explicar [25,26].
 Revelas, Boldea e Werker (2025) mostram que selecionar só os mais prováveis
 leva a aprendizado inconsistente e que a seleção aleatorizada permite
-atualizar o modelo como se a amostra fosse aleatória [35]: é a base teórica
-da fração exploratória. Em PU learning [31--33], a hipótese de que os
+atualizar o modelo como se a amostra fosse aleatória [35]: é o fundamento
+adotado para a fração exploratória. Em PU learning [31--33], a hipótese de que os
 positivos rotulados foram escolhidos ao acaso \textbf{não vale} em perdas,
 porque as inspeções são dirigidas: usar variantes com propensão dependente
 das variáveis (SAR-PU) [34].
@@ -221,8 +224,8 @@ PER-02, PER-05 e PER-06. Não foi encontrada literatura específica de
 roteamento para perdas.
 \campo{Métricas} Valor capturado sobre o ótimo; inspeções por equipe e dia;
 custo por inspeção produtiva; porcentagem do plano executada.
-\campo{Armadilhas} Segurança manda sobre o sorteio; equipes que furam o
-sorteio; agrupar alvos por rota reintroduz viés geográfico.
+\campo{Armadilhas} Critérios de segurança prevalecem sobre o sorteio;
+equipes que não seguem o sorteio; agrupar alvos por rota reintroduz viés geográfico.
 \end{ficha}
 
 \begin{ficha}{PER-05 \textperiodcentered{} Avaliação do método por região (A/B)}{V2}
@@ -240,7 +243,7 @@ dissuasão entre vizinhos; mudança da métrica regulatória em 2025.
 confirmação \textbf{estimada na fração aleatória}; calibração e taxa de
 verdadeiros positivos por grupo; testes de proporção com correção para
 comparações múltiplas; suavização bayesiana em setores pequenos. Não foi
-encontrado trabalho específico de equidade em perdas no Brasil. A própria
+encontrado trabalho específico de equidade em perdas no Brasil. A
 regulação reconhece a complexidade socioeconômica como determinante, então
 prevalências diferentes são esperadas [6].
 \campo{Armadilhas} Sem braço aleatório não se separa viés de prevalência

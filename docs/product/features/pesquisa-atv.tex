@@ -38,7 +38,8 @@ Zahra et al.\ (2025) [32].
 \campo{Métricas} F1 por classe de falha (diagnóstico); AUC-PR para falha ou
 intervenção em 12 meses e acerto no topo da lista (prognóstico); concordância
 com especialista.
-\campo{Armadilhas} Validar só no IEC TC10 (117 amostras) dá confiança falsa;
+\campo{Armadilhas} Validação só no IEC TC10 (117 amostras) não sustenta
+generalização;
 taxas exigem três ou mais amostras, raras na prática; troca de laboratório e
 tratamento do óleo criam saltos artificiais.
 \end{ficha}
@@ -50,7 +51,7 @@ Do cliente: cadastro com trocas, ordens de serviço estruturadas (ATV-05).
 \campo{Abordagens} Linha de base: Weibull por classe e Cox. Recomendada:
 random survival forest ou boosting com perda de sobrevivência e covariáveis
 que mudam no tempo (clima, carregamento), tratando censura e truncamento à
-esquerda [34,35]. Estado da arte: DeepSurv e modelos neurais de tempo
+esquerda [34,35]. Literatura recente: DeepSurv e modelos neurais de tempo
 discreto [36]. No nível do alimentador: contagem de falhas por km e ano.
 \campo{Métricas} C-index (inclusive dependente do tempo), Integrated Brier
 Score, calibração em 12 meses, acerto no topo da lista.
@@ -67,7 +68,7 @@ para atualização. LiDAR do cliente quando houver.
 buffer do vão. Recomendada: segmentação de vegetação densa e regressão de
 altura com Sentinel-2 e GEDI; caso brasileiro (SENAI e Cemig, 2025/2026) com
 RMSE de 7,7~m e MAE de 5~m contra LiDAR [39]. Com LiDAR: distância direta
-entre condutor e vegetação. Estado da arte: SAM adaptado para corredores de
+entre condutor e vegetação. Literatura recente: SAM adaptado para corredores de
 transmissão [40].
 \campo{Métricas} IoU e F1 da segmentação; erro de altura contra LiDAR; recall
 de vãos críticos em campo; correlação com interrupções por vegetação [12].
@@ -83,11 +84,12 @@ de defeito, mas só 402 amostras de defeito [22]; TTPLA (torres e cabos) [23];
 UPID [24].
 \campo{Abordagens} Linha de base: YOLO ajustado para componentes [26].
 Recomendada: dois estágios, detectar o componente e classificar o defeito ou
-detectar anomalia no recorte [22]. Estado da arte: RT-DETR (CVPR 2024) [25];
+detectar anomalia no recorte [22]. Literatura recente: RT-DETR (CVPR 2024) [25];
 SAM para pré-anotação com humano no ciclo.
 \campo{Métricas} mAP por classe; recall por defeito crítico; precisão por
 estrutura (o que vira ordem de serviço).
-\campo{Armadilhas} Defeitos raros; sintéticos não generalizam; tipos de
+\campo{Armadilhas} Defeitos raros; modelos treinados em defeitos sintéticos
+podem não generalizar; tipos de
 isolador brasileiros diferem; cada imagem precisa ser associada à estrutura
 da BDGD.
 \end{ficha}
@@ -113,7 +115,7 @@ justifica; LGPD.
 consequência da falha pelos clientes afetados (BDGD, interrupções).
 \campo{Abordagens} Linha de base: matriz risco × criticidade. Recomendada:
 risco monetizado por ativo e otimização inteira sob equipes e regiões (a
-confirmar como padrão). Estado da arte: otimização estocástica sob a
+confirmar como padrão). Literatura recente: otimização estocástica sob a
 incerteza da curva de sobrevivência.
 \campo{Armadilhas} Poucos fins de vida para validar; a otimização amplifica
 erros de calibração.
@@ -135,8 +137,8 @@ variáveis da previsão numérica, o método vencedor do GEFCom2014 [52], com
 recalibração conformal. Onboarding sem histórico: foundation models com a
 previsão do tempo como covariável futura (Chronos-2 [46], TimesFM 2.5 [47],
 Moirai 2.0 [48]); histórias sintéticas geradas por modelo físico reduziram o
-erro de 1,7 a 2 vezes em 440 usinas fotovoltaicas [50]. Nenhuma abordagem
-domina sempre [49]. No Brasil, ERA5 superou o MERRA-2 para vento [54].
+erro de 1,7 a 2 vezes em 440 usinas fotovoltaicas [50]. Em [49], nenhuma
+abordagem teve o menor erro em todos os casos. No Brasil, ERA5 superou o MERRA-2 para vento [54].
 \campo{Métricas} nMAE e nRMSE pela capacidade; pinball e CRPS; cobertura
 P10--P90; skill contra persistência; por horizonte e sem curtailment.
 \campo{Armadilhas} \textbf{Treinar sobre a geração de referência, não sobre a
@@ -162,7 +164,7 @@ irradiância na superfície (DSR) a 2~km e 10 minutos no algoritmo Enterprise
 \campo{Abordagens} Linha de base: persistência do índice de céu claro e
 vetores de movimento de nuvem. Recomendada: U-Net sobre sequências de índice
 de nuvem, convertida em potência por usina [57,60]; caso brasileiro com
-GOES-16 em Petrolina [59]. Estado da arte probabilístico: SHADECast, que
+GOES-16 em Petrolina [59]. Literatura recente probabilístico: SHADECast, que
 estende o horizonte útil em cerca de 26 minutos [56]. Acima de 2 a 3~h,
 combinar com previsão numérica [53].
 \campo{Métricas} RMSE de irradiância e potência; skill contra persistência
@@ -215,7 +217,7 @@ por ano.
 do Nordeste diferente do dos datasets europeus.
 \end{ficha}
 
-\begin{ficha}{GER-07 \textperiodcentered{} Sujidade e programação de limpeza}{V4}
+\begin{ficha}{GER-07 \textperiodcentered{} Sujidade e programação de limpeza solar}{V4}
 \campo{Abordagens} Kimber (acúmulo linear até chuva acima de limiar) e HSU
 (por massa de particulado), ambos no pvlib [69,70]; a partir da produção, SRR
 (Deceglie et al.\ 2018) no RdTools [71]; relatório IEA PVPS T13-21:2022 [72].
@@ -225,7 +227,7 @@ quando a perda esperada até a próxima chuva prevista supera o custo.
 limpezas não registradas quebram o SRR.
 \end{ficha}
 
-\begin{ficha}{GER-08 \textperiodcentered{} Geração agregada por submercado}{V3}
+\begin{ficha}{GER-08 \textperiodcentered{} Geração agregada prevista por submercado}{cond}
 \campo{Abordagens} Soma das previsões por usina com upscaling para as sem
 previsão; reconciliação hierárquica (usina, estado, submercado) [74] e versão
 orientada a valor [75]. Quantis agregados exigem cenários conjuntos: soma de

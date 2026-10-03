@@ -1,0 +1,301 @@
+% Research cards: BAS, PER
+% Checked on the web on September 23, 2026, with two 2025 BDGD (V11) actually opened.
+% "(to be confirmed)" marks what was not verified in a source or in data.
+
+\section{Network spatial base and non-technical losses}
+
+\subsection*{Inside the BDGD}
+
+Two 2025 BDGD (version V11) were downloaded and opened for this research
+[2]. The Instruction Manual could not be downloaded (the item on the portal
+responds with an error), so the semantics of some fields were inferred from the
+order of magnitude of the values, and this is indicated.
+
+\paragraph{Access.} ANEEL Open Data, ODbL license, annual update
+[1]. One geodatabase per distribution utility on the ANEEL ArcGIS Hub, listable
+through a search API and downloadable \textbf{without authentication} [2]. 2025
+sizes: from about 1~MB (cooperatives) to 4~GB (Cemig-D). The ODbL has a
+share-alike clause for derived databases used publicly:
+validate with legal counsel whether the product layers fall under it (to be confirmed).
+
+\paragraph{Lag.} In a 2025 BDGD, the period runs from January to
+December 2025, with extraction in May and publication in August 2026: in that
+edition, publication occurred \textbf{8 to 20 months} after the reference
+month. The public data serve to
+build the network and the pilot, not for monthly operation.
+
+\begin{table}[H]
+\centering\small
+\caption{BDGD entities relevant to the catalog.}
+\begin{tabularx}{\textwidth}{P{3.2cm} L}
+\toprule
+\textbf{Entity} & \textbf{What it carries (verified in the files)} \\
+\midrule
+CTMT (feeder) & substation, voltages, HV transformer; \textbf{monthly circuit energy} (ENE\_01 to 12, compatible with injected energy, to be confirmed); \textbf{technical losses} by segment and transformation (PERD\_*); \textbf{monthly non-technical losses} at medium and low voltage (PNTMT, PNTBT) \\
+UNTRMT (transformer) & rated power, iron and total losses, feeder, substation, electrical set, municipality, phases, connection date \\
+UCBT, UCMT (units) & no geometry of their own; link to the point (PONNOT) and to the transformer with 100\% fill rate in the sample; class, CNAE, load-curve typology, installed load, DG code, \textbf{monthly energy, DIC and FIC}; MV also with demand. \textbf{The unit code is a 64-character hash} \\
+BE, EP, PT, PNT & energy balance, pass-through energy, monthly technical and non-technical losses of the distribution utility \\
+CONJ, ARAT, SUB & polygons of electrical set, service area and substation (the latter came empty in one of the files) \\
+SSDMT, SSDBT & network segments, with connection points to build the graph \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Pitfalls verified in the data.}
+\begin{itemize}
+  \item \textbf{Different units across distribution utilities}: feeder
+    energy appears in kWh in one and in MWh in the other, and within a single
+    table there are fields on different scales. Every loss/energy ratio must
+    be normalized by distribution utility and by field, or the naive calculation gives
+    ``technical loss of 250\%''.
+  \item \textbf{The BDGD non-technical loss appears to be apportionment}: round values
+    that match the aggregate table indicate accounting allocation, not
+    measurement (to be confirmed in the Manual).
+  \item \textbf{Implausible MMGD}: in a distribution utility in SC, annual energy
+    over installed power reaches 4,470~kWh/kW/year, incompatible with
+    photovoltaic generation (median 900), which is compatible with the
+    injection and unit problems.
+  \item \textbf{Codes}: feeder, transformer and connection points
+    appear to be operational codes, but the consumer unit is anonymized.
+    Linking client data \emph{by unit} requires the distribution utility to
+    provide the mapping; linking \emph{through the network} tends to work (to be
+    confirmed with a client).
+\end{itemize}
+
+\paragraph{ANEEL loss indicators [5--8].} In 2024, total loss was
+about 14\% of injected energy: technical 7.4\% (44.6~TWh) and non-technical
+6.6\% (40.2~TWh). The ten largest distribution utilities account for 74\% of the
+non-technical loss; Light and Amazonas Energia, 34\%. The cost of the actual non-technical loss was
+estimated by ANEEL at R\$~10.3 billion. The regulatory limit comes from PRORET Submódulo
+2.6 through benchmarking of socioeconomic complexity [9]. \textbf{Since 2025,
+non-technical loss has been calculated on the measured market, no longer the
+billed one} (Despacho 1.220/2025), which breaks the historical series. The regulatory
+technical loss is calculated by ANEEL by building the BDGD in OpenDSS [12].
+
+% ---------------------------------------------------------------------------
+\subsection{BAS \textperiodcentered{} Network spatial base}
+
+\begin{ficha}{BAS-01 \textperiodcentered{} Georeferenced electrical hierarchy}{MVP}
+\campo{Data} BDGD: substation, feeder (CTMT), transformer (UNTRMT),
+units (UCBT, UCMT) and their points (PONNOT); segments (SSDMT, SSDBT) for
+connectivity. Converters to OpenDSS: \emph{bdgd-tools} and
+\emph{bdgd2dss} [11].
+\campo{Approaches} Baseline: ETL with GDAL to GeoParquet or PostGIS.
+Recommended: graph from the connection points with validation of radiality and
+reachability from the feeder head; unit normalization
+by distribution utility; composite key (distribution utility, code); versioning by
+base year.
+\campo{Metrics} Percentage of units linked to transformer, point and
+feeder; reachable segments; loops per circuit; divergence between
+years.
+\campo{Pitfalls} Substation polygon may come empty; files of several
+GB; resubmissions with different dates; the BDGD is a simplified model of the network
+[1].
+\end{ficha}
+
+\begin{ficha}{BAS-02 \textperiodcentered{} Administrative and regulatory boundaries}{MVP}
+\campo{Data} IBGE, 2022 tract mesh and aggregates [13]; the municipality in the
+BDGD uses the 7-digit IBGE code; electrical sets in the CONJ polygon of the
+BDGD and in the continuity indicators [14].
+\campo{Approaches} Bridge table unit, tract, municipality, set,
+computed once by spatial join.
+\campo{Pitfalls} 2010 and 2022 tracts incompatible; sets change
+between years; matching the BDGD set code with that of the indicators (to be
+confirmed).
+\end{ficha}
+
+\begin{ficha}{BAS-03 \textperiodcentered{} Data quality and coverage by entity}{MVP}
+\campo{Typical BDGD problems} Disconnected sections, inconsistent
+buses, wrong links, incorrect phase, inadequate impedances,
+misallocated load; a single parameterization error changed the calculated technical
+loss by up to 1.45\% [12].
+\campo{Approaches} Completeness and validity rules by field (Great
+Expectations, pandera) and a \textbf{score by entity} with physical rules
+(total loss greater than iron loss; yield below the cap; loss
+smaller than energy), consistency rules (sum of the units smaller than the feeder
+energy), unit detection by order of magnitude and missing links.
+The score becomes a layer and qualifies the others.
+\campo{Pitfalls} Rules calibrated on one distribution utility fail on another because
+of the units; the quality layer can be read as an accusation against the
+client.
+\end{ficha}
+
+\begin{ficha}{BAS-04 \textperiodcentered{} Topology and phase correction}{V3}
+\campo{Data} Voltage series from smart meters (level 3) and the BDGD.
+Portaria Normativa MME 126/2026 mandates additional deployment in 2\% of
+units per year for 24 months starting in March 2026, prioritizing reduction
+of non-technical loss [17].
+\campo{Approaches} Baseline: correlation of the voltage series.
+Recommended: clustering on voltage correlation with a transformer capacity
+constraint, generating candidates for field validation
+(Short 2013 [19]; Hoogsteyn et al.\ 2022: voltage series outperform
+power series [20]).
+\campo{Pitfalls} Sparse coverage per transformer; synchronization between
+meters; MMGD alters the voltage profile.
+\end{ficha}
+
+\begin{ficha}{BAS-05 \textperiodcentered{} Registry plausibility audit}{V3}
+\campo{Data} BDGD generating units (power, energy, DG code);
+ANEEL MMGD registry [15]; NASA POWER [16].
+\campo{Approaches} Baseline: annual yield cap by municipality
+from irradiation. Recommended: expected monthly range from a physical model
+(pvlib), compared with the recorded injection, which is a lower bound on generation;
+cross-check the BDGD power against the registry to detect W and kW. Real example:
+4,470~kWh/kW/year in SC.
+\campo{Pitfalls} Injection depends on self-consumption: the test works as a cap,
+not as a floor; remote compensation; missing DG code.
+\end{ficha}
+
+% ---------------------------------------------------------------------------
+\subsection{PER \textperiodcentered{} Non-technical losses}
+
+\begin{ficha}{PER-01 \textperiodcentered{} Estimated loss by transformer and feeder}{MVP}
+\campo{Data} Public: feeder energy, technical and non-technical losses
+from CTMT, energy by unit, iron and total losses of the transformers.
+Client: monthly billing (the BDGD is annual and lagged) and transformer
+metering when available.
+\campo{Approaches} \textbf{Baseline by feeder, with public data
+only}: feeder energy minus the sum of the units (LV, MV,
+public lighting) minus injected generation, compared with the BDGD
+losses. By transformer without metering: technical loss from iron plus
+copper proportional to the square of the load; the non-technical loss is left as the residual.
+Recommended: power flow in OpenDSS for the technical loss (as ANEEL does)
+and balance for the total, with a Bayesian hierarchical model that splits the
+feeder residual among the transformers using the attributes from
+PER-02. Recent literature: technical loss without power flow from
+sparse voltage [41]; estimation of rates by region in a Brazilian city
+[43].
+\campo{Metrics} Error against metered transformers; stability between
+cycles; agreement with the regulatory total.
+\campo{Pitfalls} Mixed units; BDGD non-technical loss appears to be apportionment;
+billing cycle different from the calendar month; estimated public lighting;
+energy injected by DG enters the balance.
+\end{ficha}
+
+\begin{ficha}{PER-02 \textperiodcentered{} Irregularity probability}{MVP}
+\campo{Data} Client: inspections with outcome (positive and negative),
+billing, meter replacements, disconnections. BDGD: class, CNAE, installed load,
+DIC and FIC, DG code. Context: census tract, transformer loss
+(PER-01), neighborhood.
+\campo{Approaches} Baseline: rules and gradient boosting on the
+inspections. Recommended: boosting with \textbf{neighborhood variables} [23],
+selection bias correction by inverse inspection propensity weighting,
+calibration on the exploratory fraction and PU learning.
+\campo{What the literature says} Glauner et al.\ showed covariate shift in a
+Brazilian dataset of 3.6 million clients and 820 thousand inspections: inspections
+concentrated in neighborhoods and classes make the models biased [22,24].
+Coma-Puig and Carmona propose measuring recovered energy and explaining [25,26].
+Revelas, Boldea and Werker (2025) show that selecting only the most probable
+leads to inconsistent learning and that randomized selection allows
+updating the model as if the sample were random [35]: this is the basis
+adopted for the exploratory fraction. In PU learning [31--33], the assumption that the
+labeled positives were chosen at random \textbf{does not hold} in losses,
+because inspections are targeted: use variants with propensity dependent
+on the variables (SAR-PU) [34].
+\campo{Brazilian cases} Light: satellite and BDGD for illegal connections
+[37], ANEEL R\&D with GESEL/UFRJ on areas with severe operating
+restrictions [39]; Optimum-Path Forest (UNESP, Unicamp) [28]; survey of
+28 experts [36]; irrigators in RS [44].
+\campo{Metrics} Precision at top-k with $k$ equal to the inspection capacity;
+energy-weighted recall; calibration \textbf{measured on the exploratory
+fraction}; AUC only as a diagnostic.
+\campo{Pitfalls} Metrics inflated by oversampling and leakage; inspection
+negative is noisy; drift after meter replacement; LGPD.
+\end{ficha}
+
+\begin{ficha}{PER-03 \textperiodcentered{} Estimated recoverable energy}{MVP}
+\campo{Approaches} Baseline: probability × estimated diverted energy
+(consumption before the drop or median of the peers). Recommended: two stages,
+probability × severity, with severity regressed on the confirmed
+positives, optimizing net return (recovered minus inspection
+cost), as in Massaferro, Di Martino and Fernández (UTE, Uruguay) [27].
+\campo{Pitfalls} Severity is observed only in the positives (another bias);
+accounting recovery is not sustained recovery; double counting with the
+transformer balance.
+\end{ficha}
+
+\begin{ficha}{PER-04 \textperiodcentered{} Inspection plan with routes}{MVP}
+\campo{Approaches} Baseline: top by expected value and nearest-neighbor
+route. Recommended: \textbf{team orienteering problem} (routing with
+prizes) maximizing expected value under each team's work shift, solved
+with OR-Tools; \textbf{exploratory fraction drawn at random by stratum with
+recorded probabilities} (5 to 15\%) [35], used later as weights in
+PER-02, PER-05 and PER-06. No specific literature on
+routing for losses was found.
+\campo{Metrics} Value captured over the optimum; inspections per team and day;
+cost per productive inspection; percentage of the plan executed.
+\campo{Pitfalls} Safety criteria take precedence over the random draw;
+teams that do not follow the random draw; grouping targets by route reintroduces geographic bias.
+\end{ficha}
+
+\begin{ficha}{PER-05 \textperiodcentered{} Method evaluation by region (A/B)}{V2}
+\campo{Approaches} Randomization \textbf{by cluster} (transformer, neighborhood
+or team) to avoid contamination; random arm as the prevalence
+reference; Horvitz--Thompson estimators; effect measured in recovered
+energy and in feeder loss over time (difference in
+differences).
+\campo{Pitfalls} Low statistical power with low prevalence; deterrence
+effect among neighbors; change of the regulatory metric in 2025.
+\end{ficha}
+
+\begin{ficha}{PER-06 \textperiodcentered{} Geographic and socioeconomic bias monitor}{V2}
+\campo{Approaches} Compare, by breakdown, the flagging rate with the
+confirmation rate \textbf{estimated on the random fraction}; calibration and true
+positive rate by group; proportion tests with correction for
+multiple comparisons; Bayesian smoothing in small tracts. No
+specific work on fairness in losses in Brazil was found.
+Regulation recognizes socioeconomic complexity as a determinant, so
+different prevalences are expected [6].
+\campo{Pitfalls} Without a random arm, bias cannot be separated from real
+prevalence; re-identification in fine breakdowns; using income as a variable and auditing
+the same variable.
+\end{ficha}
+
+\subsection*{References for this section}
+{\small
+\begin{enumerate}[label={[\arabic*]},leftmargin=2.2em,itemsep=1pt]
+\item ANEEL, BDGD: \url{https://dadosabertos.aneel.gov.br/dataset/base-de-dados-geografica-da-distribuidora-bdgd}
+\item ANEEL ArcGIS Hub, search API: \url{https://dadosabertos-aneel.opendata.arcgis.com/}
+\item BDGD Instruction Manual (not downloaded)
+\item ANEEL, PRODIST Módulos 7 and 10
+\item ANEEL, Perdas de Energia: \url{https://www.gov.br/aneel/pt-br/assuntos/distribuicao/perdas-de-energia}
+\item ANEEL/STR, Perdas de Energia Elétrica na Distribuição (2025, base year 2024)
+\item ANEEL, Luz na Tarifa dashboard, losses: \url{https://portalrelatorios.aneel.gov.br/luznatarifa/perdasenergias}
+\item ANEEL, tariffs and economic and financial information
+\item ANEEL, PRORET Submódulo 2.6
+\item ANEEL, losses report (2026)
+\item bdgd-tools: \url{https://github.com/eniocc/bdgd-tools}; bdgd2dss: \url{https://github.com/ArthurGS97/bdgd2dss}
+\item Norven, BDGD quality and technical loss calculation
+\item IBGE, census tract mesh
+\item ANEEL, collective continuity indicators
+\item ANEEL, MMGD installations
+\item NASA POWER, daily API: \url{https://power.larc.nasa.gov/docs/services/api/temporal/daily/}
+\item Portaria Normativa MME 126/2026
+\item Enel SP, smart meters (to be confirmed)
+\item Short (2013), \emph{IEEE Trans.\ Smart Grid} 4(2):651--658
+\item Hoogsteyn et al.\ (2022): \url{https://arxiv.org/abs/2204.06372}
+\item Glauner et al.\ (2017), survey, \emph{IJCIS}: \url{https://arxiv.org/abs/1606.00626}
+\item Glauner et al.\ (2017), ISAP: \url{https://arxiv.org/abs/1702.03767}
+\item Glauner et al.\ (2016), neighborhood, BDCAT: \url{https://arxiv.org/abs/1607.00872}
+\item Glauner, Valtchev and State (2018), ESANN
+\item Coma-Puig and Carmona (2019), \emph{Energies} 12(9):1748
+\item Coma-Puig and Carmona (2022), \emph{Machine Learning}, doi:10.1007/s10994-021-06051-1
+\item Massaferro, Di Martino and Fernández, \emph{IEEE TPWRS}, doi:10.1109/TPWRS.2019.2928276
+\item Ramos, Souza, Papa and Falcão, OPF; Passos Júnior et al.\ (2016), \emph{EPSR} 140
+\item Messinis and Hatziargyriou (2018), \emph{EPSR} 158
+\item Zheng et al.\ (2018), \emph{IEEE TII} 14(4)
+\item Elkan and Noto (2008), KDD
+\item Kiryo et al.\ (2017), nnPU: \url{https://arxiv.org/abs/1703.00593}
+\item Bekker and Davis (2020), \emph{Machine Learning} 109: \url{https://arxiv.org/abs/1811.04820}
+\item SAR-PU (KU Leuven): \url{https://github.com/ML-KULeuven/SAR-PU}
+\item Revelas, Boldea and Werker (2025): \url{https://arxiv.org/abs/2509.18739}
+\item Savian et al.\ (2022), \emph{IJEEP} 12(3)
+\item Gremes et al.\ (2024), NTL-Unet, \emph{Sensors} 24:4924
+\item Assignment of buildings to units, SEGAN (2024)
+\item GESEL/UFRJ and Light, ANEEL R\&D
+\item Cenário Energia, Light (August 2026)
+\item Bariya and Flaspohler (2025): \url{https://arxiv.org/abs/2506.21311}
+\item Nguyen et al.\ (2023), \emph{Big Data}
+\item Non-technical loss rates by region, \emph{EPSR} (2023)
+\item Losses among irrigators, \emph{Energies} 16:6832 (2023)
+\end{enumerate}}

@@ -35,4 +35,5 @@ docs/produto/*.pdf
 .temp/
 
 # Claude Code, permissões locais
-.claude/settings.local.json
+.claude
+docs/audits

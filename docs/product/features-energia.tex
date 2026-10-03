@@ -1,34 +1,20 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,a4paper,oneside]{article}
 
 % ---------------------------------------------------------------------------
-% Pacotes
+% Preâmbulo base do repositório: fonte, mancha, pacotes, legenda, título e
+% cabeçalho. Compile de dentro de `docs/product/`.
 % ---------------------------------------------------------------------------
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage{lmodern}
-\usepackage{textcomp}
-\usepackage{microtype}
-\usepackage[margin=2.2cm]{geometry}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{longtable}
-\usepackage{array}
-\usepackage{enumitem}
-\usepackage[table]{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage{pdflscape}
-\usepackage{amsmath,amssymb}
-\usepackage[hidelinks]{hyperref}
-\usepackage{xurl}
+\input{../../report/config/preambulo}
+\renewcommand{\doctitulo}{Features de energia}
+\renewcommand{\docsubtitulo}{Mapeamento: dados necessários, modelos, abordagens e fases}
+\renewcommand{\docresponsavel}{Mapeamento Energético}
+\renewcommand{\docdata}{2026-09}
 
-\setlist{itemsep=2pt,topsep=4pt}
-\renewcommand{\arraystretch}{1.2}
+% `L` aqui é coluna `X` alinhada à esquerda, e as tabelas deste documento
+% a usam assim; sobrepõe o `L{largura}` do preâmbulo base.
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
-\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
 \definecolor{prodcolor}{RGB}{28,86,140}
 \definecolor{notecolor}{RGB}{110,110,110}
@@ -48,11 +34,6 @@
     \textcolor{prodcolor}{$\bullet\bullet$}\textcolor{black!20}{$\bullet$}\or
     \textcolor{prodcolor}{$\bullet\bullet\bullet$}\fi}
 
-\newtcolorbox{nota}{
-  enhanced, breakable,
-  colback=notecolor!6, colframe=notecolor!60,
-  left=6pt, right=6pt, top=4pt, bottom=4pt
-}
 
 % Ficha de pesquisa de uma feature
 \newtcolorbox{ficha}[2]{
@@ -63,26 +44,21 @@
 }
 \newcommand{\campo}[1]{\par\smallskip\noindent\textbf{\color{prodcolor}#1.}\ }
 
-\graphicspath{{diagramas/}}
-
-\title{Features de energia\\[4pt]
-\large Mapeamento completo: dados necessários, modelos, abordagens e fases}
-\author{Mapeamento Energético}
-\date{Setembro de 2026}
+\graphicspath{{diagrams/}}
 
 \begin{document}
 
-\maketitle
+\rosto
 
 \begin{abstract}
-Este documento mapeia todas as features de energia que a plataforma
-preditiva baseada em mapa (\texttt{plataforma-mapa.tex}) pode oferecer: 66
-features em 12 módulos, da base espacial da rede à engine de análise. Para
+Este documento mapeia 66 features de energia, em 12 módulos, para a
+plataforma preditiva baseada em mapa, da base espacial da rede à engine de
+análise. Para
 cada feature registram-se a entidade do mapa sobre a qual atua, o tipo de
 saída, os dados necessários e seu nível de acesso, o modelo, o insight ou a
 decisão que produz, o cliente, o encaixe com o requisito de mapa e a fase. A
 segunda parte traz a pesquisa por módulo: fontes de dados concretas,
-abordagens (da linha de base ao estado da arte), métricas, armadilhas e
+abordagens (da linha de base à literatura recente), métricas, armadilhas e
 referências.
 \end{abstract}
 
@@ -98,6 +74,7 @@ Cada feature tem um de seis tipos e atua sempre sobre uma entidade do mapa
 
 \begin{table}[H]
 \centering
+\caption{Tipos de feature.}
 \begin{tabularx}{\textwidth}{l L}
 \toprule
 \textbf{Tipo} & \textbf{O que é} \\
@@ -108,19 +85,20 @@ decisão & saída que depende de uma restrição do usuário (plano, prioridade)
 base & estrutura sem modelo que as demais pressupõem (hierarquia, recortes) \\
 contexto & dado observado ou previsto de terceiros, exibido como referência
   (tempo, satélite); não é saída de modelo da plataforma \\
-fora & feature de energia que não passa no critério de mapa; registrada para
-  que a exclusão seja deliberada \\
+fora & feature de energia que não passa no critério de mapa; registrada com
+  o motivo da exclusão \\
 \bottomrule
 \end{tabularx}
-\caption{Tipos de feature.}
 \end{table}
 
 \begin{table}[H]
 \centering
+\caption{Colunas do catálogo.}
 \begin{tabularx}{\textwidth}{l L}
 \toprule
 \textbf{Coluna} & \textbf{Valores} \\
 \midrule
+Entidade & SE: subestação; UC: unidade consumidora \\
 Nível de dados & 0: só dado público; 1: arquivos do cliente; 2: conector
   agendado ou medição em subestação e alimentador; 3: medição contínua
   (transformador, medição inteligente) \\
@@ -141,16 +119,7 @@ Fase & \colorbox{fMVP}{\scriptsize\textcolor{white}{\textbf{MVP}}}
 Depende & features cuja saída é entrada desta; definem a ordem de construção \\
 \bottomrule
 \end{tabularx}
-\caption{Colunas do catálogo.}
 \end{table}
-
-\begin{nota}
-\textbf{Fonte única.} O catálogo vive em \texttt{features/catalogo.csv}
-(separador ponto e vírgula, abre em planilha). As tabelas deste documento e o
-mapa mental são gerados por \texttt{features/gerar.py}; edite o CSV e rode o
-script, nunca as tabelas geradas. As fichas de pesquisa (parte II) são texto
-e ficam em \texttt{features/pesquisa-*.tex}.
-\end{nota}
 
 % ===========================================================================
 \section{Visão geral}

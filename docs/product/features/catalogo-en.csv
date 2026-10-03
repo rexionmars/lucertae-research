@@ -1,0 +1,67 @@
+id;modulo;feature;tipo;entidade;modelo;dados;nivel;insight;decisao;clientes;mapa;fase;depende
+BAS-01;BAS;Georeferenced electrical hierarchy;base;concession, SS, feeder, transformer, CU;ETL, graph by connection points, unit normalization per utility;BDGD (annual geodatabase, ODbL, 8 to 20 months of lag);0;;navigate, select;D;high;MVP;
+BAS-02;BAS;Administrative and regulatory boundaries;base;state, municipality, census tract, electrical set;ETL;IBGE (meshes), ANEEL (sets);0;;cross-reference, filter;D,T,G;high;MVP;
+BAS-03;BAS;Data quality and coverage by entity;layer;all;completeness and validity rules;all ingested sources;0;data gap;trigger source, flag layer;D,T,G,C;high;MVP;BAS-01
+BAS-04;BAS;Topology and phase correction;layer;aggregated CU, transformer;voltage series correlation, clustering;smart metering (voltage), BDGD;3;registry × measurement divergence;correct registry;D;high;V3;BAS-01
+BAS-05;BAS;Registry plausibility audit;insight;aggregated CU, plant;physical ceiling (solar resource model), rules;BDGD, ANEEL MMGD registry, reanalysis (NASA POWER);0;model × registry divergence;correct registry, audit;D;high;V3;BAS-01
+PER-01;PER;Estimated loss by transformer and feeder;layer;transformer, feeder;energy balance (feeder energy − sum of units − technical), technical loss in OpenDSS, Bayesian hierarchical apportionment among transformers;BDGD (feeder energy, technical and non-technical losses, energy per unit), client billing, transformer metering where available;0;spatial anomaly, change between cycles;select targets;D;high;MVP;BAS-01
+PER-02;PER;Irregularity probability (shown aggregated);layer;CU aggregated by transformer;gradient boosting with neighborhood variables, inverse inspection-propensity weighting, PU learning with propensity (SAR);billing, registry, inspection history;1;concentration;compose plan targets;D;high;MVP;BAS-01
+PER-03;PER;Estimated recoverable energy;layer;transformer, feeder, plan;probability × estimated diverted energy;PER-01, PER-02, consumption;1;ranking by value;prioritize;D;high;MVP;PER-01,PER-02
+PER-04;PER;Inspection plan with routes;decision;selection;team orienteering problem (OR-Tools) with randomly drawn exploratory fraction and recorded probabilities;PER-02, PER-03, operating base, user constraint;1;;approve and send to the field;D;high;MVP;PER-02,PER-03
+PER-05;PER;Method evaluation by region (A/B);insight;region, batch;A/B test, precision at top-k;inspection results;1;method performance;adjust inspection policy;D;medium;V2;PER-04
+PER-06;PER;Geographic and socioeconomic bias monitor;insight;census tract, municipality;flagging rate × confirmed rate by boundary;inspections, IBGE;1;unjustified concentration;review criteria;D;high;V2;PER-04
+CAR-01;CAR;Forecast load by substation and feeder (P10–P90);layer;SS, feeder;quantile gradient boosting or TFT, hierarchical reconciliation (MinT);SS and feeder metering, weather forecast, calendar;2;trend and threshold;schedule operation;D;high;V2;BAS-01,CLI-01
+CAR-02;CAR;Forecast transformer loading;layer;transformer;regulatory method (energy × typical curve in OpenDSS) calibrated on metered transformers;BDGD (monthly energy and curve typology per unit), CTR typical curves (ANEEL), transformer metering where available;0;threshold (overload);transfer load, replace transformer;D;high;V2;BAS-01
+CAR-03;CAR;Forecast peak demand;layer;feeder, transformer;probabilistic peak forecast by simulation with resampled weather, extreme values;measured series;2;trend and threshold;reinforcement, peak management;D;high;V2;CAR-01
+CAR-04;CAR;Spatialized demand (load density);layer;census tract, grid;dasymetric: consumption × buildings, population and night lights;BDGD, IBGE, Open Buildings 2.5D, night lights (NASA);0;concentration, change;plan expansion;D;high;V2;BAS-02
+CAR-05;CAR;Climate sensitivity of load;layer;feeder, SS;piecewise regression with degree days, GAM;metering, reanalysis, weather forecast;2;threshold in heat wave;prepare operation;D;medium;V3;CAR-01
+CAR-06;CAR;Long-term load growth;layer;municipality, feeder;structural models with scenarios;historical consumption, IBGE, EPE (PDE);0;trend;expansion plan;D;high;V3;CAR-04
+CAR-07;CAR;Consumption profiles by area (aggregated);layer;transformer, census tract;load curve clustering;smart metering or billing;3;profile change;tariffs, campaigns;D;medium;V4;BAS-01
+CAR-08;CAR;Forecast load by submarket;layer;submarket;gradient boosting or TFT;ONS (verified and scheduled load), weather forecast;0;trend;contracting;C,G;low;cond;CLI-01
+MMG-01;MMG;Installed MMGD by feeder (normalized);context;feeder, transformer;registry × BDGD join, unit normalization, module (DC) to inverter (AC) conversion;ANEEL MMGD registry (monthly), BDGD;0;concentration;;D;high;V2;BAS-01
+MMG-02;MMG;Forecast distributed generation (injection);layer;feeder, SS;forecast irradiance × installed capacity, calibrated;MMG-01, weather forecast, satellite, metering where available;0;ramp, reverse power flow threshold;operate the network;D;high;V2;MMG-01,CLI-01
+MMG-03;MMG;Gross load × MMGD decomposition;layer;feeder, SS;net load = gross − MMGD, separate models;CAR-01, MMG-02;2;steeper duck curve;plan operation;D;high;V2;CAR-01,MMG-02
+MMG-04;MMG;Forecast MMGD growth;layer;feeder, municipality;hierarchical Bass with spatial covariates, EPE 4MD reference (epe4md);ANEEL MMGD registry, IBGE, PDE 2035;0;trend;plan reinforcement;D;high;V2;MMG-01
+MMG-05;MMG;Unregistered MMGD;insight;transformer, aggregated CU;consumption profile anomaly, rooftop image detection;billing or smart metering, images;1;model × registry divergence;regularize;D;high;V3;MMG-01
+MMG-06;MMG;Hosting capacity by feeder;layer;feeder;distribution power flow surrogate over scenarios;BDGD electrical model, MMG-02, CAR-01;0;threshold (no headroom);approve or deny connections, reinforce;D,G;high;V3;MMG-02,CAR-01
+MMG-07;MMG;Reverse power flow and overvoltage risk;insight;feeder, transformer;threshold of forecast injection over minimum load;MMG-02, CAR-02;0;threshold;adjust tap, reinforce;D;high;V3;MMG-02,CAR-02
+MMG-08;MMG;Forecast electric vehicle adoption;layer;municipality, feeder;diffusion model with income and fleet;fleet by municipality (Senatran), IBGE;0;trend;plan reinforcement;D;high;V4;CAR-06
+RED-01;RED;Forecast loading hot spots;layer;feeder, transformer, SS;peak quantiles aggregated by topology, flow confirmed in OpenDSS;BDGD converted to OpenDSS, CAR-01, CAR-02;0;threshold;transfer load;D;high;V2;CAR-01,CAR-02
+RED-02;RED;Forecast voltage violation;layer;feeder, bus;power flow surrogate (GNN), verified by solver;BDGD electrical model (bdgd2opendss), forecast load and MMGD;0;threshold;adjust regulation;D;high;V3;CAR-01,MMG-02
+RED-03;RED;Prioritization of reinforcement works;decision;feeder, SS;optimization under budget: risk × cost;RED-01, CAR-06, MMG-06;1;;investment plan;D;high;V3;RED-01,CAR-06,MMG-06,CON-01,CON-02
+RED-04;RED;Constraint and curtailment by region;layer;SS, bus;constraint probability model by region;ONS constrained-off by plant (half-hourly, with reason and connection point);0;concentration;site new generation;G,T;high;V3;
+RED-05;RED;Reconfiguration recommendation;decision;feeder;GNN and optimization, verified by solver;electrical model, forecast load;2;;switching;D;medium;V4;RED-02
+RED-06;RED;N-1 contingency screening (transmission);layer;line, SS;GNN surrogate with confirmation by full power flow;client network model, forecasts;2;threshold;corrective actions;T;medium;V4;RED-02
+ATV-01;ATV;Power transformer health index;layer;power transformer (SS);gradient boosting on dissolved gases, loading and age;oil reports (DGA), tests, loading;1;change, threshold;inspect, maintain;D,T;high;V3;BAS-01
+ATV-02;ATV;Failure risk by equipment;layer;equipment, feeder;random survival forest, count per km;BDGD, interruptions by event (ANEEL), client work orders, weather;0;concentration;preventive maintenance;D;high;V3;ATV-05
+ATV-03;ATV;Vegetation near the network;layer;feeder section, line;global canopy height maps, segmentation and height regression;canopy height (Lang 10 m, Meta 1 m), Sentinel-2, client LiDAR;0;concentration;tree trimming program;D,T;high;V3;BAS-01
+ATV-04;ATV;Defects in inspection images;layer;structure, equipment;object detection (YOLO, DETR);drone images;1;concentration;work order;D,T,G;high;V4;
+ATV-05;ATV;Structuring of work orders and causes;base;equipment, feeder;extraction with a language model;free-text work orders;1;cause concentration;;D,T;medium;V3;
+ATV-06;ATV;Remaining useful life and maintenance plan;decision;equipment;survival and optimization under budget and crews;ATV-01, ATV-02;1;;maintenance plan;D,T;high;V4;ATV-01,ATV-02
+CON-01;CON;Forecast DEC and FEC by set;layer;electrical set;time series with weather;DEC and FEC by set (ANEEL), interruptions by event with feeder code (ANEEL, since 2017), weather;0;threshold against regulatory target;improvement actions;D;high;V2;BAS-02
+CON-02;CON;DIC and FIC violation risk (compensation);layer;feeder, transformer (aggregated);simulation of DIC, FIC and DMIC per unit and PRODIST compensation rules;monthly DIC and FIC per unit in the BDGD, interruptions by event (ANEEL), TUSD;0;ranking by value;prioritize actions;D;high;V2;CON-01
+CON-03;CON;Interruption risk by weather event;layer;feeder section, line;forecast weather × vulnerability (vegetation, age);interruptions by event with cause (ANEEL), weather forecast, lightning (open GLM or BrasilDAT), ATV-03;0;threshold;pre-position crews;D,T;high;V3;CLI-01,CLI-03,ATV-03
+CON-04;CON;Probable fault location;layer;feeder section;classification over reclosers, metering and calls;recloser events, smart metering, calls;3;;dispatch crew;D;high;V4;BAS-01
+GER-01;GER;Forecast generation by plant (P10–P90);layer;plant;gradient boosting or TFT on weather forecast, zero-shot at onboarding;generation by plant from ONS (public), plant SCADA, weather forecast;0;trend;scheduling and declaration;G,C;medium;V2;CLI-01
+GER-02;GER;Ramp alerts;insight;plant, region;threshold on forecast trajectory;GER-01;1;trend and threshold;adjust bid;G;medium;V2;GER-01
+GER-03;GER;Satellite nowcasting (0 to 6 h);layer;plant, region;U-Net on cloud index, latent diffusion (SHADECast);GOES-19;0;change;intraday adjustment;G;high;V3;CLI-02
+GER-04;GER;Curtailment detected and flagged;layer;plant;rules and available power model;ONS constrained-off by plant, SCADA;0;concentration;dispute, clean training data;G;medium;V2;GER-01
+GER-05;GER;Actual × expected performance;insight;plant, turbine, solar block;normal behavior model;SCADA, resource;1;model × registry divergence;inspect;G;medium;V3;GER-01
+GER-06;GER;Turbine health;layer;turbine;normal behavior model on temperatures and vibration;turbine SCADA;1;change;maintenance;G;high;V3;
+GER-07;GER;Soiling and solar cleaning schedule;decision;plant, solar block;estimated soiling loss × cleaning cost;SCADA, rain;1;threshold;schedule cleaning;G;medium;V4;GER-05
+GER-08;GER;Forecast aggregate generation by submarket;layer;submarket;aggregation of forecasts;GER-01, ONS;0;trend;commercial position;C;low;cond;GER-01
+MER-01;MER;Forecast PLD by submarket (quantiles);layer;submarket;gradient boosting or DESSEM emulation;CCEE hourly PLD (annual CSV, CC-BY), NEWAVE/DECOMP/DESSEM decks, ONS;0;trend;commercial position;C,G;low;cond;CAR-08,GER-08
+MER-02;MER;Joint scenarios of generation, load and price;layer;submarket, plant;copulas over marginal forecasts;GER-01, CAR-08, MER-01;0;;risk analysis;C,G;low;cond;MER-01,CAR-08,GER-01
+MER-03;MER;Bid optimization and battery dispatch;decision;plant, battery;stochastic optimization over scenarios;MER-02;1;;bid, dispatch;G,C;low;cond;MER-02
+CLI-01;CLI;Forecast weather;context;grid;numerical weather prediction with post-processing per entity;ECMWF Open Data (CC-BY), GFS, CPTEC/INPE, INMET;0;;;D,T,G,C;high;V2;
+CLI-02;CLI;Observed satellite and radar;context;grid;precipitation nowcasting (pysteps);GOES-19 (ABI), REDEMET and CEMADEN radar;0;;;D,T,G;high;V2;
+CLI-03;CLI;Lightning and severe events;context;grid;;BrasilDAT (ELAT/INPE, under contract) or GOES-19 GLM (open);0;;;D,T;high;V3;
+DRE-01;DRE;Demand response targets by feeder;decision;feeder;counterfactual baseline and load forecast;smart metering, program contracts;3;loading threshold;trigger program;D;high;V4;CAR-01,RED-01
+DRE-02;DRE;Consumption disaggregation (NILM);out;CU;seq2point;high-frequency metering;3;;;I;low;out;
+DRE-03;DRE;Tariff and efficiency recommendation;out;CU;forecast and recommendation;metering, tariffs;3;;;I;low;out;
+ENG-01;ENG;Consolidated insight feed;insight;whole hierarchy;LISA and Getis-Ord with FDR, change points, impact × significance score, consolidation;all layers;0;all detectors;follow insight;D,T,G,C;high;MVP;
+ENG-02;ENG;Explanation by entity;layer;all;variable importance (SHAP);models;0;;;D,T,G,C;high;MVP;
+ENG-03;ENG;Model error by entity;layer;all;forecast × actual (nMAE, CRPS, precision at top-k);actuals;1;model performance;recalibrate, distrust;D,T,G,C;high;MVP;
+ENG-04;ENG;Data drift by region;insight;all;two-sample tests (KS, PSI, MMD) with effect size and FDR;model inputs;1;change;retrain;D,T,G,C;medium;V2;
+ENG-05;ENG;Scenario simulation;decision;selection;models with altered inputs;layers;0;;compare alternatives;D;high;V2;
+ENG-06;ENG;Free-text question;decision;selection;language model orchestrating queries, numbers come from the engine;layers and insights;0;;;D,T,G,C;high;V2;ENG-01

@@ -1,6 +1,6 @@
 % Leitura geral do catálogo e da pesquisa. Texto editável (não gerado).
 
-\subsection*{O que o mapeamento mostra}
+\subsection*{Resumo do catálogo}
 
 \begin{itemize}
   \item \textbf{66 features em 12 módulos}: 10 no MVP, 21 na V2, 19 na V3, 9
@@ -9,68 +9,69 @@
     médio e 7 baixo.
   \item \textbf{A distribuidora concentra o valor espacial}: 50 das 66
     features servem a ela (tabela~\ref{tab:clientes}). Geração renovável e
-    mercado têm encaixe médio ou baixo, o que confirma a hipótese de cliente
+    mercado têm encaixe médio ou baixo, o que é coerente com a hipótese de cliente
     da especificação.
-  \item \textbf{A V2 carrega a segunda história de receita}: CON-02 (risco de
-    violação de DIC e FIC) foi antecipada de V3 ao se confirmar que a BDGD
-    traz DIC e FIC mensais por unidade. É nível 0, encaixe alto e denominada
-    em reais --- compensação que a distribuidora já paga hoje. CON-01 veio
-    junto, por ser pré-requisito.
-  \item \textbf{O MVP é coerente de ponta a ponta}: base (BAS-01 a 03), perdas
-    (PER-01 a 04) e engine (ENG-01 a 03) fecham o ciclo feed $\rightarrow$
+  \item \textbf{CON-01 e CON-02 estão na V2}: a BDGD traz DIC e FIC mensais
+    por unidade. CON-02 (risco de violação de DIC e FIC) é de nível 0, tem
+    encaixe alto e mede a compensação, em reais, paga pela distribuidora.
+    CON-01 é pré-requisito de CON-02.
+  \item \textbf{O MVP fecha o ciclo}: base (BAS-01 a 03), perdas
+    (PER-01 a 04) e engine (ENG-01 a 03) cobrem feed $\rightarrow$
     diagnóstico $\rightarrow$ plano $\rightarrow$ resultado.
 \end{itemize}
 
-\subsection*{O que a pesquisa mudou}
+\subsection*{Efeitos da pesquisa sobre o catálogo}
 
-\paragraph{1. O nível 0 é mais rico do que se supunha.} Com dado público
-apenas, já existem:
+\paragraph{1. Dados disponíveis no nível 0.} Com dado público
+apenas, existem:
 \begin{itemize}
   \item na BDGD: \textbf{energia mensal por alimentador, perdas técnicas e não
     técnicas por alimentador}, energia, DIC e FIC mensais por unidade, e o
-    modelo elétrico que a própria ANEEL roda no OpenDSS;
+    modelo elétrico que a ANEEL roda no OpenDSS;
   \item na ANEEL: \textbf{cada interrupção desde 2017 com o código do
     alimentador e da subestação}, causa e expurgo; DEC e FEC com limites;
   \item no ONS: geração por usina, constrained-off semi-horário por usina com
     razão e ponto de conexão, carga com a parcela de MMGD.
 \end{itemize}
-Por isso, 36 das 66 features partem do nível 0, entre elas PER-01 (em versão
-por alimentador), CAR-02, RED-01, CON-01 a 03, GER-01 e GER-04. \textbf{Um
+Por isso, 36 das 66 features têm versão em nível 0, entre elas PER-01 (por
+alimentador), CAR-02, RED-01, CON-01 a 03, GER-01 e GER-04; quatro delas
+(MMG-06, RED-01, RED-02 e ATV-02) dependem de uma feature de nível 1 ou 2. \textbf{Um
 piloto em modo sombra pode ser montado antes de receber qualquer arquivo do
 cliente.}
 
-\paragraph{2. Mas o nível 0 tem limites duros.}
+\paragraph{2. Limites do nível 0.}
 \begin{itemize}
-  \item \textbf{Defasagem de 8 a 20 meses} na BDGD: serve para montar a rede e
+  \item \textbf{Defasagem de 8 a 20 meses} na BDGD (edição de 2025): serve para montar a rede e
     demonstrar, não para operar mês a mês.
   \item \textbf{A unidade consumidora é anonimizada} (hash) na BDGD pública.
     Ligar o dado do cliente por unidade exige a tabela de correspondência da
     distribuidora; pela rede (alimentador, transformador) a ligação tende a
-    funcionar. Isso corrige a hipótese registrada na especificação.
+    funcionar.
   \item \textbf{Unidades inconsistentes entre distribuidoras} (kWh e MWh no
-    mesmo campo) e, na MMGD, injeção no lugar de geração e kW misturado com W.
-    A normalização por distribuidora e a camada de qualidade (BAS-03) não são
-    opcionais.
-  \item A perda não técnica da BDGD é \textbf{rateio contábil}, não medição.
+    mesmo campo) e, na MMGD, injeção no lugar de geração e kW misturado com W,
+    observados em duas BDGD de 2025. A normalização por distribuidora e a
+    camada de qualidade (BAS-03) são necessárias.
+  \item A perda não técnica das duas BDGD é compatível com \textbf{rateio
+    contábil}, não com medição.
 \end{itemize}
 
 \paragraph{3. Três regras de validação atravessam o catálogo.}
 \begin{itemize}
   \item \textbf{Guardar o que era conhecido em cada data}: ONS e CCEE revisam
     dados depois de publicados, e a previsão do tempo do ECMWF só fica
-    disponível por 2 a 3 dias. Arquivar desde o primeiro dia é requisito, não
-    melhoria.
+    disponível por 2 a 3 dias. Arquivar desde o primeiro dia é requisito.
   \item \textbf{Validar fora do espaço e do evento}: em interrupções por clima,
-    divisões aleatórias inflam o desempenho, e com validação espacial e
-    temporal muitos modelos não superam a linha de base.
+    divisões aleatórias inflam a estimativa de desempenho; em Essus et
+    al.\ (2026), com validação espacial e temporal, muitos modelos não superam
+    a linha de base.
   \item \textbf{Controlar testes múltiplos} na engine: entidades × camadas ×
     detectores exigem FDR e orçamento de alertas.
 \end{itemize}
 
-\paragraph{4. A fração exploratória tem base teórica.} Selecionar só os alvos
-mais prováveis leva a aprendizado inconsistente; a seleção aleatorizada com
-probabilidades registradas permite estimar prevalência, recall, calibração e
-viés sem distorção. A mesma fração alimenta PER-02, PER-05 e PER-06.
+\paragraph{4. Fundamento da fração exploratória.} Revelas et al.\ (2025)
+mostram que selecionar só os alvos mais prováveis leva a aprendizado
+inconsistente; a seleção aleatorizada com probabilidades registradas permite
+estimar, sem viés, prevalência, recall, calibração e o viés de seleção. A mesma fração alimenta PER-02, PER-05 e PER-06.
 
 \paragraph{5. Regras regulatórias estão mudando.}
 \begin{itemize}
@@ -97,31 +98,30 @@ opção sobre a questão de cliente-alvo que a especificação deixa em aberto
 (distribuidora, ou gerador e comercializadora). Enquanto essa questão não for
 respondida, elas não recebem fase.
 
-Podem sair sem custo por uma razão estrutural: formam uma subárvore isolada
+A retirada não afeta as demais: formam uma subárvore isolada
 ---~CAR-08 e GER-08 $\rightarrow$ MER-01 $\rightarrow$ MER-02 $\rightarrow$
-MER-03~--- e \textbf{nada fora dela depende de nenhuma das cinco}. As únicas
-arestas que saem da subárvore são CAR-08 $\rightarrow$ CLI-01 e GER-08
-$\rightarrow$ GER-01, ambas para features que existem por outras razões.
-Cortar e recolar custa quase nada.
+MER-03~--- e \textbf{nada fora dela depende de nenhuma das cinco}. As
+dependências externas da subárvore são CLI-01 (de CAR-08) e GER-01 (de GER-08
+e MER-02), features que permanecem no roadmap.
 
 Três observações pesaram na decisão:
 \begin{itemize}
-  \item \textbf{É a parte do gerador que o mapa não ajuda.} As cinco têm
-    encaixe baixo, e o preço por submercado são quatro polígonos. Se a trilha
+  \item \textbf{É a parte do gerador em que o mapa não ajuda.} As cinco têm
+    encaixe baixo, e o preço por submercado ocupa quatro polígonos. Se a trilha
     de gerador for tomada, a âncora espacial é \textbf{RED-04} (restrição e
     curtailment por região): encaixe alto, nível 0, sem dependências, e já
     sustentada pelo constrained-off semi-horário do ONS.
-  \item \textbf{MER-03 não tem premissa até 2028.} Oferta só faz sentido com
+  \item \textbf{A premissa de MER-03 só existe a partir de 2028.} Oferta só faz sentido com
     o modelo híbrido do Projeto Meta II, e o primeiro leilão de baterias
     (Portaria MME 136/2026) remunera disponibilidade, não arbitragem livre.
-  \item \textbf{A fonte é frágil.} O portal de dados abertos da CCEE tem
-    bloqueio de aplicação; o endpoint CKAN funciona hoje, sem garantia de
-    continuidade.
+  \item \textbf{A continuidade da fonte não é garantida.} O portal de dados
+    abertos da CCEE tem bloqueio de aplicação; o endpoint CKAN funcionou em
+    23/09/2026.
 \end{itemize}
 
 \subsection*{Cadeias de dependência}
 
-As dependências do catálogo definem a ordem de construção. As mais longas:
+As dependências do catálogo definem a ordem de construção. As principais do roadmap faseado:
 \begin{itemize}
   \item BAS-01 $\rightarrow$ PER-01, PER-02 $\rightarrow$ PER-03 $\rightarrow$
     PER-04 $\rightarrow$ PER-05, PER-06 (o MVP e sua avaliação);

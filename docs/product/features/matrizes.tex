@@ -1,5 +1,7 @@
 % Gerado por features/gerar.py a partir de features/catalogo.csv. Não edite.
-\begin{table}[H]\centering\small
+\begin{table}[H]\small
+\caption{Features por módulo e fase.}\label{tab:fases}
+\begin{tabelalarga}
 \begin{tabular}{lccccccc}
 \toprule
 \textbf{Módulo} & \textbf{MVP} & \textbf{V2} & \textbf{V3} & \textbf{V4} & \textbf{cond} & \textbf{fora} & \textbf{Total} \\
@@ -20,11 +22,13 @@ ENG \textperiodcentered Engine de análise e modelos & 3 & 3 & -- & -- & -- & --
 \textbf{Total} & \textbf{10} & \textbf{21} & \textbf{19} & \textbf{9} & \textbf{5} & \textbf{2} & \textbf{66} \\
 \bottomrule
 \end{tabular}
-\caption{Features por módulo e fase.}\label{tab:fases}
+\end{tabelalarga}
 \end{table}
 
-\begin{table}[H]\centering\small
-\begin{tabular}{lccccc}
+\begin{table}[H]\footnotesize
+\caption{Quantas features de cada módulo servem a cada tipo de cliente.}\label{tab:clientes}
+\begin{tabelalarga}
+\begin{tabularx}{\linewidth}{Yccccc}
 \toprule
 \textbf{Módulo} & \textbf{Distribuidora} & \textbf{Transmissora} & \textbf{Gerador} & \textbf{Comercializadora} & \textbf{Consumidor} \\
 \midrule
@@ -41,7 +45,7 @@ CLI \textperiodcentered Contexto climático & 3 & 3 & 2 & 1 & -- \\
 DRE \textperiodcentered Resposta da demanda e consumidor & 1 & -- & -- & -- & 2 \\
 ENG \textperiodcentered Engine de análise e modelos & 6 & 5 & 5 & 5 & -- \\
 \bottomrule
-\end{tabular}
-\caption{Quantas features de cada módulo servem a cada tipo de cliente.}\label{tab:clientes}
+\end{tabularx}
+\end{tabelalarga}
 \end{table}
 
