@@ -22,6 +22,14 @@
 % `\chaptertitlename` e os comandos de capitulo do `tocloft`; em
 % `article` ela nao carrega. Documento avulso nao abre capitulo -- use
 % `\section*` e `\subsection*`, como abaixo.
+%
+% DEITADO. Documento que existe para caber uma tabela larga corre em uma
+% coluna dentro de `landscape` -- `tarefas-dados.tex` e
+% `modelos-metodos.tex` sao os dois casos. La, tire o `twocolumn` do
+% `\documentclass`, troque `\abertura` por `\aberturaunica` (mesmos dois
+% campos; nao chama `\twocolumn`) e ponha `\pagestyle{empty}`, porque o
+% rodape do `plain` sai deitado na margem lateral depois que o
+% `pdflscape` gira a folha. O resto da forma nao muda.
 % =====================================================================
 \documentclass[10pt,a4paper,oneside,twocolumn]{book}
 
@@ -39,7 +47,7 @@
 \setlength{\parindent}{0pt}
 
 \autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
-% \marca{../terra-mark.png}   % descomente so para trocar a marca
+% \marca{../docs/img/terra-mark.png}   % descomente so para trocar a marca
 
 \begin{document}
 

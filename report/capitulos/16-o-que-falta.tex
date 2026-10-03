@@ -53,6 +53,20 @@ valor pontual. A regra vale para a irradiância do capítulo~\ref{cap:calibracao
 e para o grafo do capítulo~\ref{cap:rede}, e não foi aplicada em nenhum dos
 dois.
 
+\campo{O cálculo está disponível} Angelopoulos et al. \cite{angelopoulos2023}
+dão o procedimento: intervalo de confiança válido para média, quantil e
+coeficiente de regressão, sem hipótese sobre o algoritmo que produz a predição,
+desde que exista um subconjunto com o valor observado. Kluger et al.
+\cite{kluger2025} estendem o procedimento ao caso em que a predição entra como
+covariável imputada, e motivam com predição de indicador ambiental por imagem de
+satélite alimentando regressão a jusante, que é a forma exata dos capítulos de
+calibração e de rede.
+
+A condição é ter verdade de campo num subconjunto. Para a irradiância ela
+existe: a série medida no plano do arranjo cobre a mesma janela. Para o grafo
+não há equivalente publicado, e ali a correção exige antes definir contra o quê
+a predição seria comparada.
+
 \begin{objecao}
 Aplicá-la alargaria os intervalos de todos os resultados de rede. Nenhum deles
 foi medido sob essa correção, e não se pode afirmar que o resultado que passa
