@@ -32,3 +32,6 @@ report/*.pdf
 .env
 .DS_Store
 .temp/
+
+# Claude Code, permissões locais
+.claude/settings.local.json

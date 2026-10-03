@@ -1,6 +1,6 @@
 ================================================================================
- TAREFAS — tee
- Atualizado: 2026-09-07
+ TAREFAS — lucertae-research
+ Atualizado: 2026-10-02
 ================================================================================
 
 ESTADOS
@@ -609,6 +609,36 @@ REGRA
  DÍVIDA — encanamento e reprodutibilidade
 ================================================================================
 
+[~] Consolidar lucertae e terra-energy-research em lucertae-research
+    02/10/2026. Os dois estudavam o corte de geração sobre o mesmo terra_br.
+    O lucertae nunca tinha ido ao GitHub: o remote apontava para
+    rexionmars/TERRA-models, que só tem um LICENSE e nenhum histórico comum.
+    A base é o terra-energy-research, único com remote sincronizado
+    (rexionmars/lucertae-research); a pasta passou a ter o nome do remote.
+
+    FEITO, no branch `consolidacao`:
+      histórico .... os 15 commits do lucertae entram por merge, intactos
+      documentos ... edições do relatório, guia, auditoria, CLAUDE.md e esta
+                     lista, commitados
+      pacote ....... `tee` -> `lucertae`; `terra_energy_research` ->
+                     `lucertae.corte`; comando `tee-engine` -> `lucertae`;
+                     TEE_INTERIM/TEE_PSQL/TEE_DB -> LUCERTAE_*
+      README ....... o do terra-energy-research foi para docs/corte.md
+
+    A MIGRAÇÃO É PROVADAMENTE NEUTRA no que tem controle:
+      `lucertae tabela` sai byte a byte idêntica a `tee-engine tabela`
+      `lucertae conferir` passa; 2_controles de E-osciloscopio e E-preco-cmo
+      passam; os seis módulos de `corte` importam e respondem a --help;
+      `viz.FIGURES_DIR` continua em reports/figures (parents[2] -> [3]).
+
+    FALTA:
+      · revisão do código (regra 9) e o commit dele;
+      · push do branch e merge em main;
+      · apagar ../lucertae e ../terra-energy-research? A pasta lucertae
+        ficou intacta como backup; a do terra-energy-research foi renomeada.
+    Os nomes antigos continuam nos registros históricos desta lista e em
+    docs/auditoria-codigo.md, que descrevem o estado da época.
+
 [x] DEFEITO · EAR do Norte e do Sul nunca entrou no painel de estado
     Achado em 07/09/2026 ao recolher os leitores duplicados para o pacote.
 
@@ -703,7 +733,9 @@ REGRA
     Postgres local com PostGIS e o banco terra_br populado. pyproject.toml não
     menciona nada disso. Caminhos absolutos /Users/fox/... em 5 _build_notebook*.
 
-[ ] Repositório sem commit
+[~] Repositório sem commit
+    02/10/2026: documentos commitados na consolidação (acima); código aguarda
+    revisão. O principal agora é main, de lucertae-research.
     Zero commits, tudo untracked, em master (o principal do projeto é main).
     .gitignore não cobre .DS_Store, o Screenshot da raiz, nem os intermediários
     do LaTeX (.aux .log .fls .fdb_latexmk .out .toc).

@@ -32,7 +32,7 @@ documento para o chat.
 ## Trabalho
 
 11. Rodar da raiz do repositório. Intermediário grande em `data/interim/`,
-    sobrescrevível por `TEE_INTERIM`.
-12. `data/raw/`, `data/interim/` e `data/processed/` estão fora do git.
+    sobrescrevível por `LUCERTAE_INTERIM`.
+12. `data/`, `figures/`, `models/` e `logs/` estão fora do git.
 13. O guia completo é `docs/DEVELOPMENT_AND_RESEARCH_GUIDE.md`, 53 regras.
     Ele vale para código, medição e escrita.
