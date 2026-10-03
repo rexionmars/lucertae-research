@@ -1,5 +1,5 @@
 -- Clean layer for the system variables (load, wind, ONS daily schedule).
--- Depends on sql/05_ons_system.sql loaded by terra_energy_research.ons.
+-- Depends on sql/05_ons_system.sql loaded by lucertae.corte.ons.
 --   psql -h localhost -d terra_br -v ON_ERROR_STOP=1 -f sql/20_clean_system.sql
 --
 -- Temporal availability:
