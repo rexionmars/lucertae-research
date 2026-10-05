@@ -1,124 +1,147 @@
-"""F2/F12 -- O corte que o ONS vai programar amanha e previsivel?
+"""F2/F12: can the ONS schedule tomorrow's curtailment be predicted?
 
-ALVO. Fracao da geracao eolica+solar prevista que o operador NAO programa, por
-patamar de meia hora, agregada ao SIN. Sai de `_corte.py`.
+TARGET. The fraction of forecast wind and solar generation that the operator
+does not schedule, aggregated to the SIN by half-hourly step. Built by
+`_corte.py`.
 
-O QUE PODE ENTRAR. So o que existe quando a programacao de amanha e feita: a
-PREVISAO de amanha, que e o insumo da propria programacao, e o historico de corte
-ate hoje. O programado de amanha e a resposta e nao entra. Esse e o unico
-vazamento possivel aqui, e esta declarado.
+AVAILABLE INFORMATION. Use only information available when tomorrow's schedule
+is produced: tomorrow's forecast, which is an input to the scheduling process,
+and curtailment history through today. Tomorrow's scheduled generation is the
+outcome and is excluded. This is the only possible leakage path and is stated
+explicitly.
 
-RESULTADO. No agregado o modelo NAO supera a barra de forma distinguivel de zero.
-O agregado esconde um corte limpo: condicionado a media de corte dos 28 dias
-anteriores -- variavel conhecida ANTES da previsao, com limiar tirado do treino --
-o modelo perde onde nao ha corte a prever e supera onde ha.
+RESULT. In aggregate, the model does not beat the benchmark by a distinguishable
+margin. The aggregate hides a clear split: conditional on mean curtailment over
+the previous 28 days, a variable known before the forecast with a threshold
+estimated on training data, the model loses when there is little curtailment to
+predict and wins when recent curtailment is high.
 
-CONTROLES
-  C1  persistencia D-1 e D-7, mesmo patamar, e climatologia por patamar. A barra
-      e a MELHOR das tres, nao a mais conveniente.
-  C2  corte temporal puro, treino ate 31/12/2025.
-  C3  hiperparametro escolhido em VALIDACAO interna (ult. trimestre do treino).
-      O teste e tocado uma vez so. Sem isso, +10,2% seria numero afinado no teste.
-  C4  bootstrap de bloco por DIA -- patamar vizinho nao e independente.
-  C5  dentro da amostra, para separar "nao aprende" de "nao generaliza".
-  C6  estratificacao por variavel conhecida a priori, nao por trimestre escolhido
-      depois de ver o resultado.
+CONTROLS
+  C1  Report D-1 persistence, D-7 persistence, and step climatology. Skill and
+      bootstrap intervals use the better of the two persistence baselines.
+  C2  chronological split, training through 2025-12-31.
+  C3  hyperparameters selected on an internal validation set (the final
+      quarter of training). The test set is evaluated only once.
+  C4  day-block bootstrap because adjacent steps are not independent.
+  C5  in-sample performance, to distinguish failure to learn from failure to
+      generalize.
+  C6  stratification by a variable known a priori, not by a quarter selected
+      after seeing the result.
 
-Roda da raiz:  .venv/bin/python notebooks/despacho/_experimento.py
+Run from the repository root: .venv/bin/python
+    experiments/E-scheduled-curtailment/_experimento.py
 """
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 
-RNG = np.random.default_rng(20260906)
-CORTE = pd.Timestamp("2026-01-01")
-VALID = pd.Timestamp("2025-10-01")
-CFG = dict(max_iter=200, learning_rate=0.05, max_leaf_nodes=15,
-           l2_regularization=1, min_samples_leaf=80, random_state=0)
-mae = lambda a, b: float(np.mean(np.abs(np.asarray(a) - np.asarray(b))))
+RANDOM_GENERATOR = np.random.default_rng(20260906)
+TEST_CUTOFF = pd.Timestamp("2026-01-01")
+MODEL_PARAMS = dict(max_iter=200, learning_rate=0.05, max_leaf_nodes=15,
+                    l2_regularization=1, min_samples_leaf=80, random_state=0)
 
 
-def montar():
-    d = pd.read_parquet("data/interim/corte_programado.parquet").sort_index()
-    d["data"] = d.index.normalize()
-    p = d.pivot_table(index="data", columns="num_patamar", values="frac")
-    prev = d.pivot_table(index="data", columns="num_patamar", values="prev")
-    l1, l7 = p.shift(1), p.shift(7)
-    m1 = p.shift(1).mean(axis=1)
-    m28 = p.shift(1).rolling(28, min_periods=7).mean().mean(axis=1)
-    pico = prev.max(axis=1)
-    reg = [pd.DataFrame({
-        "y": p[pat], "l1": l1[pat], "l7": l7[pat], "media_ontem": m1,
-        "media_28d": m28, "prev": prev[pat], "prev_dia": prev.sum(axis=1),
-        "prev_pico": pico, "prev_rel": prev[pat] / pico.where(pico > 0),
-        "patamar": pat, "dow": p.index.dayofweek, "mes": p.index.month,
-    }) for pat in p.columns]
-    return pd.concat(reg).dropna().sort_index()
+def mean_absolute_error(actual, predicted):
+    return float(np.mean(np.abs(np.asarray(actual) - np.asarray(predicted))))
 
 
-def barra(g):
-    """C1 -- a melhor das tres barras, e o vetor de erro dela."""
-    op = {"persistência D-1": g.l1.values, "persistência D-7": g.l7.values}
-    nome = min(op, key=lambda k: mae(g.y, op[k]))
-    return nome, mae(g.y, op[nome]), np.abs(g.y.values - op[nome])
+def build_panel():
+    panel = pd.read_parquet("data/interim/corte_programado.parquet").sort_index()
+    panel["data"] = panel.index.normalize()
+    curtailment = panel.pivot_table(index="data", columns="num_patamar", values="frac")
+    forecast = panel.pivot_table(index="data", columns="num_patamar", values="prev")
+    lag_1, lag_7 = curtailment.shift(1), curtailment.shift(7)
+    previous_day_mean = curtailment.shift(1).mean(axis=1)
+    previous_28_day_mean = curtailment.shift(1).rolling(28, min_periods=7).mean().mean(axis=1)
+    daily_peak = forecast.max(axis=1)
+    blocks = [pd.DataFrame({
+        "y": curtailment[step], "l1": lag_1[step], "l7": lag_7[step],
+        "media_ontem": previous_day_mean, "media_28d": previous_28_day_mean,
+        "prev": forecast[step], "prev_dia": forecast.sum(axis=1),
+        "prev_pico": daily_peak,
+        "prev_rel": forecast[step] / daily_peak.where(daily_peak > 0),
+        "patamar": step, "dow": curtailment.index.dayofweek,
+        "mes": curtailment.index.month,
+    }) for step in curtailment.columns]
+    return pd.concat(blocks).dropna().sort_index()
 
 
-def ic(em, eb, idx_dias):
-    un = list(idx_dias)
-    am = [1 - em[i].mean() / eb[i].mean() for i in
-          (np.concatenate([idx_dias[d] for d in RNG.choice(un, len(un), replace=True)])
-           for _ in range(2000))]
-    return np.percentile(am, [2.5, 97.5])
+def baseline_bar(group):
+    """C1: return the better persistence baseline and its error vector."""
+    candidates = {"D-1 persistence": group.l1.values, "D-7 persistence": group.l7.values}
+    name = min(candidates, key=lambda key: mean_absolute_error(group.y, candidates[key]))
+    return name, mean_absolute_error(group.y, candidates[name]), np.abs(group.y.values - candidates[name])
+
+
+def bootstrap_interval(model_errors, baseline_errors, rows_by_day):
+    unique_days = list(rows_by_day)
+    scores = [
+        1 - model_errors[rows].mean() / baseline_errors[rows].mean()
+        for rows in (
+            np.concatenate([rows_by_day[day] for day in RANDOM_GENERATOR.choice(
+                unique_days, len(unique_days), replace=True)])
+            for _ in range(2000)
+        )
+    ]
+    return np.percentile(scores, [2.5, 97.5])
 
 
 def main():
-    X = montar()
-    feats = [c for c in X.columns if c != "y"]
-    tr, te = X[X.index < CORTE], X[X.index >= CORTE]
-    print(f"treino {len(tr):,} patamares ({tr.index.min():%Y-%m-%d} a {tr.index.max():%Y-%m-%d})"
-          f" | teste {len(te):,} ({te.index.min():%Y-%m-%d} a {te.index.max():%Y-%m-%d})")
-    print(f"fração cortada média: treino {tr.y.mean():.4f} | teste {te.y.mean():.4f}")
+    panel = build_panel()
+    feature_columns = [column for column in panel.columns if column != "y"]
+    train, test = panel[panel.index < TEST_CUTOFF], panel[panel.index >= TEST_CUTOFF]
+    print(f"train {len(train):,} steps ({train.index.min():%Y-%m-%d} to {train.index.max():%Y-%m-%d})"
+        f" | test {len(test):,} ({test.index.min():%Y-%m-%d} to {test.index.max():%Y-%m-%d})")
+    print(f"mean curtailed fraction: train {train.y.mean():.4f} | test {test.y.mean():.4f}")
 
-    m = HistGradientBoostingRegressor(**CFG).fit(tr[feats], tr.y)
-    te = te.copy(); te["p"] = np.clip(m.predict(te[feats]), 0, 1)
-    clim = tr.groupby("patamar")["y"].mean()
+    model = HistGradientBoostingRegressor(**MODEL_PARAMS).fit(train[feature_columns], train.y)
+    test = test.copy()
+    test["p"] = np.clip(model.predict(test[feature_columns]), 0, 1)
+    climatology = train.groupby("patamar")["y"].mean()
 
-    print("\nMAE da fração cortada, no teste")
-    for k, v in [("persistência D-1", mae(te.y, te.l1)), ("persistência D-7", mae(te.y, te.l7)),
-                 ("climatologia por patamar", mae(te.y, te.patamar.map(clim))),
-                 ("modelo", mae(te.y, te.p))]:
-        print(f"  {k:28s} {v:.5f}")
+    print("\nTest MAE for curtailed fraction")
+    for name, value in [("D-1 persistence", mean_absolute_error(test.y, test.l1)),
+                ("D-7 persistence", mean_absolute_error(test.y, test.l7)),
+                ("step climatology", mean_absolute_error(test.y, test.patamar.map(climatology))),
+                ("model", mean_absolute_error(test.y, test.p))]:
+      print(f"  {name:28s} {value:.5f}")
 
-    nome, b, eb = barra(te)
-    dias = te.index.normalize()
-    idx = {d: np.where(dias == d)[0] for d in np.unique(dias)}
-    lo, hi = ic(np.abs(te.y.values - te.p.values), eb, idx)
-    print(f"\nbarra: {nome}. habilidade {100*(1-mae(te.y,te.p)/b):+.1f}%  "
-          f"IC 95% [{100*lo:+.1f}%, {100*hi:+.1f}%]")
-    print("VEREDITO AGREGADO:", "supera" if lo > 0 else "NÃO supera de forma distinguível")
+    baseline_name, baseline_error, baseline_error_vector = baseline_bar(test)
+    days = test.index.normalize()
+    rows_by_day = {day: np.where(days == day)[0] for day in np.unique(days)}
+    lower, upper = bootstrap_interval(np.abs(test.y.values - test.p.values),
+                          baseline_error_vector, rows_by_day)
+    print(f"\nbenchmark: {baseline_name}. skill {100 * (1 - mean_absolute_error(test.y, test.p) / baseline_error):+.1f}%  "
+        f"95% CI [{100 * lower:+.1f}%, {100 * upper:+.1f}%]")
+    print("AGGREGATE VERDICT:", "beats benchmark" if lower > 0 else
+        "does not beat benchmark with a distinguishable effect")
 
-    pin = np.clip(m.predict(tr[feats]), 0, 1)
-    _, bt, _ = barra(tr)
-    print(f"C5 dentro da amostra: habilidade {100*(1-mae(tr.y,pin)/bt):+.1f}%")
+    in_sample_predictions = np.clip(model.predict(train[feature_columns]), 0, 1)
+    _, train_baseline_error, _ = baseline_bar(train)
+    print(f"C5 in-sample skill: {100 * (1 - mean_absolute_error(train.y, in_sample_predictions) / train_baseline_error):+.1f}%")
 
-    # C6 -- estratificacao por media_28d. Limiar do TREINO, variavel conhecida antes.
-    q = tr.media_28d.quantile([1/3, 2/3]).values
-    print(f"\nC6 estratificado por corte médio dos 28 dias anteriores "
-          f"(limiares do treino: {q[0]:.4f}, {q[1]:.4f})")
-    faixas = [("baixo  (corte recente quase nulo)", te[te.media_28d < q[0]]),
-              ("médio", te[(te.media_28d >= q[0]) & (te.media_28d < q[1])]),
-              ("alto   (corte recente alto)", te[te.media_28d >= q[1]])]
-    for rot, g in faixas:
-        if g.empty:
-            print(f"  {rot:36s} vazio"); continue
-        n2, b2, eb2 = barra(g)
-        d2 = g.index.normalize()
-        i2 = {d: np.where(d2 == d)[0] for d in np.unique(d2)}
-        lo2, hi2 = ic(np.abs(g.y.values - g.p.values), eb2, i2)
-        v = "SUPERA" if lo2 > 0 else ("perde" if hi2 < 0 else "indistinguível")
-        print(f"  {rot:36s} n={len(g):>5} dias={len(i2):>3} ȳ={g.y.mean():.4f}  "
-              f"habilidade {100*(1-mae(g.y,g.p)/b2):+6.1f}%  IC [{100*lo2:+.1f}, {100*hi2:+.1f}]  {v}")
+    # C6: stratify by previous-28-day mean, using thresholds from training data only.
+    quantiles = train.media_28d.quantile([1 / 3, 2 / 3]).values
+    print(f"\nC6 stratification by mean curtailment over the previous 28 days "
+        f"(training thresholds: {quantiles[0]:.4f}, {quantiles[1]:.4f})")
+    strata = [("low (little recent curtailment)", test[test.media_28d < quantiles[0]]),
+          ("medium", test[(test.media_28d >= quantiles[0]) & (test.media_28d < quantiles[1])]),
+          ("high (high recent curtailment)", test[test.media_28d >= quantiles[1]])]
+    for label, group in strata:
+      if group.empty:
+        print(f"  {label:36s} empty")
+        continue
+      _, group_baseline_error, group_baseline_errors = baseline_bar(group)
+      group_days = group.index.normalize()
+      group_rows_by_day = {day: np.where(group_days == day)[0] for day in np.unique(group_days)}
+      lower, upper = bootstrap_interval(np.abs(group.y.values - group.p.values),
+                            group_baseline_errors, group_rows_by_day)
+      verdict = "BEATS" if lower > 0 else ("loses" if upper < 0 else "indistinguishable")
+      print(f"  {label:36s} n={len(group):>5} days={len(group_rows_by_day):>3} mean={group.y.mean():.4f}  "
+          f"skill {100 * (1 - mean_absolute_error(group.y, group.p) / group_baseline_error):+6.1f}%  "
+          f"95% CI [{100 * lower:+.1f}, {100 * upper:+.1f}]  {verdict}")
 
-    te.reset_index().to_parquet("data/interim/f12_teste.parquet", index=False)
+    test.reset_index().to_parquet("data/interim/f12_teste.parquet", index=False)
 
 
 if __name__ == "__main__":

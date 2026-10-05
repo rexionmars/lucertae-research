@@ -1,191 +1,193 @@
-# E-despacho-termico
+# E-thermal-dispatch
 
-Quanto da geração térmica do SIN é decisão e não preço — e a programação
-do dia seguinte se sustenta?
+How much SIN thermal generation is driven by operating decisions rather than
+price, and does the day-ahead schedule hold?
 
-Construído do zero sobre `data/raw/termica_despacho/`. Não lê, não importa
-e não reaproveita nenhum resultado, painel ou script anterior deste
-repositório. A decomposição contábil foi descoberta por teste sobre o dado,
-não copiada de manual.
+Built from scratch on `data/raw/termica_despacho/`. It does not read, import, or
+reuse any prior result, panel, or script in this repository. The accounting
+decomposition was discovered by testing the data, not copied from a manual.
 
+```text
+.venv/bin/python experiments/E-thermal-dispatch/1_painel.py
+.venv/bin/python experiments/E-thermal-dispatch/2_controles.py  # blocks step 3
+.venv/bin/python experiments/E-thermal-dispatch/3_medida.py
 ```
-.venv/bin/python experiments/E-despacho-termico/1_painel.py
-.venv/bin/python experiments/E-despacho-termico/2_controles.py   # bloqueia o passo 3
-.venv/bin/python experiments/E-despacho-termico/3_medida.py
-```
 
-Saídas em `data/interim/E-despacho-termico/` (sobrescritível por `LUCERTAE_INTERIM`).
+Outputs are written to `data/interim/E-despacho-termico/` (overridable with
+`LUCERTAE_INTERIM`).
 
----
+## Input
 
-## Insumo
+`GERACAO_TERMICA_DESPACHO-2`: 29 monthly files from April 2024 to August 2026.
+Plant-by-hour panel: **2,601,600 rows, 186 plants, 21,192 hours**, with a
+complete hourly grid.
 
-`GERACAO_TERMICA_DESPACHO-2`, 29 arquivos mensais, abr/2024 a ago/2026.
-Painel usina × hora: **2.601.600 linhas, 186 usinas, 21.192 horas**, grade
-completa sem hora ausente.
+The source schema changed three times during the study window: 42, 43, and 47
+columns. Decomposition fields exist in all three versions. `din_publicacao`,
+`nom_combustivel`, `val_geracaodespachada`, and `val_progdisponibilidade` are
+available only from February 2026 or April 2026 onward. This is a stated data
+limitation, not a panel-generation failure.
 
-O conjunto mudou de esquema três vezes na janela — 42, 43 e 47 colunas.
-As colunas da decomposição sobrevivem às três; `din_publicacao`,
-`nom_combustivel`, `val_geracaodespachada` e `val_progdisponibilidade` só
-existem a partir de fev/2026 ou abr/2026, e isso é limite declarado, não
-falha do painel.
+## Accounting decomposition
 
-## Decomposição contábil
+The decomposition was identified by testing the data. The identity that closes
+is:
 
-Descoberta por teste. A identidade que fecha é:
-
-```
+```text
 geracao = ordemdemeritoacimadainflex + inflexibilidade + RESTO
 ```
 
-e como `inflexibilidade = inflexembutmerito + inflexpura` fecha em 100% das
-linhas programadas, ela se reescreve na forma econômica usada aqui:
+Since `inflexibilidade = inflexembutmerito + inflexpura` closes for 100% of
+scheduled rows, it can be rewritten in the economic form used here:
 
-```
+```text
 geracao = MERITO + FORA
 MERITO  = ordemdemeritoacimadainflex + inflexembutmerito
 FORA    = inflexpura + razaoeletrica + garantiaenergetica + gfom
-        + reposicaoperdas + exportacao + reservapotencia + gsub + unitcommitment
+				+ reposicaoperdas + exportacao + reservapotencia + gsub + unitcommitment
 ```
 
-`MERITO` é o que a ordem de mérito despacharia de qualquer forma, incluindo
-a parcela inflexível que por acaso cai dentro dela. `FORA` é geração que
-existe por decisão, e não por preço.
+`MERITO` is generation that merit-order dispatch would produce regardless,
+including the inflexible share that happens to fall within it. `FORA` is
+generation that exists because of operating decisions rather than price.
 
-A coluna publicada `ordemmerito` **não** entra na soma: ela é redundante com
-`ordemdemeritoacimadainflex + inflexembutmerito` e a redundância falha em
-0,41% das linhas programadas e 0,46% das verificadas. O controle C1b mede
-isso em vez de esconder.
+The published `ordemmerito` column is **not** included in the sum. It is
+redundant with `ordemdemeritoacimadainflex + inflexembutmerito`, and that
+redundancy fails in 0.41% of scheduled rows and 0.46% of verified rows. Control
+C1b measures this discrepancy rather than hiding it.
 
-## Controles
+## Controls
 
-Rodam antes de qualquer número. Bloqueante reprovado interrompe o passo 3.
+Controls run before any result is produced. A failed blocking control stops
+step 3.
 
-| | Controle | Resultado |
-|---|---|---|
-| C1 | identidade fecha sobre a **energia** | prog 99,887%, verif 99,977% — passa |
-| C1b | `ordemmerito` = soma das partes | diverge em 0,41% / 0,46% das linhas — atenção |
-| C1c | resíduo concentrado, não difuso | 40 e 41 usinas; prog em Baixada Fluminense, verif em térmicas a gás do AM |
-| C2 | grade horária completa | 21.192 de 21.192 horas — passa |
-| C3 | chave (usina, hora) única | 0 duplicatas — passa |
-| C4 | componente de motivo não negativo | 9 valores negativos em 22 colunas — atenção |
-| C5 | `verificado` publicado **depois** do instante | 0 violações; atraso mediano 41,8 d — passa |
-| C6 | cobertura de identificador | `ceg` 100%, `cod_usinaplanejamento` 99,80% — passa |
+| Control | Result |
+|---|---|
+| C1: identity closes on **energy** | scheduled 99.887%, verified 99.977%; pass |
+| C1b: `ordemmerito` equals the component sum | differs in 0.41% / 0.46% of rows; note |
+| C1c: residual is concentrated, not diffuse | 40 and 41 plants; scheduled residual in Baixada Fluminense, verified residual in Amazonas gas plants |
+| C2: complete hourly grid | 21,192 of 21,192 hours; pass |
+| C3: unique (plant, hour) key | 0 duplicates; pass |
+| C4: nonnegative reason components | 9 negative values across 22 columns; note |
+| C5: `verificado` published **after** the event time | 0 violations; median lag 41.8 days; pass |
+| C6: identifier coverage | `ceg` 100%, `cod_usinaplanejamento` 99.80%; pass |
 
-**C1 mudou de critério durante a construção, e a mudança está registrada
-no código.** A primeira versão exigia 99,9% das *linhas* e **reprovou o
-painel** (verif fechava em 99,126%). O diagnóstico mostrou que a reprovação
-vinha de usina pequena do Amazonas com diferença de décimo de MW em muitas
-horas — Tucunaré, Pirarucu, Jaraqui, Poraqué — e não de erro de
-decomposição. O critério passou a ser a fração da **energia** explicada,
-que é a grandeza de que o passo 3 depende; a fração de linhas continua
-reportada, como informativa. Isto é troca de critério com diagnóstico
-publicado, não limiar afrouxado até passar.
+**The C1 criterion changed during development, and the change is documented in
+the code.** The first version required 99.9% of *rows* and **rejected the
+panel** (verified generation closed at 99.126%). Diagnosis showed that the
+failure came from small Amazonas plants with a tenth-of-a-megawatt difference
+across many hours (Tucunaré, Pirarucu, Jaraqui, and Poraqué), not from a
+decomposition error. The criterion was changed to the fraction of **energy**
+explained, the quantity used by step 3. The row fraction remains reported as
+descriptive information. This is a criteria change supported by a published
+diagnosis, not a threshold relaxed until the control passes.
 
-O resíduo **não é redistribuído** entre motivos: aparece como linha própria
-na tabela do passo 3.
+The residual is **not redistributed** across reasons; it appears as its own row
+in the step 3 table.
 
----
+## Result A: descriptive analysis
 
-## Resultado A — descritiva
+From April 2024 to August 2026, 156.34 TWh were scheduled and 153.09 TWh were
+verified.
 
-Abr/2024 a ago/2026, 156,34 TWh programados e 153,09 TWh verificados.
+| | Scheduled | Verified |
+|---|---:|---:|
+| Total | 156.34 TWh | 153.09 TWh |
+| Merit order | 81.44 TWh (52.09%) | 80.48 TWh (52.57%) |
+| **Out of merit** | **75.07 TWh (48.02%)** | **72.58 TWh (47.41%)** |
+| Unexplained residual | -0.174 TWh (-0.111%) | +0.034 TWh (+0.022%) |
 
-| | Programado | Verificado |
-|---|---|---|
-| Total | 156,34 TWh | 153,09 TWh |
-| Ordem de mérito | 81,44 TWh — 52,09% | 80,48 TWh — 52,57% |
-| **Fora do mérito** | **75,07 TWh — 48,02%** | **72,58 TWh — 47,41%** |
-| Resíduo não explicado | −0,174 TWh — −0,111% | +0,034 TWh — +0,022% |
+Out-of-merit generation by reason (scheduled, as a percentage of total thermal
+generation):
 
-Fora do mérito, por motivo (programado, % do total térmico):
+| Reason | TWh | % of thermal | % of out-of-merit |
+|---|---:|---:|---:|
+| Pure inflexibility | 50.660 | 32.40% | 67.48% |
+| Unit commitment | 10.064 | 6.44% | 13.41% |
+| Export | 8.995 | 5.75% | 11.98% |
+| GSUB | 2.653 | 1.70% | 3.53% |
+| Electrical constraint | 2.389 | 1.53% | 3.18% |
+| Energy security | 0.222 | 0.14% | 0.30% |
+| GFOM | 0.090 | 0.06% | 0.12% |
+| Loss replacement | 0 | - | - |
+| Power reserve | 0 | - | - |
 
-| Motivo | TWh | % do térmico | % do fora |
-|---|---|---|---|
-| inflexibilidade pura | 50,660 | 32,40% | 67,48% |
-| unit commitment | 10,064 | 6,44% | 13,41% |
-| exportação | 8,995 | 5,75% | 11,98% |
-| GSUB | 2,653 | 1,70% | 3,53% |
-| razão elétrica | 2,389 | 1,53% | 3,18% |
-| garantia energética | 0,222 | 0,14% | 0,30% |
-| GFOM | 0,090 | 0,06% | 0,12% |
-| reposição de perdas | 0 | — | — |
-| reserva de potência | 0 | — | — |
+**Almost half of SIN thermal generation is not dispatched by price**, and
+two-thirds of that amount is pure inflexibility, declared by the generator
+rather than decided by the operator. Loss replacement and power reserve are
+zero throughout the window: the columns exist but were never used.
 
-**Quase metade da geração térmica do SIN não é despachada por preço**, e
-dois terços disso é inflexibilidade pura — parcela declarada pelo gerador,
-não decidida pelo operador. Reposição de perdas e reserva de potência são
-zero em toda a janela: as colunas existem e nunca foram usadas.
+## Result B: decision analysis
 
-## Resultado B — decisão
+Estimand: `d = fora_verificado - fora_programado`, aggregated to the SIN by
+hour. Declared loss: MAE in MWh/h. The analysis covers 19,728 hours from June
+2024 to August 2026.
 
-Estimando: `d = fora_verificado − fora_programado`, agregado ao SIN por hora.
-Perda declarada: MAE em MWh/h. 19.728 horas avaliáveis, jun/2024 a ago/2026.
+**The design constraint comes from C5.** Month M's file is published at the end
+of month M+1. This lag was measured in the five files that contain publication
+timestamps: 29.8 to 30.8 days after the end of the month. Therefore, for an
+hour in month M, the latest knowable verified value is from month M-2. No
+baseline uses the "previous 7 days," which would introduce 30 to 60 days of
+leakage.
 
-**A restrição que define o desenho vem do C5.** O arquivo do mês M é
-publicado no fim do mês M+1 — medido nos cinco arquivos que trazem carimbo:
-atraso de 29,8 a 30,8 dias após o fim do mês. Logo, para uma hora do mês M,
-o verificado mais recente **conhecível** é o do mês M−2. Nenhuma base usa
-"os 7 dias anteriores", que seria vazamento de 30 a 60 dias.
+The baselines use the **median**, not the mean, as their central estimator
+because the declared loss is MAE, which the median minimizes. Using the mean
+would measure the analyst's choice rather than publication delay.
 
-Estimador central das bases: **mediana**, não média, porque a perda é MAE e
-o constante que minimiza MAE é a mediana. Usar média mediria a escolha do
-analista, não o atraso de publicação.
+The bias is present: mean -125.9 MWh/h, median -55.6 MWh/h, or **-3.59% of
+scheduled out-of-merit generation**. Verified generation is systematically
+below scheduled generation.
 
-O viés existe: média −125,9 MWh/h, mediana −55,6 MWh/h, **−3,59% do fora do
-mérito programado**. O verificado fica sistematicamente abaixo do programado.
+| Baseline | MAE (MWh/h) | Skill | 95% CI |
+|---|---:|---:|---:|
+| B0: unbiased schedule | 257.1 | - | - |
+| B1: median by hour, month M-2 | 268.8 | **-4.55%** | [-7.38%, -1.92%] |
+| B2: median of month M-2 | 268.6 | **-4.44%** | [-7.28%, -1.91%] |
+| Oracle: median of the same month | 218.0 | **+15.23%** | [+13.07%, +17.49%] |
 
-| Base | MAE (MWh/h) | Habilidade | IC 95% |
-|---|---|---|---|
-| B0 — programa não enviesado | 257,1 | — | — |
-| B1 — mediana por hora, mês M−2 | 268,8 | **−4,55%** | [−7,38%, −1,92%] |
-| B2 — mediana do mês M−2 | 268,6 | **−4,44%** | [−7,28%, −1,91%] |
-| ORÁCULO — mediana do próprio mês | 218,0 | **+15,23%** | [+13,07%, +17,49%] |
+**Finding.** The bias is real and predictable: the oracle gains 15.2%, with its
+entire confidence interval above zero. This positive control shows that the
+experiment can detect a bias when one is present. However, correcting with the
+most recent month already published by ONS is **significantly worse than not
+correcting**, with both baseline confidence intervals entirely below zero.
 
-**O achado.** O viés é real e capturável: o oráculo ganha 15,2% com IC
-inteiro acima de zero, o que é controle positivo — o experimento *consegue*
-detectar viés quando ele está lá. Mas corrigir com o mês mais recente que o
-ONS já publicou é **significativamente pior que não corrigir**, com IC
-inteiro abaixo de zero nas duas bases.
+Drift explains the result: the monthly median deviation ranges from -351 to
++102 MWh/h, an amplitude of 453, with a typical month-to-month step of
+43 MWh/h. The bias moves slowly but spans a wide range; a two-month publication
+lag is enough for the published value to describe a different regime.
 
-A deriva explica: a mediana mensal do desvio anda de −351 a +102 MWh/h,
-amplitude 453, com passo típico mês a mês de 43 MWh/h. O viés se move devagar
-mas percorre faixa larga, e dois meses de defasagem bastam para o valor
-publicado descrever outro regime.
+**Decision interpretation: the obstacle is institutional latency, not absence
+of signal.** An entity exposed to the charge has a 3.6% bias to correct but
+cannot do so because the operator's publication schedule is too slow. A better
+model does not solve this; faster publication would. This is a statement about
+the process, not the technique.
 
-**Leitura de decisão: o obstáculo não é ausência de sinal, é latência
-institucional.** Quem está exposto ao encargo tem um viés de 3,6% para
-corrigir e não consegue, porque o calendário de publicação do próprio
-operador chega tarde demais. Isso não se resolve com modelo melhor; resolve-se
-com publicação mais rápida — e é uma afirmação sobre o processo, não sobre a
-técnica.
+## Stated limitations
 
----
+- **No price data.** `cvu-usitermica` is not on disk, so these results are not
+	in R$. On 2026-09-06, 22 CSV files totaling 9.8 MB were available and the
+	download was tested.
+- **The M+1 rule was measured in 5 of 29 files.** The other 24 lack
+	`din_publicacao`. The August 2026 file was released 0.8 days after month-end,
+	which may indicate a preliminary version subject to revision; this was not
+	verified.
+- **"Out of merit" combines two agents.** Pure inflexibility is declared by the
+	generator; electrical constraints and GSUB are operator decisions. The table
+	reports reasons so it can be recomposed with a different classification.
+- **Export and GSUB are included in `FORA`.** This classification is
+	debatable; the published decomposition allows them to be removed without
+	rebuilding the panel.
+- **System-level grain.** All of Result B is aggregated to the SIN. Structure
+	by subsystem, plant, fuel, or load condition was not tested.
+- **No fitted model.** This analysis uses constant and hour-conditional
+	baselines only. A model with features could beat the oracle; that was not
+	tested. The latency conclusion does not depend on it because no feature
+	changes when ONS publishes the data.
 
-## Limites declarados
+## Not tested
 
-- **Sem preço.** `cvu-usitermica` não está em disco, então nada aqui é em
-  R\$. Medido em 06/09/2026: 22 arquivos CSV, 9,8 MB, download testado.
-- **A regra M+1 é medida em 5 arquivos de 29.** Os outros 24 não têm
-  `din_publicacao`. E o arquivo de ago/2026 saiu 0,8 dia após o fim do mês,
-  o que sugere versão preliminar sujeita a revisão — não verificado.
-- **"Fora do mérito" mistura dois agentes.** Inflexibilidade pura é
-  declaração do gerador; razão elétrica e GSUB são decisão do operador.
-  A tabela sai por motivo justamente para permitir recompor com outro corte.
-- **Exportação e GSUB entram em FORA.** Classificação discutível; a
-  decomposição publicada permite tirá-las sem refazer o painel.
-- **Grão de sistema.** Tudo em B é agregado ao SIN. Estrutura por
-  subsistema, por usina, por combustível ou condicionada à carga não foi
-  testada.
-- **Sem hiperparâmetro e sem ajuste.** Não há modelo treinado aqui — só
-  bases constantes e condicionais à hora. Um modelo com features poderia
-  bater o oráculo; isso não foi tentado, e a conclusão sobre latência não
-  depende disso, porque nenhuma feature muda a data em que o ONS publica.
-
-## Não testado
-
-Subsistema, usina, combustível; condicionamento à carga ou ao estado
-hidrológico; horizonte diferente de "próxima hora publicada"; e se a versão
-preliminar do mês corrente, publicada com um dia de atraso, resolveria a
-latência — este último é o teste mais promissor e exige baixar o histórico
-de versões, que o CKAN não guarda.
+Subsystem, plant, and fuel breakdowns; conditioning on load or hydrological
+state; horizons other than the "next published hour"; and whether the current
+month's preliminary version, published one day late, would resolve the latency.
+The last item is the most promising test and requires downloading version
+history, which CKAN does not retain.

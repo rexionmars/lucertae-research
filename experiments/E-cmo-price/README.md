@@ -1,358 +1,366 @@
-# E-preco-cmo
+# E-cmo-price
 
-O custo marginal de operação do dia seguinte é previsível a partir do estado do
-sistema, ou a repetição do dia anterior já é o melhor que se consegue?
+Can next-day marginal operating cost be forecast from system state, or is
+repeating the previous day already the strongest available baseline?
 
-**A um dia, empate; a dois, o modelo ganha.** Contra a ingênua sazonal da
-literatura de preço, o melhor modelo dá +0,76% de habilidade em MAE com IC 95%
-[−6,72%; +7,70%] — indistinguível — e +16,2% em RMSE. Deslocado o alvo para
-D+1, com o portão de informação deslocado junto, a habilidade vai a +16,31%,
-IC 95% [+10,64%; +21,87%]. O que a ingênua tem é o caminho realizado mais
-recente, e ele acerta o piso do CMO exatamente; esse trunfo vale a um dia e
-não vale a dois.
+**At one day ahead the model ties; at two days it gains.** Against the seasonal
+naive baseline used in price forecasting, the best model has +0.76% MAE skill
+(95% CI [-6.72%, +7.70%]), which is not distinguishable from zero, and +16.2%
+RMSE skill. When the target is shifted to D+1 and the information gate moves
+with it, skill reaches +16.31% (95% CI [+10.64%, +21.87%]). The naive baseline
+uses the most recent realized price and predicts the CMO floor exactly. That
+advantage holds one day ahead but not two.
 
-Família 11 da `report/tarefas-dados.tex` — preço e custo marginal — que até
-06/09/2026 tinha o dado em disco e nenhum experimento. Construído sobre
-`data/raw/cmo/`, que estava listado em `TAREFAS.txt` como bruto órfão: baixado
-e nunca lido por código.
+This experiment addresses task family 11, price and marginal operating cost,
+in the [energy task and data-source report](../../docs/product/data_taks.tex).
+It uses `data/raw/cmo/`, a source that was on disk but had not yet been read by
+code.
 
+```text
+.venv/bin/python experiments/E-cmo-price/1_painel.py
+.venv/bin/python experiments/E-cmo-price/2_controles.py   # blocks step 3
+.venv/bin/python experiments/E-cmo-price/3_modelos.py
+.venv/bin/python experiments/E-cmo-price/4_decomposicao.py
+.venv/bin/python experiments/E-cmo-price/5_ablacao.py
 ```
-.venv/bin/python experiments/E-preco-cmo/1_painel.py
-.venv/bin/python experiments/E-preco-cmo/2_controles.py   # bloqueia o passo 3
-.venv/bin/python experiments/E-preco-cmo/3_modelos.py
-.venv/bin/python experiments/E-preco-cmo/4_decomposicao.py
-.venv/bin/python experiments/E-preco-cmo/5_ablacao.py
+
+Outputs are written to `data/interim/E-cmo-price/` (overridable with
+`LUCERTAE_INTERIM`).
+
+| Script | Purpose | Output |
+|---|---|---|
+| `1_painel.py` | Subsystem-by-half-hour panel with 40 numeric features within the information gate | `painel.parquet`, `janelas.json` |
+| `2_controles.py` | Six blocking controls | `controles.json` |
+| `3_modelos.py` | Four baselines, three models, and one oracle; rolling origin with monthly recalibration | `previsoes.parquet`, `resultado.json` |
+| `4_decomposicao.py` | Error quantiles, behavior at the floor, daily level versus intraday shape | `decomposicao.json` |
+| `5_ablacao.py` | Feature-family ablation, permutation null, and horizon control | `ablacao.json` |
+
+## Input
+
+ONS half-hourly CMO: three annual files, **184,704 records**, four subsystems
+by 46,176 half-hours, from 2024-01-01 to 2026-08-27, with no missing values.
+Covariates are hourly load, hourly national interchange, and daily EAR and ENA
+by subsystem.
+
+Two target properties determine the design:
+
+- **Mass at the floor.** 20.5% of half-hours have CMO <= 1 R$/MWh, indicating
+  zero marginal cost and excess supply. The observed minimum is -39.24.
+- **Heavy tail.** The maximum is 4,870.95 R$/MWh, and the p99 ranges from 614
+  to 1,082 across subsystems.
+
+**Eight full CMO days are missing** from the window. They remain absent from
+the grid, are counted, and are never interpolated: interpolation would invent
+targets the operator did not publish.
+
+**Each gap removes three panel days.** In addition to the missing day, the next
+day loses D-1 persistence, and the day seven days later loses D-7 persistence.
+The 8 gaps remove **24 panel days**, plus the first 7 days of the series, which
+have no D-7. In total, 1,536 rows without targets and 4,416 rows without a
+baseline are excluded from the complete grid of 186,240 rows.
+
+## Information gate
+
+The forecast is issued at 12:00 on D-1 for all 48 half-hours of day D.
+Availability at issue time was measured source by source from the last record
+in each file and its modification time:
+
+| Source | Downloaded | Last record | Lag |
+|---|---|---|---:|
+| Half-hourly CMO | 2026-08-27 10:08 | 2026-08-27 23:30 | **-0.6 days** |
+| Load curve | 2026-09-02 04:25 | 2026-08-31 23:00 | 1.2 days |
+| Interchange | 2026-09-02 04:44 | 2026-08-31 23:00 | 1.2 days |
+| Daily EAR | 2026-09-02 04:25 | 2026-08-31 | 2.2 days |
+| Daily ENA | 2026-09-06 11:22 | 2026-09-04 | 2.3 days |
+
+**CMO is published in advance.** The file downloaded at 10:08 on August 27
+already contained all 48 half-hours for that day. It is dispatch-model output,
+not an ex-post measurement. This does not make the task tautological: at 12:00
+on D-1, the operator's value for D has not yet been published. The information
+gate is:
+
+```text
+CMO ................ through the end of D-1
+load, interchange .. through the end of D-2
+EAR, ENA ............ through D-3
+calendar for D ...... deterministic and available
 ```
 
-Saídas em `data/interim/E-preco-cmo/` (sobrescritível por `LUCERTAE_INTERIM`).
-
-| script | o que faz | saída |
-|---|---|---|
-| `1_painel.py` | painel subsistema × meia-hora com 40 features numéricas dentro do portão | `painel.parquet`, `janelas.json` |
-| `2_controles.py` | seis controles, todos bloqueantes | `controles.json` |
-| `3_modelos.py` | quatro linhas de base, três modelos, um oráculo; origem móvel com recalibração mensal | `previsoes.parquet`, `resultado.json` |
-| `4_decomposicao.py` | quantil do erro, comportamento no piso, nível contra forma | `decomposicao.json` |
-| `5_ablacao.py` | ablação por família de feature, nulo por permutação, controle de horizonte | `ablacao.json` |
-
----
-
-## Insumo
-
-`CMO semi-horário` do ONS, três arquivos anuais, **184.704 registros**,
-4 subsistemas × 46.176 meias-horas, 01/01/2024 a 27/08/2026, zero nulos.
-Covariáveis: curva de carga horária, intercâmbio nacional horário, EAR e ENA
-diárias por subsistema.
-
-O alvo tem duas propriedades que decidem o desenho inteiro:
-
-- **Inflado no piso.** 20,5% das meias-horas ficam em CMO ≤ 1 R$/MWh — custo
-  marginal nulo, oferta sobrando. O mínimo observado é −39,24.
-- **Cauda pesada.** O máximo é 4.870,95 R$/MWh, e o p99 fica entre 614 e 1.082
-  conforme o subsistema.
-
-Faltam **8 dias inteiros** de CMO na janela. Entram na grade como ausentes,
-são descartados com contagem e nunca interpolados: interpolar criaria alvo que
-o operador não publicou.
-
-**Cada buraco custa três dias de painel**, e isso só apareceu porque o C1
-reprovou com o número errado: além do próprio dia, cai o dia seguinte, que
-perde o D-1 da ingênua, e o dia sete depois, que perde o D-7. São 8 buracos e
-**24 dias fora do painel**, mais os 7 primeiros dias da série, que não têm D-7.
-Total descartado: 1.536 linhas sem alvo e 4.416 sem termo de comparação, de
-186.240 na grade cheia.
-
-## Portão de informação, medido e não suposto
-
-A previsão sai às 12:00 do dia D-1 e vale para as 48 meias-horas do dia D. O
-que está disponível nesse instante foi medido fonte a fonte, pela diferença
-entre o último registro do arquivo e a data de modificação dele:
-
-| fonte | baixado em | último registro | atraso |
-|---|---|---|---|
-| CMO semi-horário | 2026-08-27 10:08 | 2026-08-27 23:30 | **−0,6 dia** |
-| curva de carga | 2026-09-02 04:25 | 2026-08-31 23:00 | 1,2 dia |
-| intercâmbio | 2026-09-02 04:44 | 2026-08-31 23:00 | 1,2 dia |
-| EAR diária | 2026-09-02 04:25 | 2026-08-31 | 2,2 dias |
-| ENA diária | 2026-09-06 11:22 | 2026-09-04 | 2,3 dias |
-
-**O CMO é publicado com antecedência.** O arquivo baixado às 10:08 de 27/08 já
-trazia as 48 meias-horas daquele mesmo dia. Ele é saída do modelo de despacho,
-não medição ex-post. Isso não esvazia a tarefa — às 12:00 de D-1 o número do
-operador para o dia D ainda não saiu — mas define o portão:
-
-    CMO ................ até o fim do dia D-1
-    carga, intercâmbio . até o fim do dia D-2
-    EAR, ENA ........... até o dia D-3
-    calendário de D .... determinístico, liberado
-
-O portão vale **igualmente para o modelo e para as linhas de base**. Dar D-1 à
-ingênua e D-2 ao modelo viciaria a comparação contra o modelo.
-
-Cada atraso é **uma observação por fonte**, e isso é limite declarado: os
-arquivos do ONS não trazem carimbo de publicação, e a data de modificação é a
-única evidência em disco.
-
-## Desenho
-
-**Estimando.** CMO em R$/MWh de cada meia-hora do dia D, nos quatro
-subsistemas.
-
-**Adversário.** A ingênua sazonal canônica da literatura de previsão de preço:
-terça a sexta repetem D-1; sábado, domingo e segunda repetem D-7. Não a
-ingênua simples — em série de preço a repetição do dia anterior já carrega
-nível e forma diurna, e é ela que um modelo precisa bater.
-
-**Perda.** MAE, declarada antes de olhar resultado, pelas duas razões que a
-área registra: é a métrica em que estudos de preço se comparam, e a cauda do
-CMO faria o RMSE virar relatório de meia dúzia de horas. RMSE sai como
-secundário.
-
-**Recalibração mensal, janela expansiva.** 15 reajustes ao longo do teste. Sem
-recalibrar, um ajuste teria de valer 14 meses enquanto a ingênua se atualiza
-todo dia — a ingênua ganharia por desenho.
-
-**Três modelos sobre o mesmo insumo.** `direto` prevê o nível do preço;
-`residual` prevê a correção da ingênua; `duas_partes` classifica se a meia-hora
-cai no piso e regride o resto, com regra de decisão que é a que minimiza MAE
-sob esse modelo.
-
-**IC por reamostragem de dia**, 2.000 repetições, os quatro subsistemas juntos
-no bloco: meias-horas do mesmo dia têm erro correlacionado, e reamostrar linha
-daria intervalo estreito demais.
-
-## Controles
-
-Rodam antes de qualquer número, e reprovação bloqueia o passo 3.
-
-| | Controle | Resultado |
-|---|---|---|
-| C1 | grade, chave única e os dias ausentes continuam ausentes | 0 duplicatas, 0 dias incompletos, 24 ausentes — passa |
-| C2 | CMO dentro da faixa física, alvo sem nulo | 0 fora de faixa, mín −39,24, máx 4.870,95 — passa |
-| C3 | **portão de informação**: refazer as features com as fontes mascaradas na emissão | 40 dias sorteados, 307.200 células, 0 divergências — passa |
-| C4 | cobertura de feature ≥ 97% | pior 99,15% (`cmo_l2`) — passa |
-| C5 | ordem das ingênuas: D-1 bate climatologia, sazonal bate D-7 | 43,93 < 136,40 e 42,47 ≤ 61,75 — passa |
-| C6 | os quatro subsistemas são séries distintas | correlação máxima 0,933 — passa |
-
-**O C1 já reprovou uma vez**, com o limiar em 8 — o número de buracos na
-fonte. O painel perde 24 dias, e a diferença é a aritmética acima. O limiar
-está fixo em 24 e não é calculado: se a fonte for rebaixada e o número mudar,
-o controle reprova e obriga a olhar em vez de absorver a mudança em silêncio.
-
-**O C3 é o que testa o desenho e não o dado.** Ele apaga das fontes tudo o que
-está depois do instante de emissão, reconstrói as features do dia sorteado com
-a mesma função do passo 1 e exige valor idêntico célula a célula. Uma única
-feature que olhasse para o futuro faria o controle falhar.
-
-### Controle positivo, e o que ele custou
-
-O oráculo de nível recebe a mediana verdadeira do resíduo do dia e desloca a
-ingênua por ela. A primeira versão deslocava pela **média** e entregou **+0,9%**
-de habilidade, com IC cruzando zero — o desenho pareceria incapaz de detectar
-ganho, e nenhum resultado negativo do modelo significaria nada.
-
-O defeito era de estatística, não de dado: a perda declarada é MAE, e a
-constante que minimiza MAE é a mediana. Trocada a média pela mediana, sobre o
-mesmo dia e o mesmo dado, o oráculo passa a **+17,66%**, IC [+15,28; +20,21].
-É a mesma regra que o `E-despacho-termico` já tinha registrado, aplicada aqui a
-um oráculo em vez de a uma linha de base.
-
----
-
-## Resultado A — nenhum modelo se distingue da ingênua em MAE
-
-Teste de 01/06/2025 a 27/08/2026: **85.248 linhas, 444 dias, 15
-recalibrações, 41 features**.
-
-| preditor | MAE | RMSE | habilidade MAE | IC 95% |
-|---|---|---|---|---|
-| ingênua D-1 | 52,70 | 129,33 | −7,36% | [−14,08; −1,16] |
-| ingênua D-7 | 69,82 | 140,19 | −42,24% | [−53,71; −32,04] |
-| **ingênua sazonal** | **49,09** | **122,02** | adversário | |
-| climatologia por meia-hora | 125,18 | 162,89 | −155,02% | [−176,41; −136,05] |
-| LightGBM direto | 51,32 | 103,38 | −4,54% | [−12,39; +2,74] |
-| LightGBM residual | 50,04 | 115,42 | −1,94% | [−6,50; +2,26] |
-| **LightGBM duas partes** | **48,71** | **102,31** | **+0,76%** | [−6,72; +7,70] |
-| oráculo de nível | 40,42 | 112,69 | +17,66% | [+15,28; +20,21] |
-
-**Em MAE, os três modelos têm IC cruzando zero: nenhum se distingue da
-repetição do dia anterior.** O melhor deles empata, com +0,76% e intervalo de
-14 pontos de largura.
-
-**Em RMSE, os mesmos modelos batem a ingênua com folga**: +16,2% o de duas
-partes, +15,3% o direto. A divergência entre as duas métricas não é ruído — o
-passo 4 mostra de onde ela vem.
-
-O controle positivo passa: o oráculo tem IC inteiro acima de zero. O
-experimento detecta ganho quando ele existe, e o empate acima é medida, não
-incapacidade do desenho.
-
-## Resultado B — a ingênua ganha no piso e perde na cauda
-
-O CMO fica no piso em 14,0% das meias-horas do período de teste.
-
-| preditor | prevê no piso quando o alvo está lá | erro mediano ali | erro mediano fora |
-|---|---|---|---|
-| ingênua sazonal | **71,6%** | 0,00 | 15,10 |
-| LightGBM direto | 19,2% | 16,65 | 22,86 |
-| LightGBM residual | 18,6% | 13,06 | 19,48 |
-| LightGBM duas partes | **66,0%** | 0,01 | 22,03 |
-
-**A ingênua é um caminho realizado, e por isso acerta o piso exatamente.** Um
-regressor único devolve a mediana condicional, que quase nunca cai em zero, e
-paga 13 a 17 R$/MWh de erro mediano em 14% das linhas. Modelar o piso
-explicitamente recupera o comportamento — e é o que move a habilidade de
-−4,54% para +0,76%.
-
-Quantis do erro absoluto, no mesmo teste:
-
-| preditor | q25 | q50 | q90 | q95 |
-|---|---|---|---|---|
-| ingênua sazonal | **2,25** | **12,10** | 157,62 | 222,46 |
-| LightGBM direto | 7,73 | 22,06 | 136,53 | 179,90 |
-| LightGBM duas partes | 5,13 | 19,78 | **131,75** | **184,86** |
-
-**A troca é sempre a mesma:** a ingênua erra menos nas linhas fáceis e mais nas
-difíceis. O modelo de duas partes erra menos que ela em apenas **40,7%** das
-linhas e ainda assim tem RMSE 16,2% menor. MAE pesa toda linha igual e escolhe
-a ingênua; RMSE pesa a cauda e escolhe o modelo. **A escolha da perda decide o
-vencedor, e escolhê-la depois de ver o resultado seria escolher o resultado.**
-
-### Nível e forma
-
-Separando o CMO em nível do dia e desvio de cada meia-hora em torno dele:
-
-| preditor | completo | nível | forma |
-|---|---|---|---|
-| ingênua sazonal | 49,09 | 40,21 | 48,64 |
-| LightGBM direto | 51,32 | 37,80 | 42,45 |
-| LightGBM duas partes | **48,71** | **35,52** | **42,65** |
-| oráculo de nível | 40,42 | 23,57 | 48,64 |
-
-**Os modelos batem a ingênua nas duas partes medidas em separado e empatam no
-total.** Não há inconsistência: o erro de uma linha é a soma do erro de nível
-com o de forma, e |a+b| não é |a|+|b|. MAE não é aditiva sobre essa separação.
-
-## Resultado C — a ingênua só é imbatível a um dia
-
-O mesmo desenho, com o alvo deslocado para D+1 e o portão inteiro deslocado
-junto, roda como controle: o erro tem de crescer nos dois termos.
-
-| horizonte | MAE do modelo | MAE da ingênua | habilidade | IC 95% |
-|---|---|---|---|---|
-| D | 48,71 | 49,09 | +0,76% | [−6,72; +7,70] |
-| D+1 | 62,68 | 74,89 | **+16,31%** | **[+10,64; +21,87]** |
-
-O controle passa — os dois erros crescem — e o resultado que ele traz junto é
-maior que o controle. **A ingênua se degrada muito mais rápido que o modelo:**
-perde 25,80 R$/MWh de um dia para o outro, contra 13,96 do modelo. A dois dias
-o modelo ganha com IC inteiro acima de zero.
-
-A leitura é a mesma do Resultado B por outro caminho. O que a ingênua tem de
-melhor é o caminho realizado mais recente, e o valor dele cai depressa com a
-distância. As covariáveis de estado do sistema não caem tão depressa, porque
-descrevem condição hidrológica e de carga que muda em escala de semana.
-
-## Resultado C2 — a ablação não identifica de onde vem a habilidade
-
-Conjuntos encaixados, mesma origem móvel e mesma recalibração:
-
-| conjunto | features | habilidade |
-|---|---|---|
-| A0 calendário + CMO próprio | 20 | −4,87% |
-| A1 + CMO dos outros subsistemas | 28 | −1,01% |
-| A2 + carga e intercâmbio | 36 | −9,50% |
-| A3 + hidrologia (completo) | 41 | +0,76% |
-
-**Os degraus não são interpretáveis, e a razão foi medida.** Com
-`colsample_bytree` menor que 1 o LightGBM sorteia coluna por posição: permutar
-as mesmas colunas é trocar de semente. A primeira corrida da ablação
-concatenava as famílias na ordem em que as somava, e deu outro resultado para
-o mesmo conjunto de features:
-
-| conjunto | ordem da ablação | ordem canônica | diferença |
-|---|---|---|---|
-| A0 | −3,66% | −4,87% | 1,21 pt |
-| A1 | −1,84% | −1,01% | 0,83 pt |
-| A2 | −2,69% | −9,50% | **6,81 pt** |
-| A3 | +4,40% | **+0,76%** | 3,64 pt |
-
-A ordem canônica reproduz o passo 3 exatamente no A3 — +0,76% contra +0,76% —,
-o que fecha a explicação: é ordem de coluna, e não outra diferença de código.
-
-**As diferenças entre degraus vizinhos (3,86, −8,49 e 10,26 pontos) são da
-mesma ordem que a variação induzida só por permutar coluna (0,83 a 6,81).** Com
-uma semente e uma configuração, a ablação mede variância de ajuste junto com
-efeito de família, e não separa as duas. Isso não invalida o Resultado A: a
-faixa toda cabe dentro do IC de 14 pontos que o passo 3 já publica. Mas
-significa que **nenhuma afirmação sobre qual fonte carrega a habilidade se
-sustenta com este número de sementes**, e o passo 5 não faz nenhuma.
-
-### Nulo por permutação
-
-Embaralhar as features entre as linhas do treino, com o alvo intacto, leva a
-habilidade a **−206,91%** — pior que a climatologia. A associação entre feature
-e alvo é o que sustenta a previsão; sem ela o modelo vira preditor constante.
-
-## Resultado D — a habilidade não é estável no tempo nem no espaço
-
-Habilidade do modelo de duas partes sobre a ingênua sazonal, por subsistema:
-
-| subsistema | MAE da ingênua | MAE do modelo | habilidade |
-|---|---|---|---|
-| N | 50,91 | 52,27 | −2,68% |
-| NE | 51,90 | 51,44 | +0,89% |
-| S | 47,53 | 45,82 | **+3,61%** |
-| SE | 46,02 | 45,33 | +1,49% |
-
-Por mês de teste, a habilidade vai de **−68,2%** (dez/2025) a **+38,7%**
-(jan/2026), e fica acima de zero em **10 dos 15 meses**. Dois meses ruins
-carregam o agregado: sem dez/2025 e mar/2026 o resultado mudaria de sinal.
-É essa dispersão, e não o valor central, que produz o IC de 14 pontos de
-largura do Resultado A.
-
-A leitura conservadora é a do Resultado A: com 15 meses de teste, **a
-habilidade média não se distingue de zero em MAE**. A instabilidade mensal é
-grande demais para que a maioria de meses positivos sustente afirmação mais
-forte.
-
-## Limites declarados
-
-- **O atraso de publicação é um ponto por fonte.** Os arquivos do ONS não
-  trazem carimbo de publicação; a data de modificação do arquivo em disco é a
-  única evidência disponível. O portão inteiro repousa sobre cinco observações.
-- **O CMO é saída de modelo, não medição.** É o valor que o modelo de despacho
-  do operador produz. Não existe segunda fonte para conferir contra, e nenhum
-  controle aqui testa se o número publicado é o custo marginal realizado.
-- **Sem feriado.** Não há tabela de feriado nacional ou regional no
-  repositório. O efeito de feriado cai dentro do erro tanto do modelo quanto da
-  ingênua, e a ingênua sazonal é justamente a base que mais sofre com isso.
-- **Sem preço final.** O CMO não é o PLD. A CCEE, que publica o PLD, devolve
-  HTTP 403 por três vias distintas — medido em 06/09/2026 e registrado em
-  `report/tarefas-dados.tex`. Nada aqui é afirmação sobre preço de liquidação.
-- **Uma configuração de hiperparâmetro e uma semente.** O IC cobre variação
-  entre dias do teste; não cobre variância de ajuste, de semente, nem da data
-  de corte entre treino e teste. O Resultado C2 dá uma medida parcial dessa
-  variância — permutar a ordem das colunas move a habilidade de 0,83 a 6,81
-  pontos — e ela é grande o bastante para engolir qualquer diferença entre
-  conjuntos de feature.
-- **Grão de subsistema.** O ONS não publica CMO nodal. O comparador direto da
-  literatura (`maji2025`, ERCOT nó a nó) não é reproduzível com este dado, e
-  isso é objeto de comparação inexistente, não validação pendente.
-
-## Não testado
-
-- Recalibração diária ou semanal em vez de mensal. A literatura de previsão de
-  preço pede diária; 15 reajustes custaram 864 s, e 444 custariam ~7 h.
-- Janela de treino deslizante em vez de expansiva. Os dois meses em que o
-  modelo desaba (dez/2025 e mar/2026) sugerem mudança de regime, que janela
-  curta trataria melhor — não medido.
-- Modelo por subsistema em vez de um global com o subsistema como categoria.
-- Mais de uma semente. É o teste que a ablação exige para virar leitura: com
-  uma só, o Resultado C2 mede ruído de ajuste junto com efeito de família.
-- Horizonte além de D+1. A habilidade cresce de +0,76% para +16,31% de um dia
-  para dois, e não se sabe onde ela para.
-- Previsão de densidade ou de quantil. O piso e a cauda pedem isso, e o
-  Resultado B é o argumento: nenhum ponto único serve às duas regiões.
-- `cvu-usitermica`, que define a ordem de mérito e é o insumo mais próximo do
-  mecanismo que forma o CMO. Medido em 06/09/2026: 22 arquivos, 9,8 MB, HTTP
-  200. Fora do painel por não estar em disco, não por indisponibilidade.
+The same gate applies to the models and baselines. Giving the naive baseline
+D-1 information while limiting the model to D-2 would bias the comparison
+against the model.
+
+Each lag is **one observation per source**, a stated limitation: ONS files do
+not include publication timestamps, and file modification time is the only
+evidence available on disk.
+
+## Design
+
+**Estimand.** CMO in R$/MWh for each half-hour on day D across four subsystems.
+
+**Baseline.** The canonical seasonal naive baseline in the price-forecasting
+literature: Tuesday through Friday repeat D-1; Saturday, Sunday, and Monday
+repeat D-7. This is not simple persistence. In price series, the previous day
+already carries the level and intraday shape that a model must improve upon.
+
+**Loss.** MAE, selected before looking at the results for two reasons reported
+in the literature: it supports comparisons across price studies, and the CMO
+tail would make RMSE focus on a handful of hours. RMSE is secondary.
+
+**Monthly recalibration with an expanding window.** The model is refit on the
+first day of each test month using all available history. There are 15
+recalibrations. Without them, one fit would span 14 months while the naive
+baseline updates every day, favoring the baseline by design.
+
+**Three models on the same inputs.** `direto` predicts the price level;
+`residual` predicts a correction to the naive baseline; `duas_partes` classifies
+whether a half-hour is at the floor and regresses the remaining values, using
+the decision rule that minimizes MAE under this model.
+
+**Day-block confidence intervals.** The 2,000 bootstrap replicates keep all four
+subsystems together in each daily block. Half-hours within a day have
+correlated errors; resampling individual rows would produce an overly narrow
+interval.
+
+## Controls
+
+Controls run before results are produced; a failure blocks step 3.
+
+| Control | Result |
+|---|---|
+| C1: grid, unique key, missing days remain absent | 0 duplicates, 0 incomplete days, 24 missing days; pass |
+| C2: CMO within physical range and target has no missing values | 0 out of range; min -39.24, max 4,870.95; pass |
+| C3: **information gate**, rebuild features with sources masked at issue time | 40 sampled days, 307,200 cells, 0 mismatches; pass |
+| C4: feature coverage >= 97% | minimum 99.15% (`cmo_l2`); pass |
+| C5: baseline ranking, D-1 beats climatology and seasonal naive beats D-7 | 43.93 < 136.40 and 42.47 <= 61.75; pass |
+| C6: four subsystems are distinct series | maximum correlation 0.933; pass |
+
+**C1 failed once** when the threshold was set to 8, the number of missing source
+days. The panel loses 24 days, as described above. The threshold is fixed at
+24 rather than calculated from the source: if a source change alters the count,
+the control fails and requires investigation instead of silently absorbing the
+change.
+
+**C3 tests the design, not the source data.** It masks all source values after
+the issue time, rebuilds features for sampled days with the same function used
+in step 1, and requires cell-by-cell equality. A single feature using future
+information fails the control.
+
+### Positive control and its correction
+
+The level oracle receives the true median daily residual and shifts the naive
+baseline by it. The first version used the **mean** and showed only **+0.9%**
+skill, with a confidence interval crossing zero. The design would then appear
+unable to detect gains, making negative model results uninformative.
+
+This was a statistical issue, not a data issue: MAE is the declared loss, and
+the median minimizes MAE. Replacing the mean with the median on the same days
+and data raises oracle skill to **+17.66%**, with a 95% CI of [+15.28%, +20.21%].
+The same rule is used in `E-thermal-dispatch`, where it is applied to a baseline
+rather than an oracle.
+
+## Result A: no model is distinguishable from the seasonal naive in MAE
+
+Test period: 2025-06-01 to 2026-08-27, **85,248 rows, 444 days, 15
+recalibrations, 41 features**.
+
+| Predictor | MAE | RMSE | MAE skill | 95% CI |
+|---|---:|---:|---:|---|
+| D-1 naive | 52.70 | 129.33 | -7.36% | [-14.08%, -1.16%] |
+| D-7 naive | 69.82 | 140.19 | -42.24% | [-53.71%, -32.04%] |
+| **Seasonal naive** | **49.09** | **122.02** | baseline | |
+| Half-hour climatology | 125.18 | 162.89 | -155.02% | [-176.41%, -136.05%] |
+| LightGBM direct | 51.32 | 103.38 | -4.54% | [-12.39%, +2.74%] |
+| LightGBM residual | 50.04 | 115.42 | -1.94% | [-6.50%, +2.26%] |
+| **LightGBM two-part** | **48.71** | **102.31** | **+0.76%** | [-6.72%, +7.70%] |
+| Level oracle | 40.42 | 112.69 | +17.66% | [+15.28%, +20.21%] |
+
+**All three models have MAE confidence intervals that cross zero; none is
+distinguishable from repeating the previous day.** The best model ties at
++0.76%, with an interval 14 percentage points wide.
+
+**In RMSE, the same models beat the naive baseline:** +16.2% for the two-part
+model and +15.3% for the direct model. This difference between metrics is not
+noise; step 4 shows where it comes from.
+
+The positive control passes: the oracle's confidence interval is entirely above
+zero. The experiment detects a gain when one is present, so the tie above is a
+measured result rather than a limitation of the design.
+
+## Result B: the naive baseline wins at the floor and loses in the tail
+
+The CMO is at the floor in 14.0% of test-period half-hours.
+
+| Predictor | Predicts floor when target is at floor | Median error there | Median error outside |
+|---|---:|---:|---:|
+| Seasonal naive | **71.6%** | 0.00 | 15.10 |
+| LightGBM direct | 19.2% | 16.65 | 22.86 |
+| LightGBM residual | 18.6% | 13.06 | 19.48 |
+| LightGBM two-part | **66.0%** | 0.01 | 22.03 |
+
+**The naive baseline uses the most recent realized value, so it predicts the
+floor exactly.** A single regressor returns the conditional median, which
+rarely lands exactly on zero, and incurs 13 to 17 R$/MWh median error on 14% of
+rows. Explicitly modeling the floor recovers that behavior and moves skill from
+-4.54% to +0.76%.
+
+Absolute-error quantiles on the same test set:
+
+| Predictor | q25 | q50 | q90 | q95 |
+|---|---:|---:|---:|---:|
+| Seasonal naive | **2.25** | **12.10** | 157.62 | 222.46 |
+| LightGBM direct | 7.73 | 22.06 | 136.53 | 179.90 |
+| LightGBM two-part | 5.13 | 19.78 | **131.75** | **184.86** |
+
+**The trade-off is consistent:** the naive baseline has lower error on easy rows
+and higher error on difficult rows. The two-part model has lower error than
+the baseline on only **40.7%** of rows and still has 16.2% lower RMSE. MAE
+weights all rows equally and selects the naive baseline; RMSE emphasizes the
+tail and selects the model. **Choosing the loss determines the winner, so
+choosing it after seeing results would amount to choosing the result.**
+
+### Daily level and intraday shape
+
+Separate CMO into the daily level and each half-hour's deviation from that
+level:
+
+| Predictor | Overall | Level | Shape |
+|---|---:|---:|---:|
+| Seasonal naive | 49.09 | 40.21 | 48.64 |
+| LightGBM direct | 51.32 | 37.80 | 42.45 |
+| LightGBM two-part | **48.71** | **35.52** | **42.65** |
+| Level oracle | 40.42 | 23.57 | 48.64 |
+
+**The models beat the naive baseline on each component measured separately and
+tie on the total.** There is no inconsistency: row error is the sum of level
+and shape errors, and |a+b| is not |a|+|b|. MAE is not additive over this
+decomposition.
+
+## Result C: the naive baseline is only unbeatable at one day
+
+The same design is run with the target shifted to D+1 and the entire information
+gate shifted with it. As a control, both errors should increase.
+
+| Horizon | Model MAE | Naive MAE | Skill | 95% CI |
+|---|---:|---:|---:|---|
+| D | 48.71 | 49.09 | +0.76% | [-6.72%, +7.70%] |
+| D+1 | 62.68 | 74.89 | **+16.31%** | **[+10.64%, +21.87%]** |
+
+The control passes because both errors increase, and it also provides a result:
+**the naive baseline degrades much faster than the model.** Its MAE increases
+by 25.80 R$/MWh from one day to two; the model's increases by 13.96. At two
+days, the model wins with a confidence interval entirely above zero.
+
+This is the same pattern as Result B from another perspective. The naive
+baseline's main advantage is the latest realized value, and that value loses
+predictive value quickly with horizon. System-state covariates decay more
+slowly because hydrological and load conditions change on a weekly scale.
+
+## Result C2: the ablation does not identify the source of skill
+
+Nested feature sets use the same rolling-origin design and monthly
+recalibration:
+
+| Set | Features | Skill |
+|---|---:|---:|
+| A0: calendar + own-subsystem CMO | 20 | -4.87% |
+| A1: + CMO from other subsystems | 28 | -1.01% |
+| A2: + load and interchange | 36 | -9.50% |
+| A3: + hydrology (full set) | 41 | +0.76% |
+
+**The increments are not interpretable, and the reason was measured.** With
+`colsample_bytree` below 1, LightGBM samples columns by position; permuting
+the same columns acts like changing the seed. The first ablation concatenated
+feature families in the order they were added and produced a different result
+for the same feature set:
+
+| Set | Ablation order | Canonical order | Difference |
+|---|---:|---:|---:|
+| A0 | -3.66% | -4.87% | 1.21 points |
+| A1 | -1.84% | -1.01% | 0.83 points |
+| A2 | -2.69% | -9.50% | **6.81 points** |
+| A3 | +4.40% | **+0.76%** | 3.64 points |
+
+Canonical ordering reproduces step 3 exactly for A3 (+0.76% in both runs),
+which identifies column order, not a different implementation, as the cause.
+
+**Differences between adjacent sets (3.86, -8.49, and 10.26 points) are on the
+same scale as variation induced solely by column permutation (0.83 to 6.81
+points).** With one seed and one parameter configuration, the ablation mixes
+fitting variance with family effects. This does not invalidate Result A: all
+sets fall within the 14-point interval reported in step 3. It does mean that
+**the current number of seeds does not support a claim about which source
+contributes the skill.**
+
+### Permutation null
+
+Shuffling training features across rows while keeping the target intact yields
+**-206.91%** skill, worse than climatology. The feature-target association
+supports prediction; without it, the model becomes a constant predictor.
+
+## Result D: skill is not stable over time or space
+
+Two-part model skill over the seasonal naive baseline by subsystem:
+
+| Subsystem | Naive MAE | Model MAE | Skill |
+|---|---:|---:|---:|
+| N | 50.91 | 52.27 | -2.68% |
+| NE | 51.90 | 51.44 | +0.89% |
+| S | 47.53 | 45.82 | **+3.61%** |
+| SE | 46.02 | 45.33 | +1.49% |
+
+By test month, skill ranges from **-68.2%** (Dec 2025) to **+38.7%** (Jan
+2026) and is positive in **10 of 15 months**. Two poor months drive the
+aggregate: removing December 2025 and March 2026 would change its sign. This
+dispersion, rather than the central estimate, produces the 14-point-wide
+interval in Result A.
+
+The conservative interpretation remains that of Result A: over 15 test
+months, **mean MAE skill is not distinguishable from zero**. Monthly
+instability is too large for a majority of positive months to support a
+stronger claim.
+
+## Stated limitations
+
+- **Publication lag is one observation per source.** ONS files have no
+  publication timestamp; file modification time is the only available
+  evidence. The entire gate rests on five observations.
+- **CMO is model output, not a measurement.** It is produced by the operator's
+  dispatch model. There is no independent source for comparison, and no
+  control here tests whether published CMO equals realized marginal cost.
+- **No holiday calendar.** The repository has no national or regional holiday
+  table. Holiday effects are included in both model and baseline error, and the
+  seasonal naive baseline is particularly affected.
+- **No settlement price.** CMO is not PLD. CCEE, which publishes PLD, returned
+  HTTP 403 through three separate routes, as measured on 2026-09-06 and
+  documented in `docs/product/data_taks.tex`. These results make no claim about
+  settlement prices.
+- **One parameter configuration and one seed.** The confidence interval covers
+  test-day variation, not fitting variance, seed variance, or train/test cutoff
+  variation. Result C2 gives a partial estimate: column order alone moves skill
+  by 0.83 to 6.81 points, enough to obscure differences between feature sets.
+- **Subsystem-level resolution.** ONS does not publish nodal CMO. The direct
+  comparison in the literature (`maji2025`, ERCOT node by node) cannot be
+  reproduced with these data; the comparison target is unavailable, not an
+  outstanding validation task.
+
+## Not tested
+
+- Daily or weekly rather than monthly recalibration. Price-forecasting
+  literature motivates daily updates; 15 refits took 864 seconds, while 444
+  would take about 7 hours.
+- A rolling rather than expanding training window. The two months with severe
+  model degradation (Dec 2025 and Mar 2026) suggest regime change, which a
+  shorter window might handle better; this was not measured.
+- Separate models by subsystem rather than one global model with subsystem as
+  a category.
+- More than one seed. This is required for the ablation: with one seed, Result
+  C2 mixes fitting noise with feature-family effects.
+- Horizons beyond D+1. Skill increases from +0.76% to +16.31% between one and
+  two days; the later behavior is unknown.
+- Density or quantile forecasts. The floor and tail motivate them; Result B
+  shows that no single point forecast serves both regions.
+- `cvu-usitermica`, which defines merit order and is the input closest to the
+  mechanism that forms CMO. Measured on 2026-09-06: 22 files, 9.8 MB, HTTP 200.
+  It is not in the panel because it is not on disk, not because it is
+  unavailable.
