@@ -1,0 +1,768 @@
+================================================================================
+ TASKS (TAREFAS) — lucertae-research
+ Updated: 2026-10-02
+ English translation of TAREFAS.txt (Portuguese original)
+================================================================================
+
+STATES
+  [ ]  open
+  [~]  in progress
+  [x]  done
+  [!]  closed on sufficient evidence — do NOT reopen without a new fact
+  [-]  impossible: the data or comparison object does not exist. Becomes a
+       declared limit of the claim, never a "next step".
+
+RULE
+  Lack of perfection is not an open item. If the next test only rehashes the
+  same data with another statistic, it adds nothing and does not enter this list.
+
+================================================================================
+ THE SIXTEEN TASK FAMILIES
+================================================================================
+ How the energy literature divides the field. Each has its own objective, method
+ and metric. Detail and Brazilian source for each: report/tarefas-dados.tex
+
+   F1  Resource assessment ............. available irradiance and wind
+   F2  Generation and load forecasting . solar, wind, load
+   F3  Asset inventory and detection ... locate and date plants from imagery
+   F4  Operations monitoring ........... generation and emissions without telemetry
+   F5  Reservoir and hydropower ........ area, level, volume from satellite
+   F6  Performance and degradation ..... performance ratio, soiling
+   F7  Siting and land-use conflict .... siting, agrivoltaics
+   F8  Energy access and demand ........ electrification, load by region
+   F9  Adequacy and reliability ........ non-served risk, ENS
+   F10 Failure and unavailability ...... generator unit failure rate
+   F11 Price and marginal cost ......... CMO and PLD as estimands
+   F12 Interchange, flow and constraint  subsystem flows, network curtailment
+   F13 Quality, frequency, ancillaries . frequency deviation, reserve
+   F14 Marginal emissions .............. marginal factor per MWh, MCTI/SIRENE
+   F15 Methane and fugitive emissions .. point plume from satellite
+   F16 Right-of-way, vegetation, line risk corridor encroachment, ignition
+
+================================================================================
+ EXPERIMENTS
+================================================================================
+
+[x] F1 · NASA POWER error against measured POA
+    237 plants, 66,917 plant-days, 2025. Fixed transposition covers 1/3 of the
+    gap; trackers cover the rest. Measured/model ratio 1.229 -> 1.000.
+    MAE 1.228 -> 0.705 choosing geometry per plant.
+    -> notebooks/br/_poa_medida.py, _poa_erro.py
+    -> data/processed/poa_erro_{por_usina.csv,pareado.parquet}
+    -> report/execucao-poa.tex
+
+[!] F1b · Validate fixed/tracker classification
+    Four pieces of evidence, three independent of the fit that produced the label:
+      fit .......... MAE 1.228 -> 0.705
+      set .......... 86% unanimous label against 13% by chance
+      diurnal shape  DISJOINT distributions, fixed p90 7.50 h < tracker p10 9.00 h
+      agreement .... 96.6% between the two classifications, stable over 12 months
+    Cross-checks with Janaúba, which came from stage 0 by another path.
+    -> notebooks/br/_forma_diurna.py, data/processed/forma_diurna.csv
+
+[-] F1c · Tie the label to an official mounting-type register
+    Does not exist. Checked in 8 sources: ANEEL SIGA, MMGD, mmgd_pv_tec, RALIE
+    plant, RALIE generating unit, ONS coff_fv_detail, coff_fotovoltaica,
+    modalidade_usina. None carries the field.
+    CONSEQUENCE: write "two independent signatures agree at 94.4%",
+    never "66% of the fleet uses trackers, according to the register".
+
+[x] F6 · Plant performance
+    235 plants, 2025, first application of the geometry validated in F1b.
+
+      Realised PR .......... 0.838   (verified generation)
+      Potential PR (ONS) ... 1.023   (operator gen_estimated)
+      PR without restricted days 0.998
+
+    Potential–realised gap 0.227; removing days with restriction in the set
+    leaves 0.031. ~86% of the deficit is a dispatch decision, not the asset.
+    -> notebooks/br/_desempenho.py, data/processed/desempenho_por_usina.csv
+    -> report/execucao-desempenho.tex
+
+    [!] Energy accounting CLOSES. The 0.77 ratio between detail and
+        constrained-off was not a divergence between the two datasets: at
+        interval level they coincide (Pirapora 2, 15/06 12:00: 101.27 MW in
+        both). It was the day filter — a plant with fewer than 44 of 48
+        intervals drops out of the sum, while the set row stays complete.
+        Restricting to complete set-days, 5,626 days in 46 sets: measured
+        curtailment 3,610.7 GWh against gap 3,594.8 GWh = 100%.
+
+    [!] Low-plateau anomalies were artefact, not layout defect.
+        Of the original seven, five were night-time pyranometer offset added
+        into the day integral. Three remain below 0.75, two with diagnosis:
+        Guaimbé 1 with midday dip between two peaks (partial shading),
+        Santa Luzia 4 with the day truncated at 13:00.
+
+    [-] Declared PV unavailability DOES NOT EXIST.
+        taxa_teif_teip covers UHE/UTE/UTN. disponibilidade_usina likewise:
+        0 UFV rows. The three-way split becomes two — curtailment vs the rest,
+        and the rest mixes underperformance with unavailability.
+
+    [ ] PR is referenced to REGULATED (AC) capacity, not DC module capacity,
+        which ANEEL does not publish. That is why it exceeds 1. Do not compare
+        with standards PR without saying so.
+
+    [ ] ONS gen_estimated does not distinguish mounting: median potential PR
+        1.154 on fixed vs 0.971 on trackers. Consistent with a model that
+        assumes fixed layout — BUT a lower DC/AC ratio on tracker plants
+        predicts the same signal. Not separable with available data.
+
+[ ] F4 · CVU and merit order
+    cvu-usitermica, 5,221 rows, one afternoon. The out-of-merit dispatch chapter
+    argues about merit order without the variable cost that defines it.
+    Not an experiment; closing a gap in a chapter already written.
+    Best cost–benefit item in the table.
+
+[ ] Crosswalk cod_usinapdp <-> id_ons
+    Standalone deliverable, serves every family. Today: 50% exact normalised
+    match (usina_conjunto nom_conjunto + nom_usina, modalidade_usina nom_usina).
+    The remaining 297 look recoverable by approximate match. Else:
+    modalidade_usina has id_ons on only 57% of rows; use CEG as bridge
+    (99% filled, and it is the key of br.plant).
+
+[ ] F2 · Forecast benchmark against ONS
+    programacao_x_previsao: 2,073 daily files, Oct/2024 to today, 1.8 GB.
+    Forecast and scheduled side by side, PER PLANT, in 48 intervals. Baseline
+    is not a naive model: it is the forecast the operator used to schedule
+    dispatch. Design: zero-shot foundation models (TimesFM, Chronos, Moirai,
+    MOMENT) against ONS, as the ERCOT/PERFORM benchmark does.
+    DEPENDS on the crosswalk.
+
+[ ] F5 · Reservoir from satellite
+    11 ONS hydro sets, zero used, in a country that is 65% hydropower.
+    Complete field truth: EAR and ENA per reservoir, streamflow, vector basin
+    outlines. Tested: ~5 MB, downloads in 10 s. The wait is the imagery pipeline
+    (Landsat/Sentinel-1 + SRTM), not the data.
+
+[ ] F3 · Asset inventory and detection
+    Only family with no input gap: SIGA has 25,133 plants with coordinates and
+    operation date, MMGD 4,678,147 connections, ONS 2,208 lines and 1,677
+    substations. Where the series started (Figs. 2, 3, 7).
+    Unexplored branch: network infrastructure from imagery — line, tower,
+    substation. Mature field, with annotated dataset and World Bank funding.
+    LIMIT: needs sub-metre imagery (WorldView-3), which is not free. Cost,
+    not unavailability.
+
+[ ] F7 · Siting and land-use conflict
+    MapBiomas, IBGE, SIGA, ONS basin outline. Outside current stock.
+    Already 4 of 12 items in the Zotero "Energia" collection (agrivoltaics).
+    Availability not checked.
+
+[ ] F8 · Energy access and demand
+    MMGD has IBGE municipality codes on 4.7 M connections; ONS load curve on
+    disk; VIIRS night lights. Farthest from what already exists here.
+    VIIRS coverage not checked.
+
+[x] F9 · Load-interruption risk conditional on system state
+    Subsystem–hour panel, 84,764 rows, target in the next hour, prevalence
+    0.925%. Four expanding-origin folds. Out-of-sample pooled: 49,712 rows,
+    460 events.
+      subsystem ............................ AP 0.0138
+      subsystem × hour ..................... AP 0.0190   <- best baseline
+      subsystem × month × hour ............. AP 0.0118
+      LightGBM + system state .............. AP 0.0147   (−0.0044)
+    RESULT: state features do NOT beat the subsystem × hour table:
+    −23% AP, 95% CI of the gain by 24 h block bootstrap
+    [−0.0178; +0.0002], 97.2% of 2,000 resamples with gain ≤ 0.
+    RE-MEASURED 07/09/2026 on the corrected panel (see DEBT, strip defect).
+    Before: AP 0.0143, gain −0.0049, CI [−0.0186; −0.0015], 98.7%.
+    THE CONCLUSION WEAKENED: the CI now TOUCHES zero, and "degrade" becomes
+    "do not beat". Direction unchanged; strength of the claim did change.
+    What carries the predictable structure is hour of day: 14h and 15h at 5.8%
+    and 5.2% against 1–2% background in subsystem N.
+    CONTROLS, all passed:
+      count ........ 1,085 events preserved; unique (hour, subsystem) key
+      target ....... y1[t] == y[t+1] on every row; 21,190 1 h intervals
+      climatology .. index.map() and merge() identical
+      ties ......... AP with random tie-break 0.0332 > 0.0305 with ties,
+                     so ties hurt the baseline, they do not help it
+      capacity ..... LightGBM with hour + subsystem reproduces the table
+      permutation .. null 0.0122 [0.0113; 0.0127], real 0.0147, +3.6 sd:
+                     there is signal in state, and it does not cover the
+                     variance that costs
+    NOT TESTED, so the claim holds for THIS feature set:
+    reduced subset and strong regularisation. Write "this feature set does not
+    beat the table", never "system state does not inform risk" — and never
+    again cite the feature count from memory: it moved from 49 to 51 when a
+    read defect was fixed.
+    -> notebooks/risco/_interrupcao.py
+    -> data/processed/risco_interrupcao_dobras.csv
+    -> data/raw/risco/ (six ONS datasets, downloaded 06/09/2026)
+
+[x] F2b · POA nowcasting against clear-sky index persistence
+    Forecast estimand on F1's input. Does not close F2, whose target is
+    generation and load against ONS published forecast.
+    21 plants, Apr/2024–Sep/2026, three expanding-origin folds. RMSE in W/m2.
+      horizon      n      naive   smart        LightGBM   skill     95% CI
+      30 min   71,521      188.4      173.7      161.1      +7.3%   [+6.7; +7.8]
+      1 h      62,499      242.2      208.7      192.0      +8.0%   [+7.3; +8.6]
+      3 h      26,671      394.3      264.7      238.5      +9.9%   [+8.4; +11.6]
+    RESULT: the model beats clear-sky index persistence on all three horizons,
+    with CI entirely above zero. BUT most of the gain is calibration, not new
+    information:
+      kt(t) only, calibrated ... +3.7%   +4.6%   +7.7%
+      remaining features worth . +3.6%   +3.4%   +2.3%   (SHRINKS with horizon)
+    A model with the same input as the adversary already delivers half to
+    three quarters of the gain, learning E[kt(t+h)|kt(t)] instead of repeating
+    kt(t). At 3 h calibration accounts for 78% of the total.
+    CONTROLS, all passed:
+      clear sky is a ceiling ... POA above 1.15× in 2.67% of analysis intervals
+      physical kt .............. median 0.917 in sun
+      adversary ................ smart persistence beats naive at every h
+      monotonicity ............. error grows with horizon on all four predictors
+      capacity ................. kt(t)-only model never below persistence
+      ablation × null .......... −54.9/−31.7/−10.2 vs −51.4/−28.8/−6.8; they match,
+                                 the signature of actually using the series
+    TWO OF MY DEFECTS, fixed and recorded in the README:
+      1. kt(t) was outside the features. The model forecast from kt(t−1) onward
+         while the adversary used kt(t). Cost 15.7 points at 30 min and
+         INVERTED the sign: −8.4% became +7.3%.
+      2. the capacity control required a tie with persistence. Wrong criterion:
+         with the same input the model may calibrate better. Fixed to a floor,
+         and that revealed the decomposition above.
+    NOT TESTED: plant neighbourhood, fit variance, cut date, other hyperparameter
+    configuration.
+    DECLARED LIMIT: 20 trackers and 1 fixed in the subset, because the coverage
+    filter left 85 trackers against 1 fixed among eligibles. Does NOT generalise
+    to fixed layout.
+    -> E-nowcasting-poa/{1_preparo,2_modelos,3_controles}.py
+    -> data/processed/nowcast_{habilidade,controles}.csv
+    -> data/interim/nowcast_poa.parquet
+
+[x] F1d · Plant neighbourhood in nowcasting
+    12 plants in PI, span 7.0 km, median pairwise distance 4.5 km.
+      horizon        n    own      +4 neighbours gain     95% CI      SPATIAL NULL
+      30 min    35,347    +7.38%     +9.73%    +2.34%  [+1.73;+2.99]    +9.92%
+      1 h       30,887    +5.06%     +6.38%    +1.32%  [+0.81;+1.84]    +6.62%
+      3 h       11,657    +2.18%     +2.64%    +0.46%  [−0.27;+1.23]    +3.09%
+    RESULT: the spatial null MATCHES OR BEATS real neighbours on all three
+    horizons. Permuting which neighbour goes to which plant does not destroy
+    the gain. Cluster mean delivers the same or more (+11.02% at 30 min against
+    +9.73%). The gain is REGIONAL LEVEL at the instant, not advection.
+    [-] The advection hypothesis was not refuted: it is not testable in this
+        fleet. Measured: 27 connected components at 25 km, and the five largest
+        do not grow when relaxed to 60 km. There is no neighbourhood between
+        10 and 40 km, which is the advection range at 30 min. Declared limit,
+        not pending validation.
+    FOUR OF MY DEFECTS, fixed and in the README: clear sky without calibration;
+    excess calibration cannot fix, turned into a quality gate; missing factor
+    silently dropping 11 of 24 plants; wide panel losing night.
+    UNEXPLAINED CAVEAT: own-past skill FALLS with horizon here (+7.4% to +2.2%)
+    and ROSE in F2b (+7.3% to +9.9%). Different subsets and calibration.
+    Not investigated.
+    -> E-nowcasting-poa/{4_preparo_viz,5_vizinhanca}.py
+    -> data/processed/nowcast_vizinhanca.csv
+
+[x] F12/F2 · Scheduled curtailment forecast, one day ahead
+    Target: fraction of forecast wind+solar generation that ONS does NOT
+    schedule, by half-hour interval, aggregated to the SIN. 33,312 intervals,
+    694 days, Oct/2024–Sep/2026, zero incomplete days, median 545 plants per
+    interval. Not forecast error: a dispatch decision, taken one day earlier.
+
+    MEASURED, BEFORE ANY MODEL: 304.20 TWh forecast, 278.23 scheduled.
+    25.99 TWh cut in scheduling over two years, 8.5% of forecast. Median
+    fraction per interval is ZERO — half the intervals have no cut at all.
+
+    AGGREGATE: does not beat. Best bar is D−7 persistence (MAE 0.04587); the
+    model gives 0.04117, skill +10.2%, 95% CI [−3.0%, +21.5%]. Crosses zero.
+
+    CONDITIONAL: the aggregate hides a clean cut. Stratifying by mean
+    curtailment of the previous 28 days — known BEFORE the forecast, threshold
+    from training:
+        low  (ȳ=0.034) ... −54.3%  CI [−100.4, −22.9]   LOSES
+        mid  (ȳ=0.061) ... +44.5%  CI [ +34.2,  +53.7]  BEATS
+        high (ȳ=0.117) ... +31.0%  CI [ +17.2,  +41.6]  BEATS
+
+    OPERATIONAL CONSEQUENCE: use the model only when mean curtailment of the
+    previous 28 days exceeds 4.5%; below that, use D−7 persistence. The key is
+    decidable the evening before, and does not depend on seeing the outcome.
+
+    Hyperparameter chosen in internal validation (last training quarter); the
+    test was touched once. Without that the +10.2% would be a test-tuned number.
+    In-sample +60.4%: the model still memorises more than it generalises.
+
+    Uses NONE of the 49 features that failed in F9 and F14, and does not leave
+    coff_fv_detail: another source, another pipeline.
+
+    Code: notebooks/despacho/_corte.py (target) and _experimento.py (C1–C6).
+    -> data/interim/corte_programado.parquet, f12_teste.parquet
+
+[ ] F12b · Repeat by subsystem instead of SIN aggregate
+    The file has no subsystem; it enters via cod_usinapdp, the same crosswalk
+    that blocks F2. Only worth it after that.
+
+[x] F11 · Half-hourly CMO forecast one day ahead
+    First experiment in family 11, which until 06/09/2026 had the data on disk
+    and no use as an estimand. data/raw/cmo/ was listed as orphan raw in this
+    list; it stopped being so.
+
+    Target: CMO in R$/MWh for the 48 half-hours of day D, four subsystems,
+    forecast issued at 12:00 on D−1. Test Jun/2025–Aug/2026: 85,248 rows,
+    444 days, 15 monthly recalibrations, 41 features. Adversary: seasonal naive
+    from the price literature — D−1 Tue–Fri, D−7 Sat–Mon — MAE 49.09.
+
+    MEASURED GATE, NOT ASSUMED. Half-hourly CMO is published BEFORE the day it
+    refers to: the file downloaded at 10:08 on 27/08 already carried that day's
+    48 half-hours. Load and interchange lag 1.2 d; EAR and ENA, 2.2 and 2.3 d.
+    Hence the gate — CMO through D−1, load through D−2, hydrology through D−3 —
+    and it applies EQUALLY to model and naive. Each lag is ONE observation,
+    file modification date against last record: ONS does not stamp publication.
+
+    TIE IN MAE, GAIN IN RMSE.
+        direct ......... MAE 51.32  skill  −4.54%  CI [−12.39; +2.74]
+        residual ....... MAE 50.04  skill  −1.94%  CI [ −6.50; +2.26]
+        two-part ....... MAE 48.71  skill  +0.76%  CI [ −6.72; +7.70]
+        level oracle ... MAE 40.42  skill +17.66%  CI [+15.28; +20.21]
+    In RMSE on the same test: two-part +16.2%, direct +15.3%.
+    All three models have CI crossing zero in MAE. None is distinguishable
+    from repeating the previous day.
+
+    THE MECHANISM, MEASURED. CMO sits on the floor in 14.0% of test half-hours.
+    The naive is a realised path and hits the floor exactly in 71.6% of them,
+    median error 0.00. A single regressor returns the conditional median and
+    hits 19%, paying 13–17 R$/MWh there. Modelling the floor explicitly recovers
+    66.0% and moves skill from −4.54% to +0.76%.
+    Absolute-error quantiles: naive wins at q25 (2.25 vs 5.13) and q50
+    (12.10 vs 19.78) and loses at q90 (157.62 vs 131.75) and q95. The model
+    errs less than it on only 40.7% of rows and still has 16% lower RMSE.
+    CONSEQUENCE: on this target the choice of loss chooses the winner. MAE was
+    declared before looking at results, and is the price-literature metric.
+
+    THE POSITIVE CONTROL COST A CORRECTION. The oracle shifted by the MEAN of
+    the day's residual gives +0.9% with CI crossing zero — the design would
+    look unable to detect gain, and the tie above would mean nothing. The loss
+    is MAE and the constant that minimises it is the median. Switched, +17.66%
+    with CI entirely above zero. Same rule E-despacho-termico had already
+    recorded, applied to an oracle instead of a baseline.
+
+    DISPERSION. Monthly skill from −68.2% (Dec/2025) to +38.7% (Jan/2026),
+    above zero in 10 of 15 months; two bad months carry the aggregate. By
+    subsystem: S +3.6%, SE +1.5%, NE +0.9%, N −2.7%. That dispersion produces
+    the 14-point-wide CI, and is what blocks a stronger claim.
+
+    AT TWO DAYS THE MODEL WINS. The horizon control — same design, target at
+    D+1, whole gate shifted with it — brought more than the control:
+        D ..... model 48.71  naive 49.09  skill  +0.76%  CI [ −6.72; +7.70]
+        D+1 ... model 62.68  naive 74.89  skill +16.31%  CI [+10.64; +21.87]
+    Both errors grow, as the control requires. But the naive loses 25.80 R$/MWh
+    from one day to the next against 13.96 for the model: the most recent
+    realised path is what it has, and is worth little at two days. The naive
+    is unbeatable only at ONE day.
+
+    ABLATION DOES NOT IDENTIFY, AND THE REASON WAS MEASURED.
+        A0 calendar + own CMO .............. 20 feats  −4.87%
+        A1 + other subsystems' CMO ......... 28 feats  −1.01%
+        A2 + load and interchange .......... 36 feats  −9.50%
+        A3 + hydrology (full) .............. 41 feats  +0.76%
+    With colsample_bytree = 0.8 LightGBM samples columns by POSITION, so
+    permuting the same columns is changing the seed. The first run concatenated
+    families in the order they were summed and gave, for the SAME sets:
+    −3.66%, −1.84%, −2.69% and +4.40%. Difference 0.83 to 6.81 points, same
+    order as the ladder steps (3.86, −8.49, 10.26).
+    Fixed to canonical order, A3 reproduces step 3 exactly (+0.76%), which
+    closes the explanation. CONSEQUENCE: with one seed, no claim about which
+    source carries skill holds, and the experiment makes none. It all fits
+    inside the 14-point CI of step 3.
+
+    Feature-permutation null: −206.91%, worse than climatology.
+
+    Controls C1–C6, all blocking, all passed. C3 erases from sources everything
+    after the issuance instant and rebuilds features with the same function as
+    step 1: 40 sampled days, 307,200 cells, zero divergences.
+
+    C1 FAILED ONCE, and what it found was not measured: each hole in the source
+    costs THREE panel days — itself, the next day that loses the naive's D−1,
+    and day seven later that loses D−7. That is 8 holes and 24 days off the
+    panel. The threshold was 8. It stays fixed at 24 and not computed: if the
+    source worsens and the number changes, the control fails instead of absorbing.
+
+    Code: experiments/E-preco-cmo/, with design README, declared limits and
+    untested.
+    -> data/interim/E-preco-cmo/
+    -> report/execucao-cmo.tex (technical note, 2 pages)
+
+[ ] F11b · Quantile forecast instead of point CMO
+    Comes straight from F11's mechanism, and is not rehashing the same test:
+    the target has mass on the floor and a tail to 4,870 R$/MWh, and no single
+    point serves both regions — naive wins at q25 and q50, model at q90 and q95.
+    Quantile or density forecast is the estimand the distribution asks for,
+    with its own metric (pinball), and the two-part model is already halfway.
+
+[ ] F11c · Sliding window and daily recalibration
+    F11's monthly skill runs from −68.2% to +38.7%, and the two bad months are
+    regime shifts that an expanding window absorbs poorly. Price literature
+    asks for daily recalibration; 15 refits cost 864 s, 444 would cost ~7 h.
+    Test both together, or neither: separately they do not identify.
+
+[ ] F11d · Horizon beyond D+1
+    Skill goes from +0.76% at one day to +16.31% at two, CI entirely above zero.
+    Unknown where it stops, and the panel supports the test without new data:
+    shift target and gate together, which step 5 already does.
+
+[x] F14 · 24 h marginal emission factor forecast
+    Target: MCTI/SIRENE hourly Operating Margin, dispatch-analysis method.
+    22,632 h, Jan/2024–Jul/2026, zero missing hours. Features: the 49 from the
+    state panel. Temporal cut, training through 31/12/2025.
+
+    NEGATIVE. 24 h persistence gives MAE 0.04146 tCO2/MWh; the model gives
+    0.05310. Skill −28.1%, 95% CI by day block [−38.0%, −19.1%].
+    The model loses to "tomorrow equals today".
+    RE-MEASURED 07/09/2026 on the corrected panel (see DEBT, strip defect).
+    Before: MAE 0.05700, skill −37.5%, CI [−49.4%, −26.7%]. The result improved
+    9.4 points and remains negative with CI entirely below zero: the conclusion
+    does not change.
+
+    Not a bug. Positive control: MO(h) from state(h) gives R2 0.666, so the
+    pipeline finds signal. In-sample skill is +60.4%: the model learns the
+    period and does not generalise. Alternate cut in 2025-H2 repeats, −30.6%.
+
+    WHAT THIS SAYS, AND IT IS WORTH MORE THAN THE NUMBER. Second time the same
+    49 features fail out of sample: F9 already saw them degrade AP by 26% over
+    hour and subsystem. Two unrelated targets, same pattern. The finding is
+    about the feature set, not the targets.
+
+    Code: notebooks/emissao/_mo.py (target) and _experimento.py (controls C1–C6).
+
+[-] F14b · Reproduce the MCTI method from ONS dispatch
+    The positive control gives R2 0.669, not ~1: the 49 aggregated features do
+    not reconstruct the formula. Reproduction would need generation per plant
+    and emission factor per plant, which the aggregated panel does not have.
+    Not a next step.
+
+[ ] F9b · Horizon longer than one hour
+    Distinct experiment, not an F9 leftover. At one hour system state has no
+    time to show; at 6 h or 24 h it would.
+
+[ ] F9c · Severity instead of occurrence
+    Second F9 estimand, never touched. Energy not supplied runs from 6.34 MWh
+    median to 24,221 MWh maximum: heavy tail, asks for extreme-value treatment.
+
+[ ] F9d · Full series since 2007 with climate features
+    8,325 events against the 1,085 the dispatch-panel window covers. The system
+    panel starts Apr/2024 and is what limits, not the event.
+
+================================================================================
+ INSTRUMENTS
+================================================================================
+ Reading tool, not an experiment: produces neither estimand nor skill.
+ Enters this list because it produces a NUMBER, and a number carries control.
+
+[x] tee · the package, and the table that compares models
+    Created 07/09/2026 by collecting already-duplicated code. No new
+    functionality.
+
+    WHAT WAS DUPLICATED, measured before moving:
+      ONS readers ......... CMO, load, interchange, EAR and ENA rewritten in
+                            five files. Two of those copies came out of this
+                            same session.
+      block bootstrap ..... four copies, B of 1,000 or 2,000, seeds 42,
+                            20260906 and 1, and one building the index with
+                            np.where INSIDE the loop — O(B × days × n).
+      publication lag ..... lived as a comment inside a `_comum.py`,
+                            unreadable to any other experiment.
+
+    MODULES: `fontes` (one reader per series, no hole interpolation), `portao`
+    (measured lag and the gate derived from it), `avaliacao` (loss, skill,
+    block CI), `registro` (result schema and adapters), `caminhos`.
+    CLI: `tee-engine tabela`, `portao`, `conferir`.
+
+    THE MIGRATION IS PROVABLY NEUTRAL. `E-preco-cmo/painel.parquet` and
+    `E-osciloscopio/sinais.bin` have IDENTICAL md5 before and after — so
+    results of F11 steps 3–5 and the oscilloscope screen did not change.
+    Controls for both passed again.
+
+    `tee-engine tabela` builds the model comparison by READING each experiment's
+    artefact; no number is transcribed. Column `como` says whether the loss was
+    recomputed from the prediction or read from a summary, and the verdict
+    comes from the CI sign. Two findings came only from writing the adapters:
+      · F9's published number comes from the STACKED out-of-fold panel, which
+        is not written: no machine-readable source on disk;
+      · F12 writes the model prediction, so its skill and CI are recomputable —
+        and recomputed they match the published ones.
+
+    Two pre-existing defects the build exposed: `pyproject.toml` pointed at a
+    root `README.md` that did not exist, so the package had never been rebuilt
+    since the `uv` skeleton; and the entry point pointed at the `uv` skeleton
+    `main`, which only printed "Hello from".
+
+    Renamed 10/09/2026 to `tee` (terra energy engine): `src/tee/`,
+    `from tee.fontes import ...`, command `tee-engine` (not `tee`, which would
+    hide /usr/bin/tee with .venv active), variable `TEE_INTERIM`.
+
+    -> src/tee/, root README.md
+    -> data/interim/registro/{registro.json,tabela.csv}
+    -> report/modelos-metodos.tex (landscape sheet, 2 pages: one model table
+       and one statistical-method table, with the same numbers from the collect)
+
+[x] E-osciloscopio · Series oscilloscope
+    Screen with oscilloscope controls over the repository series: time base,
+    trigger with pre- and post-window, persistence folded over the period,
+    X–Y mode. 28 channels — CMO, load, interchange, EAR, ENA and F11
+    forecasts — each at its native step, 3.01 MB of signal.
+
+    WHAT IT FIXES, and why it exists:
+      decimation . every long series plot in this repo decimates by SAMPLING.
+                   With 46,176 points in ~1,150 pixels the bucket has 40
+                   samples, and the 4,870.95 R$/MWh peak has 1 in 40 chance of
+                   surviving. Peak-detector (min/max per bucket) is the fix.
+      hole ....... the 8 days without CMO break both trace AND band. The first
+                   version broke the line and closed the band over the hole:
+                   the screen said two things about the same instant. Fixed.
+      clip ....... p99 cut by default, with what lies outside marked on the
+                   border and counted in the bar. Clip without a count is
+                   silent discard.
+      scale ...... common per unit. Two R$/MWh channels on different scales
+                   draw two things and look like one.
+
+    Controls C1–C6, all blocking, all passed. C4 EXISTS TWICE: step 2 writes a
+    Python reference of 64 decimated buckets; the screen re-runs decimation in
+    JavaScript on load and shows the comparison in the header. Divergence
+    between the two implementations appears on screen.
+
+    THREE READINGS THE SCREEN RAISED, without control and without claim:
+      · folded on the day, CMO SE: median on the floor 08:00–14:00, peak at 18:00;
+      · triggered on a 1 R$/MWh drop, 211 events: symmetric collapse around
+        t=0 and replica at ±24 h;
+      · F11 model channel has a ceiling of 1,093 against 4,870 verified —
+        the shrink measured as a quantile table, seen as a ceiling.
+    Become results only in their own experiment.
+
+    Code: experiments/E-osciloscopio/, with README of modes, controls and
+    declared limits.
+    -> data/interim/E-osciloscopio/osciloscopio.html (4.07 MB, self-contained)
+
+[ ] Math channel on the oscilloscope
+    A−B, derivative, FFT. F11 residual — verified minus forecast — is the
+    first application and today requires reading two overlaid channels.
+
+[ ] POA and per-plant generation on the oscilloscope
+    560 and 186 series. Embedding in base64 does not scale that far: needs a
+    server and on-demand loading, which is another design.
+
+================================================================================
+ LITERATURE — what the field search returned
+================================================================================
+ Survey of 05/09/2026. Positioning and citation gaps.
+
+[!] Where tee sits in the field
+    Four currents: quantify, reduce, price/allocate, describe locally. The
+    series sits in the fourth, the smallest and newest.
+    Direct comparator: maji2025 (ERCOT 2023, node by node, best-paper e-Energy ’25).
+    Method difference to declare: they use nodal LMP; Brazil does not publish
+    nodal price (CMO is by subsystem), hence topological covariates.
+
+[ ] Cite Gorka & Roald 2024 — URGENT for framing
+    doi:10.1145/3632775.3661951, e-Energy. Binary classification "is there
+    curtailment in this hour?" from system state, CAISO. That is already-published M1.
+    The series' novelty is WITHIN-HOUR AUC, which separates "when" from "which".
+    Without this citation a reviewer finds the paper and the framing collapses.
+
+[ ] Cite O'Shaughnessy, Cruce & Xu 2020
+    "Too much of a good thing? Global trends in the curtailment of solar PV",
+    Solar Energy, ~170 citations. Canonical reference for global PV curtailment
+    trends. Conspicuous absence in the current bibliography (16 items).
+
+[ ] Update Newbery
+    The report cites EPRG WP 2401. CWPE 2581 exists, "Marginal curtailment under
+    network constraints", later.
+
+[x] Ch. 10 · the method rule has off-the-shelf implementation
+    Added \campo{O cálculo está disponível} citing Angelopoulos et al. 2023
+    (Science) and Kluger et al. 2025 (imputed covariate, motivated by satellite
+    prediction in downstream regression). Recorded the condition that separates
+    the two cases: for irradiance there is field truth in the subset; for the
+    graph there is not, and there correction first requires defining against what.
+
+[ ] Satellite — the field has moved since current references
+    Global PV dataset at 20 m, 2019–2022 (U-Net + PUL-RF): practical successor
+    to kruitwagen2021.
+    "Back in time" (2025): time series + deep learning to DATE installations —
+    Fig. 7 by another path, alternative to temporal cluster matching.
+    "Poor Reliability of DL Models: rooftop PV" (arXiv 2408.07828): supports
+    Fig. 2 on the theory side; the 91% sub-pixel case is the limit case.
+
+[!] Fig. 1 sits in a real void
+    Searched: work treating curtailment as a contaminant of verified generation
+    used as a solar-resource proxy. Does not exist. Satellite irradiance
+    validation literature validates against ground stations, never against
+    verified generation. The series' most original argument.
+
+[x] Zotero: collection created and populated
+    "lucertae — corte de geração no SIN", key 6FVR9HSP, 20 items, 17 with DOI.
+    The three without DOI truly have none: CEM report, EirGrid series, EPRG WP.
+    Title match is not enough — 6 of 20 resolved to the wrong item
+    (bird2016 matched a 2014 NREL report instead of the RSER article) or to
+    preprint instead of the published version. Each checked against container
+    and date before entry. Four resolve as 'generic' and Zotero refuses: the
+    three ACM conference papers and the NBER WP, created by hand.
+
+[x] Authorship error in silva2026, exposed by the Zotero cross-check
+    The .tex attributed to "Silva, W.N. et al."; first author of the Atmosphere
+    article is Nascimento, P., and Walquiria Silva is not on the list. She is
+    co-author of vieira2026, a different article. Fixed in bibliography and
+    citation in 05-calibracao.tex, with volume, issue and page added.
+
+[ ] Attach PDFs to Zotero items
+    The collection has metadata and DOI, not full text. Open-access ones
+    (arXiv, ESSD, Atmosphere, Solar Energy) download directly.
+
+================================================================================
+ DEBT — plumbing and reproducibility
+================================================================================
+
+[~] Consolidate lucertae and terra-energy-research into lucertae-research
+    02/10/2026. Both studied generation curtailment on the same terra_br.
+    lucertae had never gone to GitHub: the remote pointed at
+    rexionmars/TERRA-models, which has only a LICENSE and no shared history.
+    The base is terra-energy-research, the only one with a synced remote
+    (rexionmars/lucertae-research); the folder took the remote's name.
+
+    DONE, on branch `consolidacao`:
+      history ...... lucertae's 15 commits enter by merge, intact
+      documents .... report edits, guide, audit, CLAUDE.md and this list,
+                     committed
+      package ...... `tee` -> `lucertae`; `terra_energy_research` ->
+                     `lucertae.corte`; command `tee-engine` -> `lucertae`;
+                     TEE_INTERIM/TEE_PSQL/TEE_DB -> LUCERTAE_*
+      README ....... terra-energy-research's moved to docs/corte.md
+      product ...... all of ../mapeamento-energetico/docs into docs/produto/:
+                     identical copy; gerar.py regenerates the same files; the
+                     three .tex compile with the same page count and no missing
+                     file or reference. PDFs outside git, as in report/.
+
+    THE MIGRATION IS PROVABLY NEUTRAL on what has a control:
+      `lucertae tabela` comes out byte-identical to `tee-engine tabela`
+      `lucertae conferir` passes; 2_controles of E-osciloscopio and E-preco-cmo
+      pass; the six `corte` modules import and answer --help;
+      `viz.FIGURES_DIR` stays at reports/figures (parents[2] -> [3]).
+
+    MISSING:
+      · code review (rule 9) and its commit;
+      · push the branch and merge to main;
+      · delete ../lucertae and ../terra-energy-research? The lucertae folder
+        was left intact as backup; terra-energy-research's was renamed.
+    Old names remain in this list's historical records and in
+    docs/auditoria-codigo.md, which describe the state of the time.
+
+[x] DEFECT · North and South EAR never entered the state panel
+    Found 07/09/2026 while collecting duplicated readers into the package.
+
+    `notebooks/ml/_sistema.py` did not `.strip()` `id_subsistema`, and the
+    annual EAR file carries 'N ' and 'S ' with a trailing space in part of the
+    window. The pivot created `ear_N` and `ear_N ` as separate columns, with
+    72.5% and 27.5% coverage each — and `_juntar.py`'s 5% missing cut dropped
+    all four. The panel kept EAR only for NE and SE.
+
+    CONSEQUENCE: the "49 system-state features" of F9, F14 and M1–M3 NEVER
+    contained hydrology for two of the four subsystems, and the 5% cut hid it
+    because the column left for the right reason with the wrong number. Not a
+    criterion failure; upstream label dirt.
+
+    Fixed by reading load and EAR through `tee.fontes`, which strips in one
+    place; interchange stayed local (flow by ordered PAIR, another quantity)
+    and got the same strip. System panel goes from 58 to 56 columns and the
+    clean one from 49 to 51 features, with `ear_N` and `ear_S` at 100%.
+
+    RE-MEASURED the three results that depend on the panel:
+      F14 ... skill −37.5% -> −28.1%. CI still entirely below zero.
+      F9 .... AP gain −0.0049 -> −0.0044, and the CI now TOUCHES zero:
+              [−0.0186; −0.0015] -> [−0.0178; +0.0002]. "Degrade" becomes
+              "do not beat". Strength of the claim fell.
+      M1–M3 . fraction recovered by the network 98.7% -> 97.6%, and the CI now
+              EXCLUDES 100%: [97.1%; 100.2%] -> [96.1%; 99.2%]. Global AUC
+              M1/M2/M3 from 0.8872/0.8958/0.9028 to 0.8866/0.8980/0.9008.
+
+    LESSON, and it holds beyond this defect: citing a feature count from memory
+    is a liability. "The 49 features" appeared in three places in the text and
+    aged in all three at once. Removed from code and text.
+
+
+[x] POWER cache with mixed time zone
+    9 of 90 cells in LST, up to 14.2% of annual GHI falling with the sun below
+    the horizon. Downgraded to UTC; originals in
+    data/raw/power_hourly_lst_backup/. _power_h.py passes &time-standard=UTC;
+    _power_h_todas.py validates the header instead of only testing file existence.
+
+[x] Re-measure stage 0 on the corrected cache
+    _transpor.py: 24 of 25 plants changed adjusted tilt.
+    _otimo.py: adjusted − optimal from +5.0° to +0.0° — CONCLUSION INVERTED.
+    _tilt_pareado.py: +2.5° to +0.0°; Janaúba p from 0.015 to 0.056, crossing
+    the conventional threshold. Old outputs in data/processed/_antes_correcao_lst/.
+    Text fixed in notebooks/br/README.md.
+
+[x] POA quality control: wrong window and threshold exclusion
+    QC ran the night median over the whole database period, and the analysis
+    is 2025: Santa Luzia 1 and V passed with 2.8 W/m2 because the sensor was
+    healthy in 2024 and 2026 and offset by 323.8 through all of 2025 —
+    ~3.9 kWh/m2/day of artefact in the denominator. QC now runs on the same
+    window. And threshold exclusion became subtraction of the night baseline
+    per plant-month: the fleet's night mean is continuous (median 4.6, p75 15.5,
+    p90 69.1) and any threshold would cost 25% to 47% of plants.
+    Effect: all F1/F1b/F6 results redone, no conclusion changed.
+
+[x] Recover the ML chain from the dead-session transcript
+    _juntar.py and _exportar.py existed only as heredocs. SP is now
+    data/interim/, not a session scratchpad. See notebooks/ml/README.md.
+
+[x] M3 bug — CODE fixed in _modelos.py, _dentro_hora.py, _boot_ganho.py
+    All three restrict to the base with network covariate before fitting.
+    _modelos.py also reports M1 and M2 on the full panel, so sample loss stays
+    visible.
+
+[x] Redo ML outputs on the corrected code
+    Chain run end-to-end on 05/09/2026 and AGAIN on 07/09/2026, on the panel
+    corrected for the strip defect. Fraction of within-hour identity gain that
+    network covariates recover:
+        M3 bug .............. 92.4%  CI [89.7%; 94.7%]
+        fixed, 49 feats ..... 98.7%  CI [97.1%; 100.2%]
+        51-feature panel .... 97.6%  CI [96.1%;  99.2%]
+    The 92.4% was an artefact of M3 running with NaN in eight columns for a
+    third of the panel. Moving from 49 to 51 features moves the point little
+    and changes one thing: the CI STOPS CONTAINING 100%. Before one could not
+    rule out that the network recovered everything; now one can.
+    Globally, outside the hour, M3 passes M2: 0.9008 against 0.8980, M1 at 0.8866.
+    Measured cost: ~20 min on an 11-core M-series. Prep is 3 min; the rest is
+    LightGBM. No GPU path — the wheel has no support, and LightGBM backends are
+    OpenCL/CUDA/ROCm, not Metal. MPS is a PyTorch path.
+
+[ ] Sentinel-2 stage missing from the repo
+    data/raw/s2 (37 MB, 5 .npy) is read by no code. Ten fig7_*/s2_* intermediates
+    without a producer. Notebook 07 only plots. Fig. 7 is not reconstructible.
+    Also missing jaiba_2025.npy: the series runs 2021–2024, 2026.
+
+[ ] Notebooks 05 and 06 without a generator
+    The other ten have _build_notebook*.py. Code for 05 and 06 exists only
+    inside the .ipynb.
+
+[ ] Undeclared external dependency
+    sys.path to geosense-infer/sidecar (terra.grid) in 7 br/ scripts, plus
+    local Postgres with PostGIS and a populated terra_br. pyproject.toml
+    mentions none of it. Absolute /Users/fox/... paths in 5 _build_notebook*.
+
+[~] Repository without commit
+    02/10/2026: documents committed in the consolidation (above); code awaits
+    review. Main is now main, of lucertae-research.
+    Zero commits, everything untracked, on master (the project's main is main).
+    .gitignore does not cover .DS_Store, the root Screenshot, or LaTeX
+    intermediates (.aux .log .fls .fdb_latexmk .out .toc).
+
+[ ] Dead intermediates in data/processed
+    No producer AND no consumer: painel_corte_diario, painel_corte_solar,
+    painel_diario_clima, painel_fc_solar, painel_vies, alvo_series, alvo_pontos,
+    celulas_power, fig4_fc_corte, fig4_fc_mensal, fig6_vies_por_usina,
+    s2_brilho_jaiba.
+    Orphan raw: siget/lt.csv, rel_conj.csv, cap_ger.csv, data/raw/power/.
+    data/raw/cmo/ left this list on 07/09/2026: it is F11's input.
+
+[ ] Lipsum skeleton in report/capitulos
+    03-sinal, 04-representacao, 05-transferencia, 06-produto-crop. None is
+    included by reporte.tex. Either write them, or delete them.
+
+[ ] serie.tex and serie-relatorio.tex
+    Diverge by 1,664 lines — voice rewrite, not a copy. Decide which survives.
+
+[ ] Wrong running header in the appendices
+    Continuation pages show "CAPÍTULO 10. O QUE FALTA" with body numbering.
+    Affects A and B. A \markboth after each \chapter inside landscape.
+
+================================================================================
