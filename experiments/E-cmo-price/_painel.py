@@ -1,123 +1,137 @@
-"""Construcao do painel subsistema x meia-hora com as features do dia seguinte.
+"""Build the subsystem-by-half-hour panel and its next-day features.
 
-Fica separado do runner porque o controle de vazamento (C4) precisa chamar a
-MESMA funcao sobre series truncadas no instante de emissao. Se alguma feature
-olhasse para o futuro, truncar mudaria o valor dela, e o controle falharia.
+This module is separate from the runner because leakage control C3 must call the
+same function with source series truncated at issue time. If any feature used
+future information, truncation would change its value and the control would
+fail.
 
-Toda feature nomeia no sufixo o dia de onde vem, contado do dia alvo D:
-`_d1` e o dia D-1 inteiro, `_l1` e a mesma meia-hora do dia D-1.
+Feature suffixes identify the source day relative to target day D: `_d1` means
+the full day D-1; `_l1` means the same half-hour on D-1.
 """
 import numpy as np
 import pandas as pd
 
-from _comum import (ATRASO_CARGA, ATRASO_CMO, ATRASO_HIDRO, LIMIAR_PISO,
-                    SUBSISTEMAS)
+from _comum import (CMO_FLOOR_THRESHOLD, CMO_LAG_DAYS, HYDRO_LAG_DAYS,
+                    LOAD_LAG_DAYS, SUBSYSTEMS)
 
 
-def _agrega_dia(serie_mh):
-    """Media, minimo, maximo e fracao no piso, por dia, de uma serie de 30 min."""
-    dia = serie_mh.index.normalize()
-    g = serie_mh.groupby(dia)
+def _daily_summary(half_hourly_series):
+    """Summarize each day of a half-hourly series by mean, min, max, and floor fraction."""
+    day = half_hourly_series.index.normalize()
+    grouped = half_hourly_series.groupby(day)
     return pd.DataFrame({
-        "med": g.mean(), "min": g.min(), "max": g.max(),
-        "piso": (serie_mh <= LIMIAR_PISO).groupby(dia).mean(),
+        "med": grouped.mean(), "min": grouped.min(), "max": grouped.max(),
+        "piso": (half_hourly_series <= CMO_FLOOR_THRESHOLD).groupby(day).mean(),
     })
 
 
-def construir(cmo, carga, interc, ear, ear_sin, ena, horizonte=1):
-    """Painel longo, uma linha por (subsistema, meia-hora do dia alvo).
+def build_panel(cmo, load, interchange, ear, ear_sin, ena, horizon=1):
+    """Build a long panel with one row per (subsystem, target-day half-hour).
 
-    `horizonte` em dias desloca o alvo sem mexer no instante de emissao: com 2,
-    a previsao emitida na vespera de D vale para D+1, e todo atraso do portao
-    cresce de 1. Serve ao controle C9, que exige erro crescente com o horizonte.
+    `horizon` shifts the target in days without changing issue time. At 2, a
+    forecast issued on the day before D targets D+1, and each information-gate
+    lag increases by one day. This supports control C9, which expects error to
+    increase with forecast horizon.
 
-    O alvo `y` e o CMO do proprio instante. As features vem do portao declarado
-    em `_comum`, e nenhuma delas toca o dia D.
+    Target `y` is CMO at that timestamp. Features follow the gate declared in
+    `_comum` and do not use any information from day D.
     """
-    desl = horizonte - 1
-    dcmo = ATRASO_CMO + desl
-    dcarga = ATRASO_CARGA + desl
-    dhidro = ATRASO_HIDRO + desl
+    horizon_shift = horizon - 1
+    cmo_lag = CMO_LAG_DAYS + horizon_shift
+    load_lag = LOAD_LAG_DAYS + horizon_shift
+    hydro_lag = HYDRO_LAG_DAYS + horizon_shift
 
-    agr = {s: _agrega_dia(cmo[s]) for s in SUBSISTEMAS}
-    passos = 48  # meias-horas por dia
+    daily_cmo = {subsystem: _daily_summary(cmo[subsystem]) for subsystem in SUBSYSTEMS}
+    half_hours_per_day = 48
 
-    blocos = []
-    for s in SUBSISTEMAS:
-        d = pd.DataFrame({"t": cmo.index, "y": cmo[s].to_numpy()})
-        d["sub"] = s
-        d["dia"] = d["t"].dt.normalize()
-        d["hh"] = d["t"].dt.hour * 2 + d["t"].dt.minute // 30
-        d["dow"] = d["t"].dt.dayofweek
-        d["mes"] = d["t"].dt.month
+    blocks = []
+    for subsystem in SUBSYSTEMS:
+        frame = pd.DataFrame({"t": cmo.index, "y": cmo[subsystem].to_numpy()})
+        frame["sub"] = subsystem
+        frame["dia"] = frame["t"].dt.normalize()
+        frame["hh"] = frame["t"].dt.hour * 2 + frame["t"].dt.minute // 30
+        frame["dow"] = frame["t"].dt.dayofweek
+        frame["mes"] = frame["t"].dt.month
 
-        # CMO proprio, mesma meia-hora de dias anteriores
+        # Own-subsystem CMO at the same half-hour on prior days.
         for k in (0, 1, 2, 6):
-            d[f"cmo_l{dcmo + k}"] = cmo[s].shift(passos * (dcmo + k)).to_numpy()
+            frame[f"cmo_l{cmo_lag + k}"] = cmo[subsystem].shift(
+                half_hours_per_day * (cmo_lag + k)
+            ).to_numpy()
 
-        # CMO proprio, agregados de dia inteiro
+        # Own-subsystem CMO daily aggregates.
         for k in (0, 1, 6):
-            idx = d["dia"] - pd.Timedelta(days=dcmo + k)
-            a = agr[s].reindex(idx)
-            for c in ("med", "min", "max", "piso"):
-                d[f"cmo{c}_d{dcmo + k}"] = a[c].to_numpy()
+            day_index = frame["dia"] - pd.Timedelta(days=cmo_lag + k)
+            daily_values = daily_cmo[subsystem].reindex(day_index)
+            for column in ("med", "min", "max", "piso"):
+                frame[f"cmo{column}_d{cmo_lag + k}"] = daily_values[column].to_numpy()
 
-        # CMO dos quatro subsistemas na mesma meia-hora de D-1: o acoplamento
-        # entre eles e por limite de intercambio, e o preco de um informa o do
-        # outro. A coluna do proprio subsistema repete `cmo_l{dcmo}` de
-        # proposito, para o conjunto de colunas ser identico nos quatro blocos.
-        for o in SUBSISTEMAS:
-            d[f"cmo_{o}_l{dcmo}"] = cmo[o].shift(passos * (dcmo + 0)).to_numpy()
-        idx1 = d["dia"] - pd.Timedelta(days=dcmo)
-        for o in SUBSISTEMAS:
-            d[f"cmomed_{o}_d{dcmo}"] = agr[o]["med"].reindex(idx1).to_numpy()
+        # CMO for all four subsystems at the same half-hour. Interchange limits
+        # couple subsystem prices. The own-subsystem column is intentionally
+        # duplicated so each subsystem block has the same feature columns.
+        for other_subsystem in SUBSYSTEMS:
+            frame[f"cmo_{other_subsystem}_l{cmo_lag}"] = cmo[other_subsystem].shift(
+                half_hours_per_day * cmo_lag
+            ).to_numpy()
+        lagged_day_index = frame["dia"] - pd.Timedelta(days=cmo_lag)
+        for other_subsystem in SUBSYSTEMS:
+            frame[f"cmomed_{other_subsystem}_d{cmo_lag}"] = (
+                daily_cmo[other_subsystem]["med"].reindex(lagged_day_index).to_numpy()
+            )
 
-        # Carga e intercambio sao horarios: junta pela hora cheia
-        hora = d["t"].dt.floor("h")
+        # Load and interchange are hourly, so join on the full hour.
+        hour = frame["t"].dt.floor("h")
         for k in (0, 1, 7):
-            d[f"carga_l{dcarga + k}"] = carga[s].reindex(
-                hora - pd.Timedelta(days=dcarga + k)).to_numpy()
-        cd = carga[s].groupby(carga.index.normalize()).mean()
-        cx = carga[s].groupby(carga.index.normalize()).max()
-        idxc = d["dia"] - pd.Timedelta(days=dcarga)
-        d[f"cargamed_d{dcarga}"] = cd.reindex(idxc).to_numpy()
-        d[f"cargamax_d{dcarga}"] = cx.reindex(idxc).to_numpy()
-        d[f"cargasin_d{dcarga}"] = carga.sum(axis=1).groupby(
-            carga.index.normalize()).mean().reindex(idxc).to_numpy()
-        d[f"interc_l{dcarga}"] = interc[s].reindex(
-            hora - pd.Timedelta(days=dcarga)).to_numpy()
-        d[f"intercmed_d{dcarga}"] = interc[s].groupby(
-            interc.index.normalize()).mean().reindex(idxc).to_numpy()
+            frame[f"carga_l{load_lag + k}"] = load[subsystem].reindex(
+                hour - pd.Timedelta(days=load_lag + k)
+            ).to_numpy()
+        daily_load_mean = load[subsystem].groupby(load.index.normalize()).mean()
+        daily_load_max = load[subsystem].groupby(load.index.normalize()).max()
+        lagged_load_day = frame["dia"] - pd.Timedelta(days=load_lag)
+        frame[f"cargamed_d{load_lag}"] = daily_load_mean.reindex(lagged_load_day).to_numpy()
+        frame[f"cargamax_d{load_lag}"] = daily_load_max.reindex(lagged_load_day).to_numpy()
+        frame[f"cargasin_d{load_lag}"] = load.sum(axis=1).groupby(
+            load.index.normalize()
+        ).mean().reindex(lagged_load_day).to_numpy()
+        frame[f"interc_l{load_lag}"] = interchange[subsystem].reindex(
+            hour - pd.Timedelta(days=load_lag)
+        ).to_numpy()
+        frame[f"intercmed_d{load_lag}"] = interchange[subsystem].groupby(
+            interchange.index.normalize()
+        ).mean().reindex(lagged_load_day).to_numpy()
 
-        # Hidrologia diaria
-        idxh = d["dia"] - pd.Timedelta(days=dhidro)
-        d[f"ear_d{dhidro}"] = ear[s].reindex(idxh).to_numpy()
-        d["ear_delta7"] = d[f"ear_d{dhidro}"] - ear[s].reindex(
-            idxh - pd.Timedelta(days=7)).to_numpy()
-        d[f"earsin_d{dhidro}"] = ear_sin.reindex(idxh).to_numpy()
-        d[f"ena_d{dhidro}"] = ena[s].reindex(idxh).to_numpy()
-        d[f"enam7_d{dhidro}"] = ena[s].rolling(7).mean().reindex(idxh).to_numpy()
+        # Daily hydrology.
+        lagged_hydro_day = frame["dia"] - pd.Timedelta(days=hydro_lag)
+        frame[f"ear_d{hydro_lag}"] = ear[subsystem].reindex(lagged_hydro_day).to_numpy()
+        frame["ear_delta7"] = frame[f"ear_d{hydro_lag}"] - ear[subsystem].reindex(
+            lagged_hydro_day - pd.Timedelta(days=7)
+        ).to_numpy()
+        frame[f"earsin_d{hydro_lag}"] = ear_sin.reindex(lagged_hydro_day).to_numpy()
+        frame[f"ena_d{hydro_lag}"] = ena[subsystem].reindex(lagged_hydro_day).to_numpy()
+        frame[f"enam7_d{hydro_lag}"] = ena[subsystem].rolling(7).mean().reindex(
+            lagged_hydro_day
+        ).to_numpy()
 
-        blocos.append(d)
+        blocks.append(frame)
 
-    pan = pd.concat(blocos, ignore_index=True)
-    return pan.sort_values(["t", "sub"]).reset_index(drop=True)
-
-
-# O subsistema entra no modelo como categoria. Sem ele o modelo nao sabe de
-# qual subsistema e a linha: as quatro colunas `cmo_<sub>_l1` aparecem sempre na
-# mesma ordem, e a que repete o proprio passado nao e identificavel dentro
-# delas. Fica fora de `colunas_feature` porque nao e numerica -- o controle de
-# vazamento compara valor a valor -- e volta em `colunas_modelo`.
-FEATURE_CATEGORICA = "sub"
-
-
-def colunas_feature(pan):
-    """Features numericas. Fora ficam alvo, chave e a linha de base ingenua."""
-    fora = {"t", "y", "dia", "sub", "naive_sazonal"}
-    return [c for c in pan.columns if c not in fora]
+    panel = pd.concat(blocks, ignore_index=True)
+    return panel.sort_values(["t", "sub"]).reset_index(drop=True)
 
 
-def colunas_modelo(pan):
-    """O que o modelo recebe: as numericas mais o subsistema como categoria."""
-    return colunas_feature(pan) + [FEATURE_CATEGORICA]
+# Treat subsystem as a categorical feature. Without it, the model cannot
+# identify the subsystem represented by a row: all four `cmo_<sub>_l1` columns
+# always appear in the same order, and the own-subsystem lag cannot be inferred
+# from their values alone. It is excluded from `feature_columns` because it is
+# nonnumeric, then added by `model_columns` after the leakage check.
+CATEGORICAL_FEATURE = "sub"
+
+
+def feature_columns(panel):
+    """Return numeric features, excluding the target, keys, and naive baseline."""
+    excluded = {"t", "y", "dia", "sub", "naive_sazonal"}
+    return [column for column in panel.columns if column not in excluded]
+
+
+def model_columns(panel):
+    """Return model inputs: numeric features plus subsystem as a category."""
+    return feature_columns(panel) + [CATEGORICAL_FEATURE]

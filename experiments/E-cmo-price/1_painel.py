@@ -1,94 +1,99 @@
-"""Passo 1 -- monta o painel subsistema x meia-hora e conta todo descarte.
+"""Step 1: build the subsystem-by-half-hour panel and count every exclusion.
 
-Le data/raw/{cmo,curva_carga,intercambio,ear_subsistema,ena_subsistema} e grava
-data/interim/E-preco-cmo/painel.parquet, mais o inventario de descarte em
-janelas.json. Nao mede nada sobre o alvo: quem decide se o painel presta e o
-passo 2.
+Read CMO, load, interchange, EAR, and ENA sources and write the panel and an
+exclusion inventory. This step does not assess the target; step 2 validates the
+panel.
 
-Rodar da raiz do repositorio:
-    .venv/bin/python experiments/E-preco-cmo/1_painel.py
+Run from the repository root:
+    .venv/bin/python experiments/E-cmo-price/1_painel.py
 """
 import json
 
-import numpy as np
 import pandas as pd
 
-from _comum import (CMO_PISO, CMO_TETO, LIMIAR_PISO, PAINEL, SAIDA,
-                    SUBSISTEMAS, naive_sazonal)
+from _comum import (CMO_FLOOR_THRESHOLD, CMO_MAX_VALUE, CMO_MIN_VALUE,
+                    OUTPUT_DIR, PANEL_PATH, SUBSYSTEMS, seasonal_naive)
 from lucertae.sources.series import (
-    cmo, ear, ear_sin, ena, hourly_load as carga,
-    net_interchange as intercambio_liquido)
-from _painel import colunas_feature, construir
+    cmo, ear, ear_sin, ena, hourly_load, net_interchange)
+from _painel import build_panel, feature_columns
 
 
 def main():
-    SAIDA.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    fcmo, fcarga = cmo(), carga()
-    finterc, fear, fsin, fena = intercambio_liquido(), ear(), ear_sin(), ena()
+    cmo_frame, load_frame = cmo(), hourly_load()
+    interchange_frame, ear_frame, sin_ear, ena_frame = (
+        net_interchange(), ear(), ear_sin(), ena()
+    )
 
-    grade = len(fcmo) * len(SUBSISTEMAS)
-    dias_ausentes = sorted({str(d.date()) for d in
-                            fcmo.index[fcmo[SUBSISTEMAS[0]].isna()].normalize().unique()})
+    grid_size = len(cmo_frame) * len(SUBSYSTEMS)
+    missing_cmo_days = sorted({
+        str(day.date())
+        for day in cmo_frame.index[cmo_frame[SUBSYSTEMS[0]].isna()].normalize().unique()
+    })
 
-    pan = construir(fcmo, fcarga, finterc, fear, fsin, fena, horizonte=1)
-    if len(pan) != grade:
-        raise SystemExit(f"painel com {len(pan)} linhas, grade tem {grade}")
+    panel = build_panel(cmo_frame, load_frame, interchange_frame, ear_frame,
+                        sin_ear, ena_frame, horizon=1)
+    if len(panel) != grid_size:
+        raise SystemExit(f"panel has {len(panel)} rows; expected {grid_size}")
 
-    # Descartes, contados na ordem em que se aplicam.
-    n0 = len(pan)
-    pan = pan[pan["y"].notna()]
-    n_sem_alvo = n0 - len(pan)
+    # Count exclusions in the order they are applied.
+    initial_rows = len(panel)
+    panel = panel[panel["y"].notna()]
+    rows_without_target = initial_rows - len(panel)
 
-    # Termos da comparacao: alvo, D-1 e D-7 da mesma meia-hora. Sem os tres na
-    # mesma linha as linhas de base correriam sobre amostras diferentes, e a
-    # razao entre elas nao significaria nada.
-    l1, l7 = "cmo_l1", "cmo_l7"
-    n1 = len(pan)
-    pan = pan[pan[l1].notna() & pan[l7].notna()]
-    n_sem_base = n1 - len(pan)
+    # Keep the target and both persistence terms on the same rows so baseline
+    # comparisons use identical samples.
+    lag_1, lag_7 = "cmo_l1", "cmo_l7"
+    rows_before_baseline_filter = len(panel)
+    panel = panel[panel[lag_1].notna() & panel[lag_7].notna()]
+    rows_without_baseline = rows_before_baseline_filter - len(panel)
 
-    pan["naive_sazonal"] = naive_sazonal(pan[l1].to_numpy(), pan[l7].to_numpy(),
-                                         pan["dow"].to_numpy())
+    panel["naive_sazonal"] = seasonal_naive(
+        panel[lag_1].to_numpy(), panel[lag_7].to_numpy(), panel["dow"].to_numpy()
+    )
 
-    feats = colunas_feature(pan)
-    cobertura = {c: float(pan[c].notna().mean()) for c in feats}
+    features = feature_columns(panel)
+    coverage = {column: float(panel[column].notna().mean()) for column in features}
 
-    pan.to_parquet(PAINEL, index=False)
+    panel.to_parquet(PANEL_PATH, index=False)
 
-    inv = {
-        "janela": [str(pan["t"].min()), str(pan["t"].max())],
-        "grade_completa": int(grade),
-        "linhas_gravadas": int(len(pan)),
-        "descarte_sem_alvo": int(n_sem_alvo),
-        "descarte_sem_base": int(n_sem_base),
-        "dias_de_cmo_ausentes": dias_ausentes,
-        "n_features": len(feats),
-        "features": feats,
-        "cobertura_minima": min(cobertura.values()),
-        "feature_menos_coberta": min(cobertura, key=cobertura.get),
-        "cmo_fracao_no_piso": float((pan["y"] <= LIMIAR_PISO).mean()),
-        "cmo_min": float(pan["y"].min()),
-        "cmo_max": float(pan["y"].max()),
-        "cmo_fora_da_faixa": int(((pan["y"] < CMO_PISO) | (pan["y"] > CMO_TETO)).sum()),
+    inventory = {
+        "janela": [str(panel["t"].min()), str(panel["t"].max())],
+        "grade_completa": int(grid_size),
+        "linhas_gravadas": int(len(panel)),
+        "descarte_sem_alvo": int(rows_without_target),
+        "descarte_sem_base": int(rows_without_baseline),
+        "dias_de_cmo_ausentes": missing_cmo_days,
+        "n_features": len(features),
+        "features": features,
+        "cobertura_minima": min(coverage.values()),
+        "feature_menos_coberta": min(coverage, key=coverage.get),
+        "cmo_fracao_no_piso": float((panel["y"] <= CMO_FLOOR_THRESHOLD).mean()),
+        "cmo_min": float(panel["y"].min()),
+        "cmo_max": float(panel["y"].max()),
+        "cmo_fora_da_faixa": int(
+            ((panel["y"] < CMO_MIN_VALUE) | (panel["y"] > CMO_MAX_VALUE)).sum()
+        ),
     }
-    (SAIDA / "janelas.json").write_text(json.dumps(inv, indent=2, ensure_ascii=False))
+    inventory_path = OUTPUT_DIR / "janelas.json"
+    inventory_path.write_text(json.dumps(inventory, indent=2, ensure_ascii=False))
 
-    print(f"painel: {len(pan)} linhas, {len(feats)} features, "
-          f"{inv['janela'][0][:10]} a {inv['janela'][1][:10]}")
-    ausentes_no_painel = pd.date_range(
-        pan["dia"].min(), pan["dia"].max(), freq="D").difference(
-        pd.DatetimeIndex(pan["dia"].unique()))
-    inv["dias_ausentes_no_painel"] = [str(d.date()) for d in ausentes_no_painel]
-    (SAIDA / "janelas.json").write_text(
-        json.dumps(inv, indent=2, ensure_ascii=False))
+    print(f"panel: {len(panel)} rows, {len(features)} features, "
+          f"{inventory['janela'][0][:10]} to {inventory['janela'][1][:10]}")
+    missing_panel_days = pd.date_range(
+        panel["dia"].min(), panel["dia"].max(), freq="D"
+    ).difference(pd.DatetimeIndex(panel["dia"].unique()))
+    inventory["dias_ausentes_no_painel"] = [str(day.date()) for day in missing_panel_days]
+    inventory_path.write_text(json.dumps(inventory, indent=2, ensure_ascii=False))
 
-    print(f"descarte: {n_sem_alvo} sem alvo ({len(dias_ausentes)} dias de CMO "
-          f"ausentes), {n_sem_base} sem D-1 ou D-7")
-    print(f"o painel perde {len(ausentes_no_painel)} dias: cada buraco na fonte "
-          f"leva junto o dia seguinte (sem D-1) e o dia sete depois (sem D-7)")
-    print(f"piso: {100 * inv['cmo_fracao_no_piso']:.1f}% das meias-horas "
-          f"em CMO <= {LIMIAR_PISO} R$/MWh")
+    print(f"excluded: {rows_without_target} without target "
+          f"({len(missing_cmo_days)} missing CMO days), "
+          f"{rows_without_baseline} without D-1 or D-7")
+    print(f"panel omits {len(missing_panel_days)} days: each source gap also removes "
+          "the following day (no D-1) and the day seven days later (no D-7)")
+    print(f"floor: {100 * inventory['cmo_fracao_no_piso']:.1f}% of half-hours "
+          f"have CMO <= {CMO_FLOOR_THRESHOLD} R$/MWh")
 
 
 if __name__ == "__main__":

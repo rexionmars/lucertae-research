@@ -24,16 +24,16 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
-from _comum import PAINEL, CONTROLES, RESULTADO, MOTIVOS_FORA, MERITO_PARTES
+from _comum import CONTROLS_PATH, OUT_OF_MERIT_REASONS, PANEL_PATH, RESULT_PATH
 
 RNG = np.random.default_rng(20260906)
 N_BOOTSTRAP = 2000
 
 
 def require_controls():
-    if not CONTROLES.exists():
+    if not CONTROLS_PATH.exists():
         sys.exit("run 2_controles.py before this step")
-    controls = json.loads(CONTROLES.read_text())
+    controls = json.loads(CONTROLS_PATH.read_text())
     if controls["bloqueado"]:
         sys.exit("controls BLOCKED the panel; step 3 will not run")
     return controls
@@ -56,7 +56,7 @@ def part_a(panel):
         print(f"  residual             {residual/1e6:7.3f} TWh   {residual/total:6.3%}")
         print("  by reason:")
         reasons = {}
-        for reason in MOTIVOS_FORA:
+        for reason in OUT_OF_MERIT_REASONS:
             value = panel[f"val_{side}{reason}"].sum()
             reasons[reason] = value / 1e6
             if value > 0:
@@ -172,15 +172,15 @@ def part_b(series):
 
 def main():
     require_controls()
-    panel = pd.read_parquet(PAINEL)
+    panel = pd.read_parquet(PANEL_PATH)
     print(f"panel available: {len(panel):,} rows, {panel.din_instante.min()} to {panel.din_instante.max()}")
 
     analysis_a = part_a(panel)
     system = sin_series(panel)
     analysis_b = part_b(system)
 
-    RESULTADO.write_text(json.dumps({"parte_a": analysis_a, "parte_b": analysis_b}, indent=1, ensure_ascii=False))
-    print(f"\nsaved: {RESULTADO}")
+    RESULT_PATH.write_text(json.dumps({"parte_a": analysis_a, "parte_b": analysis_b}, indent=1, ensure_ascii=False))
+    print(f"\nsaved: {RESULT_PATH}")
 
 
 if __name__ == "__main__":

@@ -8,14 +8,14 @@ Run from the repository root.
 import os
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parents[2]
-BRUTO = RAIZ / "data" / "raw" / "termica_despacho"
-INTERIM = Path(os.environ.get("LUCERTAE_INTERIM", RAIZ / "data" / "interim"))
-SAIDA = INTERIM / "E-despacho-termico"
+ROOT_DIR = Path(__file__).resolve().parents[2]
+RAW_DIR = ROOT_DIR / "data" / "raw" / "termica_despacho"
+INTERIM_DIR = Path(os.environ.get("LUCERTAE_INTERIM", ROOT_DIR / "data" / "interim"))
+OUTPUT_DIR = INTERIM_DIR / "E-despacho-termico"
 
-PAINEL = SAIDA / "painel_usina_hora.parquet"
-CONTROLES = SAIDA / "controles.json"
-RESULTADO = SAIDA / "resultado.json"
+PANEL_PATH = OUTPUT_DIR / "painel_usina_hora.parquet"
+CONTROLS_PATH = OUTPUT_DIR / "controles.json"
+RESULT_PATH = OUTPUT_DIR / "resultado.json"
 
 # --- accounting decomposition -------------------------------------------
 # Discovered empirically rather than from a manual. The identity that closes the
@@ -38,7 +38,7 @@ RESULTADO = SAIDA / "resultado.json"
 # `ordemdemeritoacimadainflex + inflexembutmerito`; this redundancy fails in some rows,
 # and control C1b tracks that gap instead of hiding it.
 
-MOTIVOS_FORA = [
+OUT_OF_MERIT_REASONS = [
     "inflexpura",
     "razaoeletrica",
     "garantiaenergetica",
@@ -49,23 +49,23 @@ MOTIVOS_FORA = [
     "gsub",
     "unitcommitment",
 ]
-MERITO_PARTES = ["ordemdemeritoacimadainflex", "inflexembutmerito"]
+MERIT_COMPONENTS = ["ordemdemeritoacimadainflex", "inflexembutmerito"]
 
 # Required columns in every raw file. The schema changed three times during the period,
 # and these are the columns that survive across the three signatures.
-CHAVES = ["din_instante", "nom_tipopatamar", "id_subsistema", "nom_usina",
-          "cod_usinaplanejamento", "ceg"]
+KEY_COLUMNS = ["din_instante", "nom_tipopatamar", "id_subsistema", "nom_usina",
+               "cod_usinaplanejamento", "ceg"]
 
 
-def colunas_valor():
+def value_columns():
     """Return prog_* and verif_* names for all terms in the decomposition."""
-    partes = MERITO_PARTES + MOTIVOS_FORA
-    return (["val_prog" + c for c in partes] + ["val_proggeracao"],
-            ["val_verif" + c for c in partes] + ["val_verifgeracao"])
+    components = MERIT_COMPONENTS + OUT_OF_MERIT_REASONS
+    return (["val_prog" + column for column in components] + ["val_proggeracao"],
+            ["val_verif" + column for column in components] + ["val_verifgeracao"])
 
 
-def arquivos():
-    fs = sorted(BRUTO.glob("GERACAO_TERMICA_DESPACHO-2_*.csv"))
-    if not fs:
-        raise SystemExit(f"no input files found in {BRUTO}")
-    return fs
+def input_files():
+    files = sorted(RAW_DIR.glob("GERACAO_TERMICA_DESPACHO-2_*.csv"))
+    if not files:
+        raise SystemExit(f"no input files found in {RAW_DIR}")
+    return files

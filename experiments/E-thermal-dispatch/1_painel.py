@@ -11,7 +11,8 @@ import sys
 import pandas as pd
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
-from _comum import BRUTO, SAIDA, PAINEL, CHAVES, MOTIVOS_FORA, MERITO_PARTES, arquivos
+from _comum import (KEY_COLUMNS, MERIT_COMPONENTS, OUT_OF_MERIT_REASONS,
+                    OUTPUT_DIR, PANEL_PATH, RAW_DIR, input_files)
 
 
 def read_file(file_path):
@@ -26,15 +27,17 @@ def read_file(file_path):
 
 
 def main():
-    SAIDA.mkdir(parents=True, exist_ok=True)
-    files = arquivos()
-    print(f"reading {len(files)} files from {BRUTO}")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    files = input_files()
+    print(f"Reading {len(files)} files from {RAW_DIR}")
 
-    partes = MERITO_PARTES + MOTIVOS_FORA
+    components = MERIT_COMPONENTS + OUT_OF_MERIT_REASONS
     required_columns = (
-        CHAVES + ["din_publicacao", "arquivo"]
-        + ["val_prog" + c for c in partes] + ["val_proggeracao", "val_progordemmerito"]
-        + ["val_verif" + c for c in partes] + ["val_verifgeracao", "val_verifordemmerito"]
+        KEY_COLUMNS + ["din_publicacao", "arquivo"]
+        + ["val_prog" + column for column in components]
+        + ["val_proggeracao", "val_progordemmerito"]
+        + ["val_verif" + column for column in components]
+        + ["val_verifgeracao", "val_verifordemmerito"]
     )
 
     blocks = []
@@ -54,18 +57,22 @@ def main():
     # generation column. This is the only way to make a decomposition error appear as a number
     # rather than vanish during aggregation.
     for side in ("prog", "verif"):
-        panel[f"{side}_merito"] = sum(panel[f"val_{side}{c}"] for c in MERITO_PARTES)
-        panel[f"{side}_fora"] = sum(panel[f"val_{side}{c}"] for c in MOTIVOS_FORA)
+        panel[f"{side}_merito"] = sum(
+            panel[f"val_{side}{column}"] for column in MERIT_COMPONENTS
+        )
+        panel[f"{side}_fora"] = sum(
+            panel[f"val_{side}{column}"] for column in OUT_OF_MERIT_REASONS
+        )
         panel[f"{side}_total_pub"] = panel[f"val_{side}geracao"]
         panel[f"{side}_total_soma"] = panel[f"{side}_merito"] + panel[f"{side}_fora"]
 
     panel = panel.sort_values(["din_instante", "nom_usina"]).reset_index(drop=True)
-    panel.to_parquet(PAINEL, index=False)
+    panel.to_parquet(PANEL_PATH, index=False)
 
     print(f"\npanel: {len(panel):,} rows, {panel.nom_usina.nunique()} plants, "
           f"{panel.din_instante.nunique():,} instants")
     print(f"period: {panel.din_instante.min()} .. {panel.din_instante.max()}")
-    print(f"saved: {PAINEL}")
+    print(f"Saved: {PANEL_PATH}")
 
 
 if __name__ == "__main__":

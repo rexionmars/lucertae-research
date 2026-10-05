@@ -1,40 +1,38 @@
-"""Passo 3 -- linhas de base, modelos e habilidade, com origem movel.
+"""Step 3: evaluate baselines and models with rolling-origin validation.
 
-Rodar da raiz do repositorio, depois do passo 2 ter passado:
-    .venv/bin/python experiments/E-preco-cmo/3_modelos.py
+Run from the repository root after step 2 passes:
+    .venv/bin/python experiments/E-cmo-price/3_modelos.py
 
-DESENHO
--------
-Estimando: CMO em R$/MWh de cada uma das 48 meias-horas do dia D, nos quatro
-subsistemas, com previsao emitida as 12:00 do dia D-1.
+DESIGN
+------
+Estimand: CMO in R$/MWh for each of the 48 half-hours on target day D across
+four subsystems, forecast at 12:00 on D-1.
 
-Adversario: a ingenua sazonal da literatura de previsao de preco -- terca a
-sexta repetem D-1, sabado a segunda repetem D-7. Nao a ingenua simples: em
-serie de preco horario a repeticao do dia anterior ja carrega a forma diurna e
-o nivel, e e ela que um modelo precisa bater para acrescentar alguma coisa.
+Baseline: the canonical seasonal-naive price-forecasting baseline. Tuesday
+through Friday repeat D-1; Saturday through Monday repeat D-7. This is not the
+simple naive baseline: for price series, the previous day's value already
+carries the intraday shape and level that a model must improve upon.
 
-Perda: MAE, e ela e escolhida ANTES de olhar o resultado, pelas duas razoes que
-a literatura da area registra -- e a metrica em que a serie de preco se compara
-entre estudos, e o CMO tem cauda pesada o bastante para o RMSE virar relatorio
-de meia duzia de horas. O RMSE sai como secundario, e a divergencia entre os
-dois, se houver, e resultado e nao ruido.
+Loss: MAE, selected before examining the results because it supports comparison
+across price-forecasting studies and is less dominated by the heavy CMO tail
+than RMSE. RMSE is secondary; any disagreement between the two is a result.
 
-Recalibracao MENSAL com janela expansiva: o modelo e reajustado no primeiro dia
-de cada mes de teste com todo o passado disponivel. Sem recalibrar, um unico
-ajuste teria de valer por 14 meses, e a ingenua -- que se atualiza sozinha todo
-dia -- ganharia por desenho e nao por merito.
+Monthly recalibration with an expanding training window: the model is refit on
+the first day of each test month using all available history. Without this,
+one fit would span 14 months while the naive baseline updates every day.
 
-CONTROLE POSITIVO
------------------
-O oraculo de nivel recebe a media verdadeira do dia D e desloca a ingenua ate
-ela, mantendo a forma. Se ele nao mostrasse habilidade grande, o desenho seria
-incapaz de detectar ganho e nenhum numero negativo do modelo significaria nada.
+POSITIVE CONTROL
+----------------
+The level oracle receives the true mean for target day D and shifts the naive
+forecast to that level while preserving its shape. If the oracle did not show
+substantial skill, the design could not detect gains and negative model results
+would be uninformative.
 
-O QUE ESTE PASSO NAO TESTA
---------------------------
-Uma configuracao de hiperparametro e uma semente. O IC cobre a variacao entre
-dias do periodo de teste; nao cobre variancia de ajuste, de semente, nem da
-data de corte entre treino e teste.
+LIMITATION
+----------
+There is one hyperparameter configuration and one random seed. The confidence
+interval covers variation across test days, not fitting variance, seed variance,
+or variation in the train/test cutoff.
 """
 import json
 import time
@@ -43,158 +41,185 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from _comum import (LIMIAR_PISO, PAINEL, PREVISOES, RESULTADO, SAIDA,
-                    SUBSISTEMAS)
-from _modelos_comum import (ADVERSARIO, B_BOOT, FRACAO_TREINO_INICIAL, PARAMS,
-                            PREDITORES, SEMENTE)
-from _painel import colunas_modelo
+from _comum import (CMO_FLOOR_THRESHOLD, OUTPUT_DIR, PANEL_PATH,
+                    PREDICTIONS_PATH, RESULT_PATH, SUBSYSTEMS)
+from _modelos_comum import (BASELINE, INITIAL_TRAIN_FRACTION, N_BOOTSTRAP,
+                            PARAMS, PREDICTORS, RANDOM_SEED)
+from _painel import model_columns
 
 
-def mae(y, p):
-    return float(np.abs(y - p).mean())
+def mean_absolute_error(actual, predicted):
+    return float(np.abs(actual - predicted).mean())
 
 
-def rmse(y, p):
-    return float(np.sqrt(((y - p) ** 2).mean()))
+def root_mean_squared_error(actual, predicted):
+    return float(np.sqrt(((actual - predicted) ** 2).mean()))
 
 
-def ajustar_e_prever(pan, feats, dias_teste):
-    """Origem movel com recalibracao mensal e janela de treino expansiva."""
-    saida, custo = [], 0.0
-    meses = sorted(pd.Series(dias_teste).dt.to_period("M").unique())
-    for m in meses:
-        ini, fim = m.to_timestamp(), m.to_timestamp() + pd.offsets.MonthBegin(1)
-        tr = pan[pan["dia"] < ini]
-        te = pan[(pan["dia"] >= ini) & (pan["dia"] < fim)]
-        if te.empty:
+def fit_and_predict(panel, feature_columns, test_days):
+    """Use rolling-origin evaluation with monthly recalibration and an expanding window."""
+    prediction_frames, fit_seconds = [], 0.0
+    test_months = sorted(pd.Series(test_days).dt.to_period("M").unique())
+    for month in test_months:
+        month_start = month.to_timestamp()
+        next_month_start = month_start + pd.offsets.MonthBegin(1)
+        train = panel[panel["dia"] < month_start]
+        test = panel[(panel["dia"] >= month_start) & (panel["dia"] < next_month_start)]
+        if test.empty:
             continue
-        t0 = time.time()
-        direto = lgb.LGBMRegressor(**PARAMS).fit(tr[feats], tr["y"])
-        # O residual aprende a CORRECAO da ingenua, e nao o nivel do preco. Sao
-        # dois vieses indutivos diferentes sobre o mesmo insumo: um tem de
-        # reconstruir o nivel do zero, o outro so precisa saber quando a
-        # repeticao do dia anterior erra.
-        residual = lgb.LGBMRegressor(**PARAMS).fit(
-            tr[feats], tr["y"] - tr["naive_sazonal"])
-        # Duas partes. A distribuicao do CMO tem massa concentrada no piso -- o
-        # custo marginal e nulo quando sobra oferta -- e uma cauda longa. Um
-        # regressor unico devolve a mediana condicional, que quase nunca cai
-        # exatamente no piso. A regra de decisao abaixo e a que minimiza MAE sob
-        # esse modelo: prever o piso quando ele e mais provavel que o resto.
-        piso_tr = (tr["y"] <= LIMIAR_PISO)
-        clf = lgb.LGBMClassifier(**{**PARAMS, "objective": "binary"}).fit(
-            tr[feats], piso_tr.astype(int))
-        reg = lgb.LGBMRegressor(**PARAMS).fit(
-            tr.loc[~piso_tr, feats], tr.loc[~piso_tr, "y"])
-        valor_piso = float(tr.loc[piso_tr, "y"].median())
-        custo += time.time() - t0
+        start_time = time.time()
+        direct_model = lgb.LGBMRegressor(**PARAMS).fit(train[feature_columns], train["y"])
+        # The residual model learns a correction to the naive forecast rather
+        # than the price level. It has a different inductive bias but uses the
+        # same inputs.
+        residual_model = lgb.LGBMRegressor(**PARAMS).fit(
+            train[feature_columns], train["y"] - train["naive_sazonal"]
+        )
+        # CMO has mass at the floor and a long right tail. A single regressor
+        # rarely predicts the floor exactly. The two-part rule predicts the
+        # floor when its estimated probability is greater than 0.5.
+        at_floor = train["y"] <= CMO_FLOOR_THRESHOLD
+        floor_classifier = lgb.LGBMClassifier(
+            **{**PARAMS, "objective": "binary"}
+        ).fit(train[feature_columns], at_floor.astype(int))
+        positive_regressor = lgb.LGBMRegressor(**PARAMS).fit(
+            train.loc[~at_floor, feature_columns], train.loc[~at_floor, "y"]
+        )
+        floor_value = float(train.loc[at_floor, "y"].median())
+        fit_seconds += time.time() - start_time
 
-        d = te[["t", "sub", "dia", "hh", "dow", "y", "cmo_l1", "cmo_l7",
-                "naive_sazonal"]].copy()
-        d["climatologia"] = tr.groupby(["sub", "hh"])["y"].mean().reindex(
-            pd.MultiIndex.from_arrays([te["sub"], te["hh"]])).to_numpy()
-        d["lgbm_direto"] = direto.predict(te[feats])
-        d["lgbm_residual"] = te["naive_sazonal"].to_numpy() + residual.predict(te[feats])
-        prob = clf.predict_proba(te[feats])[:, 1]
-        d["lgbm_duas_partes"] = np.where(prob > 0.5, valor_piso,
-                                         reg.predict(te[feats]))
-        saida.append(d)
-    return pd.concat(saida, ignore_index=True), custo
+        predictions = test[["t", "sub", "dia", "hh", "dow", "y", "cmo_l1", "cmo_l7",
+                            "naive_sazonal"]].copy()
+        predictions["climatologia"] = train.groupby(["sub", "hh"])["y"].mean().reindex(
+            pd.MultiIndex.from_arrays([test["sub"], test["hh"]])
+        ).to_numpy()
+        predictions["lgbm_direto"] = direct_model.predict(test[feature_columns])
+        predictions["lgbm_residual"] = (
+            test["naive_sazonal"].to_numpy()
+            + residual_model.predict(test[feature_columns])
+        )
+        floor_probability = floor_classifier.predict_proba(test[feature_columns])[:, 1]
+        predictions["lgbm_duas_partes"] = np.where(
+            floor_probability > 0.5, floor_value,
+            positive_regressor.predict(test[feature_columns])
+        )
+        prediction_frames.append(predictions)
+    return pd.concat(prediction_frames, ignore_index=True), fit_seconds
 
 
-def oraculo_de_nivel(p):
-    """Ingenua sazonal deslocada pela MEDIANA do residuo do dia. Nao e previsao.
+def level_oracle(predictions):
+    """Shift the seasonal-naive forecast by the true daily median residual; this is not a forecast.
 
-    A mediana, e nao a media: a perda declarada e MAE, e a constante que
-    minimiza MAE e a mediana. Deslocar pela media mediria a escolha de
-    estatistica do analista em vez do ganho de acertar o nivel -- medido, o
-    deslocamento pela media entrega +0,9% de habilidade e o pela mediana
-    +17,7%, sobre o mesmo dado e o mesmo dia.
+    The median, not the mean, minimizes the declared MAE loss. Using the mean
+    would measure the analyst's choice of statistic rather than level recovery.
     """
-    r = p["y"] - p["naive_sazonal"]
-    return p["naive_sazonal"] + r.groupby([p["sub"], p["dia"]]).transform("median")
+    residual = predictions["y"] - predictions["naive_sazonal"]
+    return predictions["naive_sazonal"] + residual.groupby(
+        [predictions["sub"], predictions["dia"]]
+    ).transform("median")
 
 
-def boot_habilidade(p, preditor, adversario, b=B_BOOT, semente=SEMENTE):
-    """IC da habilidade por reamostragem de DIA, nao de linha.
+def bootstrap_skill_interval(predictions, predictor, baseline,
+                             n_bootstrap=N_BOOTSTRAP, seed=RANDOM_SEED):
+    """Estimate a skill interval by resampling whole days, not individual rows.
 
-    O erro de meias-horas do mesmo dia e correlacionado: reamostrar linha daria
-    IC estreito demais. O bloco e o dia inteiro, com os quatro subsistemas
-    juntos, porque eles tambem andam juntos.
+    Half-hour errors within a day are correlated. Resampling rows would produce
+    an overly narrow interval. Each block is a full day with all four
+    subsystems, which also move together.
     """
-    g = p.groupby("dia")
-    em = g.apply(lambda d: np.abs(d["y"] - d[preditor]).sum(), include_groups=False)
-    ea = g.apply(lambda d: np.abs(d["y"] - d[adversario]).sum(), include_groups=False)
-    n = g.size()
-    em, ea, n = em.to_numpy(), ea.to_numpy(), n.to_numpy()
-    rng = np.random.default_rng(semente)
-    idx = rng.integers(0, len(n), size=(b, len(n)))
-    hm = em[idx].sum(1) / n[idx].sum(1)
-    ha = ea[idx].sum(1) / n[idx].sum(1)
-    h = 100.0 * (1.0 - hm / ha)
-    return float(np.percentile(h, 2.5)), float(np.percentile(h, 97.5))
+    grouped = predictions.groupby("dia")
+    model_error = grouped.apply(
+        lambda day: np.abs(day["y"] - day[predictor]).sum(), include_groups=False
+    )
+    baseline_error = grouped.apply(
+        lambda day: np.abs(day["y"] - day[baseline]).sum(), include_groups=False
+    )
+    group_sizes = grouped.size()
+    model_error = model_error.to_numpy()
+    baseline_error = baseline_error.to_numpy()
+    group_sizes = group_sizes.to_numpy()
+    rng = np.random.default_rng(seed)
+    indices = rng.integers(0, len(group_sizes), size=(n_bootstrap, len(group_sizes)))
+    model_mae = model_error[indices].sum(1) / group_sizes[indices].sum(1)
+    baseline_mae = baseline_error[indices].sum(1) / group_sizes[indices].sum(1)
+    skill = 100.0 * (1.0 - model_mae / baseline_mae)
+    return float(np.percentile(skill, 2.5)), float(np.percentile(skill, 97.5))
 
 
 def main():
-    SAIDA.mkdir(parents=True, exist_ok=True)
-    pan = pd.read_parquet(PAINEL)
-    pan["sub"] = pan["sub"].astype("category")
-    feats = colunas_modelo(pan)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    panel = pd.read_parquet(PANEL_PATH)
+    panel["sub"] = panel["sub"].astype("category")
+    feature_columns = model_columns(panel)
 
-    dias = np.sort(pan["dia"].unique())
-    corte = dias[int(len(dias) * FRACAO_TREINO_INICIAL)]
-    dias_teste = dias[dias >= corte]
+    days = np.sort(panel["dia"].unique())
+    cutoff = days[int(len(days) * INITIAL_TRAIN_FRACTION)]
+    test_days = days[days >= cutoff]
 
-    t0 = time.time()
-    p, custo_ajuste = ajustar_e_prever(pan, feats, dias_teste)
-    p["oraculo_nivel"] = oraculo_de_nivel(p)
-    p.to_parquet(PREVISOES, index=False)
+    start_time = time.time()
+    predictions, fit_seconds = fit_and_predict(panel, feature_columns, test_days)
+    predictions["oraculo_nivel"] = level_oracle(predictions)
+    predictions.to_parquet(PREDICTIONS_PATH, index=False)
 
-    y = p["y"].to_numpy()
-    erros = {k: dict(mae=mae(y, p[k].to_numpy()), rmse=rmse(y, p[k].to_numpy()))
-             for k in PREDITORES}
-    adv = erros[ADVERSARIO]["mae"]
-    hab = {}
-    for k in PREDITORES:
-        if k == ADVERSARIO:
+    target = predictions["y"].to_numpy()
+    errors = {
+        key: dict(mae=mean_absolute_error(target, predictions[key].to_numpy()),
+                  rmse=root_mean_squared_error(target, predictions[key].to_numpy()))
+        for key in PREDICTORS
+    }
+    baseline_mae = errors[BASELINE]["mae"]
+    skills = {}
+    for predictor in PREDICTORS:
+        if predictor == BASELINE:
             continue
-        lo, hi = boot_habilidade(p, k, ADVERSARIO)
-        hab[k] = dict(habilidade_mae=100.0 * (1 - erros[k]["mae"] / adv),
-                      ic95=[lo, hi],
-                      habilidade_rmse=100.0 * (1 - erros[k]["rmse"] /
-                                               erros[ADVERSARIO]["rmse"]))
+        lower, upper = bootstrap_skill_interval(predictions, predictor, BASELINE)
+        skills[predictor] = dict(
+            habilidade_mae=100.0 * (1 - errors[predictor]["mae"] / baseline_mae),
+            ic95=[lower, upper],
+            habilidade_rmse=100.0 * (1 - errors[predictor]["rmse"] /
+                                     errors[BASELINE]["rmse"]),
+        )
 
-    por_sub = {}
-    for s in SUBSISTEMAS:
-        q = p[p["sub"] == s]
-        por_sub[s] = {k: mae(q["y"].to_numpy(), q[k].to_numpy())
-                      for k in PREDITORES}
-    por_mes = (p.assign(m=p["dia"].dt.to_period("M").astype(str))
-               .groupby("m").apply(lambda d: pd.Series(
-                   {k: mae(d["y"].to_numpy(), d[k].to_numpy())
-                    for k in PREDITORES}), include_groups=False))
-
-    res = dict(
-        janela_teste=[str(p["t"].min()), str(p["t"].max())],
-        n_linhas=int(len(p)), n_dias=int(p["dia"].nunique()),
-        n_features=len(feats), recalibracoes=int(p["dia"].dt.to_period("M").nunique()),
-        adversario=ADVERSARIO, erros=erros, habilidade=hab,
-        mae_por_subsistema=por_sub,
-        mae_por_mes=por_mes.round(2).to_dict(orient="index"),
-        custo_s=dict(ajuste=round(custo_ajuste, 1), total=round(time.time() - t0, 1)),
+    mae_by_subsystem = {}
+    for subsystem in SUBSYSTEMS:
+        subset = predictions[predictions["sub"] == subsystem]
+        mae_by_subsystem[subsystem] = {
+            key: mean_absolute_error(subset["y"].to_numpy(), subset[key].to_numpy())
+            for key in PREDICTORS
+        }
+    mae_by_month = (
+        predictions.assign(m=predictions["dia"].dt.to_period("M").astype(str))
+        .groupby("m").apply(
+            lambda month: pd.Series({
+                key: mean_absolute_error(month["y"].to_numpy(), month[key].to_numpy())
+                for key in PREDICTORS
+            }), include_groups=False
+        )
     )
-    RESULTADO.write_text(json.dumps(res, indent=2, ensure_ascii=False))
 
-    print(f"teste: {res['n_linhas']} linhas, {res['n_dias']} dias, "
-          f"{res['recalibracoes']} recalibracoes, {feats and len(feats)} features")
-    print(f"{'preditor':16s} {'MAE':>8s} {'RMSE':>8s} {'hab.MAE':>9s} {'IC95':>20s}")
-    for k in PREDITORES:
-        h = hab.get(k)
-        ic = f"[{h['ic95'][0]:+.2f}; {h['ic95'][1]:+.2f}]" if h else ""
-        hv = f"{h['habilidade_mae']:+.2f}%" if h else "adversario"
-        print(f"{k:16s} {erros[k]['mae']:8.2f} {erros[k]['rmse']:8.2f} "
-              f"{hv:>9s} {ic:>20s}")
-    print(f"custo de ajuste: {res['custo_s']['ajuste']:.0f} s")
+    result = dict(
+        janela_teste=[str(predictions["t"].min()), str(predictions["t"].max())],
+        n_linhas=int(len(predictions)), n_dias=int(predictions["dia"].nunique()),
+        n_features=len(feature_columns),
+        recalibracoes=int(predictions["dia"].dt.to_period("M").nunique()),
+        adversario=BASELINE, erros=errors, habilidade=skills,
+        mae_por_subsistema=mae_by_subsystem,
+        mae_por_mes=mae_by_month.round(2).to_dict(orient="index"),
+        custo_s=dict(ajuste=round(fit_seconds, 1),
+                     total=round(time.time() - start_time, 1)),
+    )
+    RESULT_PATH.write_text(json.dumps(result, indent=2, ensure_ascii=False))
+
+    print(f"test: {result['n_linhas']} rows, {result['n_dias']} days, "
+          f"{result['recalibracoes']} recalibrations, {len(feature_columns)} features")
+    print(f"{'predictor':16s} {'MAE':>8s} {'RMSE':>8s} {'MAE skill':>9s} {'95% CI':>20s}")
+    for predictor in PREDICTORS:
+        skill = skills.get(predictor)
+        interval = f"[{skill['ic95'][0]:+.2f}; {skill['ic95'][1]:+.2f}]" if skill else ""
+        skill_value = f"{skill['habilidade_mae']:+.2f}%" if skill else "baseline"
+        print(f"{predictor:16s} {errors[predictor]['mae']:8.2f} "
+              f"{errors[predictor]['rmse']:8.2f} {skill_value:>9s} {interval:>20s}")
+    print(f"fit time: {result['custo_s']['ajuste']:.0f} s")
 
 
 if __name__ == "__main__":

@@ -1,93 +1,91 @@
-"""Definicoes compartilhadas do E-preco-cmo. Nao contem analise: so caminho,
-esquema, o portao de informacao e a leitura das fontes.
+"""Shared paths, schema conventions, information gate, and source readers.
 
-Rodar sempre da raiz do repositorio.
+Run this experiment from the repository root.
 
-PORTAO DE INFORMACAO
---------------------
-O experimento preve as 48 meias-horas do dia D com previsao emitida as 12:00 do
-dia D-1. O que esta disponivel nesse instante foi MEDIDO, fonte a fonte, pela
-diferenca entre o ultimo registro do arquivo em disco e a data de modificacao
-dele -- uma observacao por fonte, o que e limite declarado e nao regra:
+INFORMATION GATE
+----------------
+The experiment forecasts all 48 half-hours of day D at 12:00 on D-1. Source
+availability at that issue time was measured from the difference between the
+last record on disk and the file modification time. This is one observation per
+source, a stated limitation rather than a general publication rule:
 
-    CMO semi-horario   baixado 2026-08-27 10:08, ultimo registro 2026-08-27
-                       23:30. O dia inteiro ja estava no arquivo as 10:08:
-                       o CMO e publicado COM ANTECEDENCIA, nao ex-post.
-    Curva de carga     baixado 2026-09-02 04:25, ultimo 2026-08-31 23:00.
-                       Atraso ~1,2 dia.
-    Intercambio        baixado 2026-09-02 04:44, ultimo 2026-08-31 23:00.
-                       Atraso ~1,2 dia.
-    EAR diario         baixado 2026-09-02 04:25, ultimo 2026-08-31. ~2,2 dias.
-    ENA diario         baixado 2026-09-06 11:22, ultimo 2026-09-04. ~2,3 dias.
+    Half-hourly CMO   downloaded 2026-08-27 10:08; last record 2026-08-27
+                      23:30. The full day was already in the file: CMO is
+                      published in advance, not ex post.
+    Load curve        downloaded 2026-09-02 04:25; last record 2026-08-31 23:00
+                      (about 1.2 days of lag).
+    Interchange       downloaded 2026-09-02 04:44; last record 2026-08-31 23:00
+                      (about 1.2 days of lag).
+    Daily EAR         downloaded 2026-09-02 04:25; last record 2026-08-31
+                      (about 2.2 days of lag).
+    Daily ENA         downloaded 2026-09-06 11:22; last record 2026-09-04
+                      (about 2.3 days of lag).
 
-Dai o portao, que vale IGUALMENTE para o modelo e para as linhas de base:
+The resulting gate applies equally to models and baselines:
 
-    CMO ................ ate o fim do dia D-1
-    carga, intercambio . ate o fim do dia D-2
-    EAR, ENA ........... ate o dia D-3
-    calendario de D .... deterministico, liberado
+    CMO ................ through the end of D-1
+    load, interchange .. through the end of D-2
+    EAR, ENA ............ through D-3
+    D's calendar ........ deterministic and available
 
-O CMO ser publicado antes do dia nao esvazia a tarefa: na emissao das 12:00 de
-D-1 o numero do operador para o dia D ainda nao saiu.
+Advance CMO publication does not make the task tautological: at 12:00 on D-1,
+the operator's value for day D has not yet been published.
 
-DE ONDE VEM A LEITURA
----------------------
-Os leitores do ONS estao em `lucertae.sources.series`, e os atrasos de
-publicacao em `lucertae.gate`. Estavam aqui ate 07/09/2026, quando o mesmo codigo apareceu
-pela segunda vez em `experiments/E-osciloscopio/_comum.py`: duas copias da mesma
-serie sao duas series que podem divergir sem ninguem notar.
+SOURCE READERS
+--------------
+ONS readers are in `lucertae.sources.series`; publication lags are in
+`lucertae.gate`. The reader code was moved there from this experiment to avoid
+duplicating it in `experiments/E-osciloscopio/_comum.py`.
 
-PROPRIEDADES DO DADO QUE OBRIGAM DECISAO
-----------------------------------------
-1. Faltam 8 dias inteiros de CMO na janela (48 meias-horas x 4 subsistemas cada).
-   Eles entram na grade como ausentes e sao descartados com contagem, nunca
-   preenchidos por interpolacao -- interpolar criaria alvo que o operador nunca
-   publicou. Cada buraco custa TRES dias de painel: o proprio, o dia seguinte
-   que perde o D-1 e o dia sete depois que perde o D-7.
-2. O CMO e limitado por piso e teto regulatorios e encosta nos dois: 17% a 28%
-   das meias-horas ficam em <= 1 R$/MWh, e o maximo observado e 4.870,95.
-   A distribuicao e inflada no piso e de cauda pesada a direita.
-3. A carga e o intercambio sao HORARIOS; o CMO e semi-horario. A juncao e pela
-   hora cheia, e as duas meias-horas de uma hora recebem o mesmo valor.
+DATA PROPERTIES THAT CONSTRAIN THE ANALYSIS
+-------------------------------------------
+1. Eight full CMO days are missing from the window (48 half-hours x 4
+   subsystems). They remain missing and are counted, never interpolated;
+   interpolation would invent targets that the operator did not publish. Each
+   gap removes three panel days: the missing day, the next day without D-1, and
+   the day seven days later without D-7.
+2. CMO is bounded by regulatory floors and ceilings and reaches both. Between
+   17% and 28% of half-hours are at or below 1 R$/MWh; the observed maximum is
+   4,870.95. The distribution has mass at the floor and a heavy right tail.
+3. Load and interchange are hourly; CMO is half-hourly. Join on the full hour,
+   assigning the same hourly value to both half-hours.
 """
 import numpy as np
 
-from lucertae.paths import ROOT as RAIZ, output_dir as saida
-from lucertae.sources.series import (
-    SUBSYSTEMS as SUBSISTEMAS, cmo, ear, ear_sin, ena, hourly_load as carga,
-    net_interchange as intercambio_liquido)
+from lucertae.paths import output_dir
 
-SAIDA = saida("E-cmo-price")
+OUTPUT_DIR = output_dir("E-cmo-price")
 
-PAINEL = SAIDA / "painel.parquet"
-CONTROLES = SAIDA / "controles.json"
-PREVISOES = SAIDA / "previsoes.parquet"
-RESULTADO = SAIDA / "resultado.json"
-DECOMPOSICAO = SAIDA / "decomposicao.json"
+PANEL_PATH = OUTPUT_DIR / "painel.parquet"
+CONTROLS_PATH = OUTPUT_DIR / "controles.json"
+PREDICTIONS_PATH = OUTPUT_DIR / "previsoes.parquet"
+RESULT_PATH = OUTPUT_DIR / "resultado.json"
+DECOMPOSITION_PATH = OUTPUT_DIR / "decomposicao.json"
 
-# Portao, em dias, contado do dia alvo D. Numero maior e informacao mais velha.
-# O atraso que justifica cada um esta MEDIDO em `lucertae.gate`, com
-# `lucertae gate` refazendo a medida sobre os arquivos em disco.
-from lucertae.gate import GATE_DAYS as ATRASO_DIAS
+# Gate offsets are measured in days back from target day D; larger values refer
+# to older information. The measurements are in `lucertae.gate` and can be
+# reproduced with `lucertae gate` on the source files on disk.
+from lucertae.gate import GATE_DAYS
 
-ATRASO_CMO = ATRASO_DIAS["cmo"]
-ATRASO_CARGA = ATRASO_DIAS["load"]
-ATRASO_HIDRO = ATRASO_DIAS["ear"]
+CMO_LAG_DAYS = GATE_DAYS["cmo"]
+LOAD_LAG_DAYS = GATE_DAYS["load"]
+HYDRO_LAG_DAYS = GATE_DAYS["ear"]
 
-# Faixa fisica do CMO em R$/MWh. Piso e teto regulatorios do PLD, com folga:
-# o teto observado na janela e 4.870,95 e o minimo e -39,24.
-CMO_PISO = -100.0
-CMO_TETO = 6000.0
+# Physical CMO range in R$/MWh. These limits leave margin around the PLD
+# regulatory floor and ceiling; the observed window ranges from -39.24 to
+# 4,870.95.
+CMO_MIN_VALUE = -100.0
+CMO_MAX_VALUE = 6000.0
 
-# Limiar de "piso" para a fracao de meias-horas em custo marginal nulo.
-LIMIAR_PISO = 1.0
+# Threshold used to calculate the fraction of half-hours at the marginal-cost floor.
+CMO_FLOOR_THRESHOLD = 1.0
 
 
-def naive_sazonal(cmo_l1, cmo_l7, dow):
-    """Linha de base ingenua canonica da literatura de previsao de preco.
+def seasonal_naive(cmo_lag_1, cmo_lag_7, day_of_week):
+    """Canonical seasonal-naive baseline from the price-forecasting literature.
 
-    Terca a sexta repetem D-1; sabado, domingo e segunda repetem D-7, porque o
-    dia anterior a eles tem perfil de outro tipo de dia. `dow` segue o pandas:
-    0 e segunda.
+    Tuesday through Friday repeat D-1; Saturday through Monday repeat D-7,
+    because their immediately preceding day has a different day-type profile.
+    `day_of_week` follows pandas numbering, where 0 is Monday.
     """
-    return np.where(np.isin(dow, [1, 2, 3, 4]), cmo_l1, cmo_l7)
+    return np.where(np.isin(day_of_week, [1, 2, 3, 4]), cmo_lag_1, cmo_lag_7)

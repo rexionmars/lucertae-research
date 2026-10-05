@@ -1,19 +1,19 @@
-"""Nomes de preditor e hiperparametro, compartilhados pelos passos 3, 4 e 5.
+"""Shared predictor names and hyperparameters for steps 3, 4, and 5.
 
-Fica separado para o nome do preditor ter UMA fonte: mudar a lista aqui muda a
-tabela do passo 3, a decomposicao do passo 4 e a ablacao do passo 5 juntas.
+Keeping predictor names in one place ensures that changes are reflected in the
+step 3 results, step 4 decomposition, and step 5 ablation together.
 """
-SEMENTE = 1
+RANDOM_SEED = 1
 
 PARAMS = dict(objective="mae", n_estimators=600, learning_rate=0.05,
               num_leaves=63, min_child_samples=40, subsample=0.8,
               subsample_freq=1, colsample_bytree=0.8, verbose=-1,
-              n_jobs=-1, random_state=SEMENTE)
+              n_jobs=-1, random_state=RANDOM_SEED)
 
-PREDITORES = ["cmo_l1", "cmo_l7", "naive_sazonal", "climatologia",
+PREDICTORS = ["cmo_l1", "cmo_l7", "naive_sazonal", "climatologia",
               "lgbm_direto", "lgbm_residual", "lgbm_duas_partes",
               "oraculo_nivel"]
-ADVERSARIO = "naive_sazonal"
+BASELINE = "naive_sazonal"
 
-FRACAO_TREINO_INICIAL = 0.55
-B_BOOT = 2000
+INITIAL_TRAIN_FRACTION = 0.55
+N_BOOTSTRAP = 2000
