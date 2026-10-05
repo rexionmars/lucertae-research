@@ -1,0 +1,167 @@
+' Solara: application specification
+' Diagrams of the specification (plataforma-mapa-en.tex)
+' en-US version of `plataforma-mapa.puml`: same nodes, same links, same style.
+'
+' Render, from inside docs/product/diagrams/:
+'   plantuml -charset UTF-8 -tsvg -tpng plataforma-mapa-en.puml
+'   rsvg-convert -f pdf -o arquitetura-solara-en.pdf arquitetura-solara-en.svg
+'   rsvg-convert -f pdf -o fluxo-leitura-en.pdf fluxo-leitura-en.svg
+'
+' Style: box with black border and white fill, group in #F3F3F3, no shadow,
+' link type encoded by both color and stroke, orthogonal layout.
+
+' ===========================================================================
+' 1. Architecture: what runs on the machine and what each part reads
+' ===========================================================================
+@startuml arquitetura-solara-en
+left to right direction
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam linetype ortho
+skinparam nodesep 28
+skinparam ranksep 70
+skinparam packageStyle rectangle
+skinparam ArrowColor #000000
+skinparam package {
+  BackgroundColor #F3F3F3
+  BorderColor #000000
+  FontStyle bold
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  Style rectangle
+}
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+skinparam file {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+
+package "Store loading (outside Solara)" as carga {
+  component "TERRA loader\nONS and ANEEL -> br schema" as l_terra
+  component "BDGD loader\n-> bdgd schema\n(not distributed)" as l_bdgd
+  component "contract/load.py\nWRI, OSM, geoBoundaries\n-> solara schema" as l_contrato
+}
+
+package "User's machine" as maq {
+  database "Grid store\nPostgreSQL + PostGIS\n(read-only)" as store
+  component "Python sidecar\none process per request\nenergy, sun, terrain,\ngrid, weather, world" as sidecar
+  component "Go/Wails shell\nbindings, one request at a time,\ncancellable" as casca
+  component "Interface (webview)\nstudio: map, editors,\noperators, undo" as ui
+  file "Project\nname.solara\nname.solara-data" as projeto
+  file "User cache\nPOWER series,\nwind field of the hour" as cache
+}
+
+package "Public sources, read on demand" as pub {
+  component "NASA POWER\nirradiation, meteorology" as power
+  component "Planetary Computer\nCopernicus DEM GLO-30,\nESA WorldCover 2021" as pc
+  component "NOAA GFS (UCAR THREDDS)\nwind field" as gfs
+  component "geoBoundaries\nboundaries of any country" as geob
+  component "IBGE\nmeshes and localities" as ibge
+  component "NASA GIBS, RainViewer,\nOpen-Meteo\nclouds, rain, current conditions" as tempo
+  component "OpenFreeMap, EOX Sentinel-2,\nSIGEL, Black Marble\nbasemaps and published registries" as fundos
+}
+
+' local call: solid black
+ui --> casca
+casca --> sidecar
+sidecar --> store
+casca --> projeto
+sidecar --> cache
+
+' read over the network: dashed blue
+sidecar -[#0072B2,dashed]-> power
+sidecar -[#0072B2,dashed]-> pc
+sidecar -[#0072B2,dashed]-> gfs
+sidecar -[#0072B2,dashed]-> geob
+ui -[#0072B2,dashed]-> ibge
+ui -[#0072B2,dashed]-> tempo
+ui -[#0072B2,dashed]-> fundos
+
+' loading done by another program: dotted gray
+l_terra -[#777777,dotted]-> store
+l_bdgd -[#777777,dotted]-> store
+l_contrato -[#777777,dotted]-> store
+
+legend bottom left
+  solid black: local call
+  dashed blue: read over the network
+  dotted gray: loading done by another program
+end legend
+@enduml
+
+' ===========================================================================
+' 2. Flow of a reading: from the place chosen on the map to the map layer
+' ===========================================================================
+@startuml fluxo-leitura-en
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam ArrowColor #000000
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #000000
+}
+skinparam partition {
+  BackgroundColor #F3F3F3
+  BorderColor #000000
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #777777
+}
+
+start
+partition "Map" {
+  :Choose the place;
+  note right
+    site: a point
+    area: an entry of the boundary catalog
+  end note
+}
+partition "Properties" {
+  :Open the product card;
+  if (Does the product answer here?) then (no)
+    :The card states the reason\n(store absent, no grid data,\nno Brazilian registry);
+    stop
+  else (yes)
+  endif
+  :Read the list of inputs and the state of each one;
+  :Run;
+}
+partition "Sidecar" {
+  :Validate the place before downloading;
+  :Compute, with progress and cancellation;
+  if (Could any input not be read?) then (yes)
+    :The run fails and the input is left in error;
+    stop
+  else (no)
+  endif
+}
+partition "Project" {
+  :Save the result with the parameters and the place;
+}
+partition "Map and reading" {
+  :Draw the layer and frame the place;
+  :Open the reading: one number, up to four\nsupporting numbers, panels, method;
+  :Compare with other results of the product\nand export (CSV, JSON, GeoTIFF);
+}
+if (Did the place or a parameter change afterwards?) then (yes)
+  :The result is marked stale;
+else (no)
+endif
+stop
+@enduml

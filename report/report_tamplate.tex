@@ -1,0 +1,86 @@
+% !TEX program = pdflatex
+% =====================================================================
+% modelo.tex -- esqueleto de documento avulso da linha Solara
+%
+% Copie este arquivo, renomeie, troque os tres campos da `\abertura` e
+% escreva. Nao ha decisao de forma a tomar: mancha, fontes,
+% paleta e abertura saem do `estilo-reporte.sty` e do `config/preambulo.tex`.
+%
+%   cp modelo.tex meu-registro.tex
+%   latexmk -pdf meu-registro.tex
+%
+% MOTOR. pdflatex. A fonte e a Charis SIL, com matematica do newtxmath e
+% Bera Mono, todas do TeX Live; o preambulo base recusa outro motor. O
+% `% !TEX program` no topo faz o VS Code acertar o motor sozinho.
+%
+% DIRETORIO. Compile de dentro de `report/`. O caminho do preambulo base
+% e o da marca sao relativos a ele.
+%
+% FORMA. E a de manual tecnico: coluna unica de 152 mm, titulos recuados
+% 14 mm para a esquerda, rodape com o nome do arquivo, a data e "pagina X
+% de Y". Avisos (`perigo`, `atencao`, `cuidado`, `aviso`), `nota`,
+% `passos` e `historico` vem do preambulo base.
+%
+% CLASSE. E `book` porque a folha de estilo usa `\chaptertitlename` e os
+% comandos de capitulo do `tocloft`; em `article` ela nao carrega.
+% Documento avulso nao abre capitulo -- use `\section*` e
+% `\subsection*`, como abaixo.
+%
+% DEITADO. Documento que existe para caber uma tabela larga corre dentro
+% de `landscape` -- `tarefas-dados.tex` e `modelos-metodos.tex` sao os
+% dois casos. La, carregue `geometry` proprio antes da folha de estilo e
+% ponha `\pagestyle{empty}`, porque o rodape sai deitado na margem
+% lateral depois que o `pdflscape` gira a folha.
+% =====================================================================
+\documentclass[10pt,a4paper,oneside]{book}
+
+\usepackage[brazilian]{babel}
+\usepackage{estilo-reporte}
+
+% A pagina termina onde o texto termina.
+\raggedbottom
+
+\autoria{João Leonardi da Silva Melo}{joao\_leonardi.melo@somosicev.com}
+% \marca{outro/arquivo.png}   % descomente so para trocar a marca
+
+\begin{document}
+
+\abertura{Título do documento}
+         {Registro de execução · \today{} ·
+          \texttt{caminho/do/script.py}}
+
+\section*{Primeira seção}
+
+Texto. O corpo e a Charis SIL a 10 pt, e a linha de 152 mm corre a 98,1
+caracteres.
+
+\campo{Rótulo} Parágrafo com rótulo destacado na cor da marca.
+
+\termo{Termo} marca vocabulário novo; \exper{nome-do-experimento} marca
+nome de experimento; \texttt{arquivo.py} marca caminho e nome de coluna.
+
+\begin{ficha}
+  \item[Primeiro]  a lista de ficha e para definição curta, e o rótulo
+                   fica na sem serifa em negrito.
+  \item[Segundo]   o corpo dela cai para 7,4 pt.
+\end{ficha}
+
+\pepar[Pendente]{a marca de vaga imprime o que falta e some quando o
+campo e preenchido; uma varredura por \texttt{pe} diz quanto do
+documento existe.}
+
+\section*{Resultado}
+
+\tabfont
+\begin{tabular}{@{}>{\rag\arraybackslash}p{3.3cm}rr@{}}
+\toprule
+\cab{Modelo} & \cab{Viés} & \cab{MAE} \\
+\midrule
+Uma linha      & $-1{,}032$ & 1,301 \\
+Outra linha    & $+0{,}258$ & 0,962 \\
+\bottomrule
+\end{tabular}
+\notas{A nota de tabela cai para 6,8 pt e diz unidade, recorte e
+janela. \num{271} usinas, 2025.}
+
+\end{document}

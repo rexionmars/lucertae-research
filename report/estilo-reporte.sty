@@ -1,28 +1,24 @@
 % =====================================================================
-% estilo-reporte.sty -- identidade do relatorio de andamento
+% estilo-reporte.sty -- elementos de forma do relatorio de andamento
 %
-% MANCHA. A4, margens de 1,9 cm nas laterais e 2,0/2,2 cm no topo e no
-% pe. A mancha fica com 17,2 cm, ou 82% da largura da folha, contra os
-% 12,5 cm (60%) dos documentos de estudo da linha. Com 0,7 cm de
-% medianiz, cada coluna tem 8,25 cm.
+% BASE. Fonte, pacotes, numeros e unidades, legenda, titulo de secao e
+% cabecalho saem de `config/preambulo.tex`, o mesmo arquivo que os
+% documentos de `docs/product/` carregam. Esta folha acrescenta so o que
+% e do relatorio: paleta, abertura com a marca, titulo de parte e de
+% capitulo, sumario, tabela densa, ficha, nota e apendice deitado.
 %
-% MEDIDA DE LINHA. Medida, e nao estimada: uma frase de 139 caracteres,
-% composta em IBM Plex Serif a 10 pt, ocupa 659,12 pt, o que da 4,742 pt
-% por caractere. A 8,25 cm a coluna corre a 49,5 caracteres por linha.
-% A faixa confortavel de coluna de periodico vai de 45 a 60.
+% MANCHA. E a de manual do preambulo base: coluna unica de 152 mm, com
+% os titulos recuados 14 mm para a esquerda. O documento em pe nao carrega
+% `geometry`. Nao ha mais duas colunas.
 %
-% Duas colunas resolvem a exigencia de aproveitar a folha sem alongar a
-% linha: a mancha cresce 38% em largura e a medida de leitura encolhe de
-% ~73 para ~50 caracteres. E a razao de o corpo ficar a 10 pt e nao a
-% 11 pt, que daria 45 caracteres e quebraria palavra longa a cada linha.
+% TABELA DEITADA. Tabela que nao cabe nem na largura util de 166 mm vai
+% para `landscape`, que gira a pagina tambem no leitor de PDF. Documento
+% que e so tabela larga -- `tarefas-dados.tex`, `modelos-metodos.tex` --
+% carrega `geometry` proprio antes desta folha e corre inteiro deitado;
+% ali a margem de titulo vale zero.
 %
-% TABELA DEITADA. Tabela larga nao cabe em coluna de 8,25 cm nem em
-% mancha de 17,2 cm. Os apendices saem do regime de duas colunas e
-% entram em `landscape`, que gira a pagina tambem no leitor de PDF. A
-% largura util ali e a altura da mancha em pe, 25,3 cm.
-%
-% PALETA. Derivada da `terra-mark.png`. O destaque e o verde medio da
-% marca, #658637, terceira cor mais usada dela. A fechada nao vem da
+% PALETA. O destaque e o verde da marca Solara, #658637, a folha de cima
+% do simbolo em `solara-logo-on-light.png`. A fechada nao vem da
 % marca: nenhum verde dela e escuro o bastante, entao e o mesmo matiz e
 % saturacao rebaixados ate a separacao de claridade que a paleta anterior
 % usava. A tinta2 sai do quase-preto quente #24201B, clareado ate o
@@ -33,115 +29,16 @@
 %
 % Sem dependencia de pacote externo a este diretorio: um relatorio que
 % nao compila num clone limpo nao e um relatorio.
+%
+% DIRETORIO. Compile de dentro de `report/`: o caminho do preambulo base
+% e o da marca sao relativos a ele.
 % =====================================================================
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{estilo-reporte}[2026/09/01 Relatorio de andamento TERRA-Simulation]
+\ProvidesPackage{estilo-reporte}[2026/09/01 Relatorio de andamento Solara]
 
-% FAMILIAS. Dependem do motor, porque a Urbanist nao existe empacotada
-% no CTAN: e um TTF do Google Fonts, e so `fontspec` le TTF solto. Um
-% pacote CTAN traria a fonte tambem em Type 1 com codificacao T1, que e
-% o que o pdflatex consome; o TTF nao serve para ele.
-%
-%   pdflatex           -> IBM Plex Serif + IBM Plex Sans (antigo)
-%   lualatex/xelatex   -> Urbanist no corpo e nos titulos
-%
-% O `reporte.tex` continua saindo em pdflatex sem alteracao; quem quiser
-% Urbanist troca o motor no proprio documento. `Path` e relativo ao
-% diretorio de compilacao, entao compile de dentro de `report/`.
-%
-% A monoespacada e Plex Mono nos dois casos. Sem serifa vizinha ela
-% destoa mais do que destoava, e isso e aceito: o `\texttt` aqui marca
-% nome de arquivo e de coluna, e destacar e a funcao dele.
-%
-% ESCALAS. Casadas pela altura-x, e nao pelo corpo nominal, e as duas
-% saem da mesma conta. Plex Serif e Plex Sans tem altura-x de 0,516 em;
-% a sans rodava a .96, logo 0,4954 efetivo contra 0,516 do corpo. A
-% Urbanist tem 0,500, entao precisa de 0,516/0,500 = 1,032 no corpo e de
-% 0,4954/0,500 = 0,99 na sans. A razao entre as duas fica em 0,959, que
-% reproduz o .96 anterior: a hierarquia optica nao se mexe.
-%
-% MEDIDA DE LINHA. Medida nos dois, sobre a mesma frase de 134
-% caracteres: Plex Serif da 4,891 pt por caractere e Urbanist a 1,032 da
-% 4,727. Na coluna de 8,25 cm sao 48,0 e 49,7 caracteres por linha. A
-% troca alarga a linha em 3,4% e continua dentro da faixa de 45 a 60.
-%
-% RESSALVA. Urbanist e geometrica de altura-x baixa, desenhada para
-% display. Em duas colunas densas ela cansa mais que a Plex Serif ao
-% longo de muitas paginas. Cabe num registro de execucao de duas ou tres
-% paginas; se este documento crescer, a escolha merece ser revista.
-\RequirePackage{iftex}
-\ifPDFTeX
-  \RequirePackage[T1]{fontenc}
-  \RequirePackage{plex-serif}
-  \RequirePackage[scale=.96]{plex-sans}
-  \RequirePackage[scale=.92]{plex-mono}
-\else
-  \RequirePackage[scale=.92]{plex-mono}
-  \RequirePackage{fontspec}
-  % A Urbanist chega como fonte variavel; `fontes/urbanist/` guarda as
-  % instancias estaticas geradas do eixo `wght`, mais os dois arquivos
-  % variaveis de origem e a licenca OFL, que a licenca exige distribuir.
-  \defaultfontfeatures[Urbanist]{
-    Path            = fontes/urbanist/,
-    Extension       = .ttf,
-    UprightFont     = *-Regular,
-    ItalicFont      = *-Italic,
-    BoldFont        = *-Bold,
-    BoldItalicFont  = *-BoldItalic,
-    FontFace        = {l}{n}{*-Light},
-    FontFace        = {l}{it}{*-LightItalic},
-    FontFace        = {mb}{n}{*-Medium},
-    FontFace        = {mb}{it}{*-MediumItalic},
-    FontFace        = {sb}{n}{*-SemiBold},
-    FontFace        = {sb}{it}{*-SemiBoldItalic},
-  }
-  \setmainfont{Urbanist}[Scale=1.032]
-  \setsansfont{Urbanist}[Scale=0.99]
-\fi
+\input{config/preambulo}
 
-\RequirePackage{xcolor}
-\RequirePackage{graphicx}
-\RequirePackage{array}
-\RequirePackage{booktabs}
 \RequirePackage{longtable}
-\RequirePackage{pdflscape}
-\RequirePackage{enumitem}
-% MATEMATICA. Com o corpo serifado, o Computer Modern da matematica
-% passava despercebido. Contra a Urbanist ele denuncia: na tabela de
-% resultado os numeros com sinal, que sao matematica, saiam serifados, e
-% os sem sinal, que sao texto, nao. Lado a lado na mesma linha.
-%
-% A matematica daqui nao passa de numero com sinal, `\cdot`, `\le` e uma
-% barra: nada que exija `amssymb`. Entao no motor unicode o `unicode-math`
-% entra no lugar dele e traz digito e letra da propria Urbanist, deixando
-% operador e delimitador com o Latin Modern Math, neutro o bastante para
-% um menos. Em pdflatex nada muda: o corpo ali continua Plex Serif e o
-% Computer Modern nao destoa.
-%
-% `unicode-math` e `amssymb` colidem -- os dois definem `\eth`,
-% `\digamma`, `\backepsilon` --, por isso a carga e exclusiva.
-\ifPDFTeX
-  \RequirePackage{amsmath,amssymb}
-\else
-  \RequirePackage{amsmath}
-  \RequirePackage{unicode-math}
-  \setmathfont{Latin Modern Math}
-  % O nome da familia nao resolve aqui como resolve no `\setmainfont`:
-  % `\setmathfont` nao le as chaves de face, entao o arquivo vai direto.
-  \setmathfont{Urbanist-Regular.ttf}[Path=fontes/urbanist/, Scale=1.032,
-    range={up/{latin,Latin,num}}]
-  \setmathfont{Urbanist-Italic.ttf}[Path=fontes/urbanist/, Scale=1.032,
-    range={it/{latin,Latin}}]
-  % Os quatro simbolos que este documento usa a Urbanist tem, entao o
-  % Latin Modern fica so de rede: menos, mais, ponto medio, `\le` e a
-  % barra saem da propria fonte. O menos importa em particular -- o do
-  % Latin Modern e longo o bastante para se confundir com o travessao
-  % que a tabela usa como "nao se aplica".
-  \setmathfont{Urbanist-Regular.ttf}[Path=fontes/urbanist/, Scale=1.032,
-    range={"2212,"002B,"00B7,"2264,"007C}]
-\fi
-\RequirePackage{microtype}
-\RequirePackage{caption}
 \RequirePackage{tocloft}
 % Enchimento da maquete. Sai quando o texto entrar; enquanto estiver
 % carregado, o PDF mostra a forma do documento e nao o conteudo dele.
@@ -158,17 +55,10 @@
 \setlength{\aboverulesep}{0.35ex}
 \setlength{\belowrulesep}{0.45ex}
 
-% A barra do rotulo em texto, e nao em modo matematico: dentro de
-% tabela a 7,4 pt o modo matematico pede corpo 3,7 e o TeX substitui.
-\DeclareCaptionLabelFormat{natureza}{\textbf{#1~#2~\textbar}}
-\captionsetup{labelformat=natureza, labelsep=space, font={small,sf},
-              labelfont={bf}, justification=raggedright,
-              singlelinecheck=false, skip=4pt}
-
 % --- titulos ---------------------------------------------------------
-% Em coluna de 8,25 cm o titulo nao e justificado nem hifenizado: a
-% justificacao abre buracos e o hifen quebra a palavra no meio.
-\RequirePackage[raggedright]{titlesec}
+% Secao e subdivisoes saem do preambulo base. Parte e capitulo sao so do
+% relatorio, que e `book`. Avancam sobre a margem de titulo, como a
+% secao. O titulo nao e justificado nem hifenizado.
 
 \titleformat{\part}[display]
   {\sffamily\bfseries\Huge\filright}
@@ -180,16 +70,10 @@
   % acompanha sem intervenção.
   {\normalsize\normalfont\sffamily\color{tinta2}\chaptertitlename\ \thechapter}
   {0.4em}{\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
-\titlespacing*{\chapter}{0pt}{0pt}{1.2em}
-\titleformat*{\section}{\sffamily\large\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
-\titleformat*{\subsection}{\sffamily\normalsize\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
-\titleformat*{\subsubsection}{\sffamily\small\bfseries\hyphenpenalty=10000\exhyphenpenalty=10000\hbadness=10000 }
-\titlespacing*{\section}{0pt}{1.4em}{.5em}
-\titlespacing*{\subsection}{0pt}{1.0em}{.4em}
-\titlespacing*{\subsubsection}{0pt}{0.8em}{.3em}
+\titlespacing*{\chapter}{-\margemmanual}{0pt}{1.4em}
+\titlespacing*{\part}{-\margemmanual}{0pt}{1.4em}
 
-% O sumario acompanha os titulos: sem serifa. Sem isto ele sai na
-% serifada da classe, e e a unica peca do documento fora do padrao.
+% O sumario acompanha os titulos de parte e de capitulo.
 \renewcommand{\cfttoctitlefont}{\sffamily\bfseries\Huge}
 \renewcommand{\cftpartfont}{\sffamily\bfseries}
 \renewcommand{\cftpartpagefont}{\sffamily\bfseries}
@@ -211,32 +95,27 @@
 % arquivos um modelo e nao quatro aberturas parecidas. Um documento novo
 % preenche os tres campos e nao decide mais nada de forma.
 %
-% A marca e brasao hexagonal escuro, e nao logotipo horizontal. Abaixo de
-% uns 12 mm o "EARTH OBSERVATION" fecha e vira mancha; os 15 mm de
-% `\marcalargura` sao o menor tamanho em que a palavra TERRA ainda se le,
-% que e o que precisa ser lido. Nao encolha sem olhar impresso.
+% A marca e logotipo horizontal, 634 x 90 px, de proporcao 7:1: simbolo
+% de duas folhas e a palavra Solara em tinta escura, a versao para fundo
+% claro. Os 30 mm de `\marcalargura` dao 4,3 mm de altura, perto da altura
+% de uma linha do titulo. Nao encolha sem olhar impresso.
 %
-%   \marca{../docs/img/terra-mark.png}   % ja e o valor de fabrica
+%   \marca{outro/arquivo.png}         % sem isso, a marca do preambulo base
 %   \autoria{Nome}{correio@dominio}    % opcional; sem isso a linha some
 %   \abertura{Titulo}{Registro de ... \textbackslash{} data \textbackslash{} arquivo}
 %
-% `\abertura` ja embute o `\twocolumn[...]`, entao chame-a no lugar dele,
-% logo depois do `\begin{document}`.
-%
-% DUAS COLUNAS OU UMA. `\abertura` serve o documento em pe, de duas
-% colunas, que e o caso comum. Documento deitado -- `tarefas-dados.tex`,
-% `modelos-metodos.tex` -- corre em uma coluna dentro de `landscape`, e
-% ali `\twocolumn` nao cabe: use `\aberturaunica`, que imprime o mesmo
-% bloco sem trocar o numero de colunas. Os dois campos sao os mesmos, e a
-% forma sai daqui nos dois casos -- o que muda e so o invólucro.
+% UMA FORMA SO. `\abertura` e `\aberturaunica` imprimem o mesmo bloco.
+% Os dois nomes ficam porque os documentos ja os usam; a diferenca entre
+% eles era o `\twocolumn`, que saiu com a forma de manual. O bloco ocupa
+% a largura util inteira, margem de titulo incluida.
 %
 % O corpo do bloco fica em `\re@aberturacorpo` para que as duas versoes
 % nao se separem: mexer na marca, no fio ou na assinatura de uma mexe na
 % outra.
-\newlength{\marcalargura}\setlength{\marcalargura}{15mm}
+\newlength{\marcalargura}\setlength{\marcalargura}{30mm}
 \newlength{\marcarespiro}\setlength{\marcarespiro}{5mm}
 
-\newcommand{\re@marca}{../docs/img/terra-mark.png}
+\newcommand{\re@marca}{\marcaarquivo}
 \newcommand{\marca}[1]{\renewcommand{\re@marca}{#1}}
 
 \newcommand{\re@autor}{}
@@ -259,7 +138,10 @@
 % `\linewidth` e `\columnwidth`, e `\textwidth` continua valendo a largura
 % da pagina em pe. Um fio de `\textwidth` dentro de `landscape` para a dois
 % tercos da mancha -- fica curto, e parece descuido de desenho.
-\newcommand{\re@aberturacorpo}[3]{%
+\newcommand{\re@aberturacorpo}[2]{%
+  \gdef\doctitulo{#1}%
+  \thispagestyle{rosto}%
+  \begin{adjustwidth}{-\margemmanual}{0pt}%
   \vspace*{-0.4em}%
   \noindent
   % A marca alinha pelo pe do bloco de texto, e nao pelo topo: o titulo
@@ -268,32 +150,29 @@
     \includegraphics[width=\marcalargura]{\re@marca}%
   \end{minipage}%
   \hspace{\marcarespiro}%
-  \begin{minipage}[b]{\dimexpr#1-\marcalargura-\marcarespiro\relax}%
+  \begin{minipage}[b]{\dimexpr\linewidth-\marcalargura-\marcarespiro\relax}%
     {\sffamily\bfseries\LARGE\hyphenpenalty=10000\exhyphenpenalty=10000
-     \raggedright #2\par}%
+     \raggedright #1\par}%
     \vspace{0.35em}%
-    {\sffamily\fontsize{9}{11}\selectfont\color{tinta2}\raggedright #3\par}%
+    {\sffamily\fontsize{9}{11}\selectfont\color{tinta2}\raggedright #2\par}%
     \vspace{0.25em}%
     \re@assinatura
   \end{minipage}%
   \vspace{0.7em}\par
-  \noindent{\color{destaque}\rule{#1}{0.6pt}}%
+  \noindent{\color{destaque}\rule{\linewidth}{0.6pt}}%
+  \end{adjustwidth}%
   \vspace{1.0em}%
 }
 
-\newcommand{\abertura}[2]{\twocolumn[{\re@aberturacorpo{\textwidth}{#1}{#2}}]}
-
-% Deitado, em uma coluna. A mancha e `\linewidth` -- 25,3 cm contra os
-% 16,8 cm da pagina em pe -- entao a marca fica do mesmo tamanho e o fio
-% fecha a mancha inteira, que e o que ele existe para fazer.
-\newcommand{\aberturaunica}[2]{\re@aberturacorpo{\linewidth}{#1}{#2}\par}
+% A pagina da abertura sai sem cabecalho, porque o titulo ja esta no
+% bloco, e com o rodape de identificacao.
+\newcommand{\abertura}[2]{\re@aberturacorpo{#1}{#2}\par}
+\newcommand{\aberturaunica}[2]{\re@aberturacorpo{#1}{#2}\par}
 
 % --- marcacoes de texto ----------------------------------------------
-% Nome do experimento. Nem Plex Serif nem Plex Sans trazem versalete, e
-% `\textsc` cairia em silencio na caixa normal. A marca e o semibold da
-% familia serifada, que existe nas duas larguras e nao colide com o
-% negrito, reservado a enfase.
-\newcommand{\exper}[1]{{\rmfamily\fontseries{sb}\selectfont #1}}
+% Nome do experimento, em versalete. A Charis SIL traz versalete proprio,
+% e o preambulo base ja o espaceja; o negrito fica reservado a enfase.
+\newcommand{\exper}[1]{\textsc{#1}}
 \newcommand{\termo}[1]{\textbf{\textcolor{destaque}{#1}}}
 \newcommand{\campo}[1]{\par\smallskip\noindent\textbf{\textcolor{destaque}{#1.}}\space}
 
@@ -407,11 +286,5 @@
      \begin{multicols}{2}}
   {\end{multicols}\par\medskip}
 
-\RequirePackage{siunitx}
-\sisetup{output-decimal-marker={,},group-separator={\,},
-         group-minimum-digits=4,separate-uncertainty=true}
-
-\RequirePackage[hidelinks]{hyperref}
-
-\setlength{\emergencystretch}{2.5em}
+\setlength{\emergencystretch}{4em}
 \endinput

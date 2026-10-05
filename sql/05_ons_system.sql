@@ -1,5 +1,5 @@
 -- Raw ONS system tables (load, energy balance and daily schedule).
--- Loaded by: uv run python -m lucertae.corte.ons load
+-- Loaded by: uv run python -m lucertae.sources.ons load
 -- Idempotent: only creates what does not exist. Lineage in br.source_file, like the rest of the br schema.
 --
 -- Time convention: `instante` is the START of the interval, in Brasília time (UTC-3),
@@ -103,7 +103,7 @@ create table if not exists br.interchange_hourly (
 );
 
 -- Archived weather forecasts (Open-Meteo Previous Runs API, ECMWF IFS 0.25°)
--- loaded by: uv run python -m lucertae.corte.weather
+-- loaded by: uv run python -m lucertae.sources.weather
 create table if not exists br.weather_cell (
     cell_id    text primary key,          -- 'lat_lon' rounded to 0.25°
     latitude   double precision not null,

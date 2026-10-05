@@ -1,479 +1,166 @@
-' Plataforma preditiva baseada em mapa
+' Solara: especificação da aplicação
 ' Diagramas da especificação (plataforma-mapa.tex)
 '
-' Renderizar: plantuml -charset UTF-8 -tsvg -tpng plataforma-mapa.puml
+' Renderizar, de dentro de docs/product/diagrams/:
+'   plantuml -charset UTF-8 -tsvg -tpng plataforma-mapa.puml
+'   rsvg-convert -f pdf -o arquitetura-solara.pdf arquitetura-solara.svg
+'   rsvg-convert -f pdf -o fluxo-leitura.pdf fluxo-leitura.svg
+'
+' Estilo: caixa de borda preta e fundo branco, grupo em #F3F3F3, sem sombra,
+' ligação por tipo com cor e traço redundantes, leiaute ortogonal.
 
 ' ===========================================================================
-' 1. Hierarquia de camadas: o que o usuário pode selecionar
+' 1. Arquitetura: o que roda na máquina e o que cada parte lê
 ' ===========================================================================
-@startuml hierarquia-camadas
-title Hierarquia de camadas — o "onde" é sempre uma entidade
-
-skinparam defaultFontName Helvetica
-skinparam shadowing false
-skinparam roundcorner 8
-skinparam ArrowColor #444444
-skinparam packageStyle rectangle
-skinparam class {
-  BackgroundColor #F4F8FC
-  BorderColor #1C568C
-  HeaderBackgroundColor #EAF1F8
-}
-skinparam class<<agregada>> {
-  BackgroundColor #FFF8E6
-  BorderColor #B07A1A
-}
-skinparam class<<recorte>> {
-  BackgroundColor #FFFFFF
-  BorderColor #8AA9C7
-}
-hide circle
-hide methods
-hide empty members
-
-package "Hierarquia elétrica (onde vivem os dados e os modelos)" {
-  class "Operador / área de concessão" as op {
-    perda agregada
-    carga e MMGD previstas
-    insights consolidados
-  }
-  class "Subestação" as se {
-    carregamento previsto
-    risco de ativos
-  }
-  class "Alimentador" as al {
-    perda estimada
-    carregamento previsto
-    MMGD prevista
-  }
-  class "Transformador" as tr {
-    perda estimada
-    balanço energético
-    carregamento previsto
-  }
-  class "Unidades consumidoras" as uc <<agregada>> {
-    exibidas agregadas por padrão, LGPD
-    nível individual só como alvo de plano
-  }
-  class "Ativo / equipamento" as at {
-    risco de falha
-    idade, histórico de ocorrências
-  }
-}
-
-package "Recortes administrativos (cruzamento, não modelagem)" {
-  class "Estado" as uf <<recorte>>
-  class "Município" as mun <<recorte>>
-  class "Setor censitário" as set <<recorte>>
-  class "Submercado" as sub <<recorte>>
-}
-
-op "1" *-- "n" se
-se "1" *-- "n" al
-al "1" *-- "n" tr
-tr "1" *-- "n" uc
-se "1" o-- "n" at
-al "1" o-- "n" at
-
-uf "1" *-- "n" mun
-mun "1" *-- "n" set
-
-mun ..> al : recorta
-sub ..> op : agrega
-
-legend right
-  Toda entidade selecionável tem dado e modelo por trás.
-  Os níveis são os mesmos usados pela engine
-  para consolidar insights (filho → pai).
-end legend
-@enduml
-
-' ===========================================================================
-' 2. Arquitetura: das fontes ao mapa e ao feed de insights
-' ===========================================================================
-@startuml arquitetura-mapa
-title Plataforma preditiva baseada em mapa — arquitetura
-
+@startuml arquitetura-solara
 left to right direction
 skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
 skinparam shadowing false
-skinparam roundcorner 8
+skinparam roundcorner 0
+skinparam linetype ortho
+skinparam nodesep 28
+skinparam ranksep 70
 skinparam packageStyle rectangle
-skinparam ArrowColor #444444
+skinparam ArrowColor #000000
+skinparam package {
+  BackgroundColor #F3F3F3
+  BorderColor #000000
+  FontStyle bold
+}
 skinparam component {
-  BackgroundColor #F4F8FC
-  BorderColor #1C568C
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  Style rectangle
 }
 skinparam database {
-  BackgroundColor #EAF1F8
-  BorderColor #1C568C
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+skinparam file {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
 }
 
-package "Fontes públicas (nível 0)" as pub {
-  component "BDGD / ANEEL\n(rede georreferenciada,\nconsumo mensal)" as bdgd
-  component "ONS, ANEEL, IBGE\n(carga, MMGD,\nsetores censitários)" as publicos
-  component "Previsão do tempo\ne satélite" as nwp
+package "Carga do store (fora do Solara)" as carga {
+  component "Carregador do TERRA\nONS e ANEEL -> esquema br" as l_terra
+  component "Carregador da BDGD\n-> esquema bdgd\n(não distribuído)" as l_bdgd
+  component "contract/load.py\nWRI, OSM, geoBoundaries\n-> esquema solara" as l_contrato
 }
 
-package "Cliente" as cli {
-  component "Arquivos mensais\n(faturamento, cadastro,\ninspeções) — nível 1" as arquivos
-  component "Conector agendado\n— nível 2" as conector <<V2>>
-  component "Medição de trafos / AMI\n— nível 3" as medicao <<V3>>
+package "Máquina do usuário" as maq {
+  database "Grid store\nPostgreSQL + PostGIS\n(só leitura)" as store
+  component "Sidecar Python\num processo por pedido\nenergy, sun, terrain,\ngrid, weather, world" as sidecar
+  component "Casca Go/Wails\nbindings, um pedido por vez,\ncancelável" as casca
+  component "Interface (webview)\nestúdio: mapa, editores,\noperadores, desfazer" as ui
+  file "Projeto\nnome.solara\nnome.solara-data" as projeto
+  file "Cache do usuário\nséries POWER,\ncampo de vento da hora" as cache
 }
 
-package "Ingestão" as ing {
-  component "Mapeamento para o\nmodelo canônico" as mapeamento
-  component "Validação e\nqualidade" as validacao
+package "Fontes públicas, lidas sob demanda" as pub {
+  component "NASA POWER\nirradiação, meteorologia" as power
+  component "Planetary Computer\nCopernicus DEM GLO-30,\nESA WorldCover 2021" as pc
+  component "NOAA GFS (UCAR THREDDS)\ncampo de vento" as gfs
+  component "geoBoundaries\nlimites de qualquer país" as geob
+  component "IBGE\nmalhas e localidades" as ibge
+  component "NASA GIBS, RainViewer,\nOpen-Meteo\nnuvens, chuva, condições agora" as tempo
+  component "OpenFreeMap, EOX Sentinel-2,\nSIGEL, Black Marble\nfundos e registros publicados" as fundos
 }
 
-package "Modelo canônico" as mc {
-  database "Entidades\n(geometria + hierarquia)" as entidades
-  database "Séries bitemporais\n(referência × conhecido em)" as series
-  database "Eventos e rótulos" as rotulos
-}
+' chamada local: contínua preta
+ui --> casca
+casca --> sidecar
+sidecar --> store
+casca --> projeto
+sidecar --> cache
 
-package "Modelos" as mod {
-  component "Perdas" as m_perdas
-  component "Carga e MMGD" as m_carga
-  component "Risco de ativos" as m_risco <<V3>>
-}
+' leitura pela rede: tracejada azul
+sidecar -[#0072B2,dashed]-> power
+sidecar -[#0072B2,dashed]-> pc
+sidecar -[#0072B2,dashed]-> gfs
+sidecar -[#0072B2,dashed]-> geob
+ui -[#0072B2,dashed]-> ibge
+ui -[#0072B2,dashed]-> tempo
+ui -[#0072B2,dashed]-> fundos
 
-database "Store de camadas\n(entidade × data × versão\n× quantis P10/P50/P90)" as camadas
+' carga feita por outro programa: pontilhada cinza
+l_terra -[#777777,dotted]-> store
+l_bdgd -[#777777,dotted]-> store
+l_contrato -[#777777,dotted]-> store
 
-package "Engine de análise" as eng {
-  component "Detectores" as detectores
-  component "Pontuação e\nconsolidação" as pontuacao
-  component "Narrativa\n(texto a partir\nde números)" as narrativa
-  database "Insights" as insights
-}
-
-component "Planejador\n(alvos e rotas\nsob restrição)" as planejador
-
-package "Interface" as ui {
-  component "Mapa\n(camadas, trilha, filtro)" as mapa
-  component "Feed de insights" as feed
-  component "Painel da entidade" as painel
-  component "App de campo" as appcampo
-}
-
-actor "Usuário de negócio" as usuario
-actor "Equipe de campo" as campo
-
-bdgd --> mapeamento
-publicos --> mapeamento
-nwp --> mapeamento
-arquivos --> mapeamento
-conector ..> mapeamento
-medicao ..> mapeamento
-mapeamento --> validacao
-validacao --> entidades
-validacao --> series
-validacao --> rotulos
-
-entidades --> m_perdas
-series --> m_perdas
-rotulos --> m_perdas
-series --> m_carga
-rotulos ..> m_risco
-
-m_perdas --> camadas
-m_carga --> camadas
-m_risco ..> camadas
-
-camadas --> detectores
-detectores --> pontuacao
-pontuacao --> narrativa
-narrativa --> insights
-
-camadas --> mapa
-camadas --> planejador
-insights --> feed
-insights --> painel
-planejador --> mapa
-planejador --> appcampo
-
-mapa --> usuario
-feed --> usuario
-painel --> usuario
-appcampo --> campo
-
-feed ..> rotulos : avaliação (útil / falso)
-appcampo ..> rotulos : resultado da inspeção
-
-legend right
-  <<V2>>, <<V3>>: roadmap
-  Toda camada e todo insight guardam
-  entidade, data de referência e versão do modelo
-  Tracejado: retorno que vira rótulo de treino
+legend bottom left
+  contínua preta: chamada local
+  tracejada azul: leitura pela rede
+  pontilhada cinza: carga feita por outro programa
 end legend
 @enduml
 
 ' ===========================================================================
-' 3. Engine de análise: das camadas ao feed
+' 2. Fluxo de uma leitura: do lugar escolhido no mapa à camada no mapa
 ' ===========================================================================
-@startuml engine-insights
-title Engine de análise — pipeline de um ciclo
-
+@startuml fluxo-leitura
 skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
 skinparam shadowing false
-skinparam roundcorner 8
-skinparam ArrowColor #444444
+skinparam roundcorner 0
+skinparam ArrowColor #000000
 skinparam activity {
-  BackgroundColor #F4F8FC
-  BorderColor #1C568C
-  DiamondBackgroundColor #FFF8E6
-  DiamondBorderColor #B07A1A
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #000000
 }
-skinparam NoteBackgroundColor #FFF8E6
-skinparam NoteBorderColor #B07A1A
+skinparam partition {
+  BackgroundColor #F3F3F3
+  BorderColor #000000
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #777777
+}
 
 start
-:Novo ciclo de camadas publicado
-(ou pergunta sobre uma seleção);
-
-fork
-  :Anomalia espacial
-  (entidade × vizinhas);
-fork again
-  :Tendência e limiar
-  (trajetória prevista);
-fork again
-  :Mudança entre ciclos;
-fork again
-  :Concentração
-  (aglomerados);
-fork again
-  :Divergência
-  modelo × registro;
-fork again
-  :Desempenho do
-  próprio modelo;
-end fork
-
-:Candidatos a insight
-(entidade, métrica, comparação, incerteza);
-
-if (Significativo acima da incerteza?) then (não)
-  :Descarta;
-  stop
-else (sim)
+partition "Mapa" {
+  :Escolher o lugar;
+  note right
+    sítio: um ponto
+    área: uma entrada do catálogo de limites
+  end note
+}
+partition "Propriedades" {
+  :Abrir o cartão do produto;
+  if (O produto responde aqui?) then (não)
+    :O cartão diz o motivo\n(store ausente, sem rede,\nsem o registro brasileiro);
+    stop
+  else (sim)
+  endif
+  :Ler a lista de entradas e o estado de cada uma;
+  :Executar;
+}
+partition "Sidecar" {
+  :Validar o lugar antes de baixar;
+  :Calcular, com progresso e cancelamento;
+  if (Alguma entrada não pôde ser lida?) then (sim)
+    :A execução falha e a entrada fica em erro;
+    stop
+  else (não)
+  endif
+}
+partition "Projeto" {
+  :Gravar o resultado com os parâmetros e o lugar;
+}
+partition "Mapa e leitura" {
+  :Desenhar a camada e enquadrar o lugar;
+  :Abrir a leitura: um número, até quatro\nnúmeros de apoio, painéis, método;
+  :Comparar com outros resultados do produto\ne exportar (CSV, JSON, GeoTIFF);
+}
+if (O lugar ou um parâmetro mudou depois?) then (sim)
+  :O resultado é marcado obsoleto;
+else (não)
 endif
-
-:Pontuação =
-magnitude × confiança × valor (R$ / MWh);
-
-:Consolidação hierárquica
-(filhos semelhantes viram um insight no pai);
-
-:Explicação
-(variáveis que mais pesaram);
-
-:Ação sugerida
-(plano, inspeção, estudo);
-
-:Narrativa
-(texto gerado a partir dos números da engine);
-note right
-  Números, rankings e comparações
-  vêm só da engine. Se houver LLM,
-  ele só redige.
-end note
-
-:Publica no feed, ranqueado,
-com link para a entidade no mapa;
 stop
-@enduml
-
-' ===========================================================================
-' 4. Ciclo de vida de um insight
-' ===========================================================================
-@startuml ciclo-insight
-title Ciclo de vida de um insight
-
-skinparam defaultFontName Helvetica
-skinparam shadowing false
-skinparam nodesep 60
-skinparam ranksep 60
-skinparam roundcorner 12
-skinparam ArrowColor #333333
-skinparam state {
-  BackgroundColor #FFE066
-  BorderColor #333333
-  StartColor #111111
-  EndColor #111111
-}
-hide empty description
-
-state "Detectado" as Detectado
-state "Consolidado\nno pai" as Consolidado
-state "Publicado" as Publicado
-state "Visto" as Visto
-state "Em ação" as Acao
-state "Resolvido" as Resolvido
-state "Descartado" as Descartado
-state "Expirado" as Expirado
-
-[*] --> Detectado
-Detectado --> Consolidado : Semelhante a\nirmãos na hierarquia
-Detectado --> Publicado : Pontuação acima\ndo corte
-Consolidado --> [*]
-Publicado --> Publicado : Novo ciclo\natualiza magnitude
-Publicado --> Visto : Usuário abre
-Publicado --> Expirado : Condição some\nno ciclo seguinte
-Visto --> Acao : Gera plano\nou aceita ação
-Visto --> Descartado : Marcado como\nfalso ou irrelevante
-Acao --> Resolvido : Resultado\nregistrado
-Resolvido --> [*] : Vira rótulo
-Descartado --> [*] : Vira rótulo
-Expirado --> [*]
-@enduml
-
-' ===========================================================================
-' 5. Casos de uso centrados nos gestos
-' ===========================================================================
-@startuml casos-de-uso-mapa
-title Plataforma preditiva baseada em mapa — casos de uso
-
-left to right direction
-skinparam defaultFontName Helvetica
-skinparam shadowing false
-skinparam packageStyle rectangle
-skinparam ArrowColor #444444
-skinparam actorStyle awesome
-skinparam usecase {
-  BackgroundColor #F4F8FC
-  BorderColor #1C568C
-  BackgroundColor<<V2>> #FFFFFF
-  BorderColor<<V2>> #8AA9C7
-}
-skinparam rectangle {
-  BorderColor #1C568C
-}
-
-actor "Usuário de negócio" as usuario
-actor "Gerente de recuperação\nde energia" as gerente
-actor "Engenheiro de\nplanejamento" as planejador
-actor "Equipe de campo" as campo
-actor "Cientista de dados" as cientista
-
-usuario <|-- gerente
-usuario <|-- planejador
-
-rectangle "Plataforma" {
-  package "Onde (seleção por camadas)" {
-    usecase "Navegar na hierarquia\nde camadas" as UC_nav
-    usecase "Buscar entidade\npor nome ou código" as UC_busca
-    usecase "Filtrar entidades\npor atributo" as UC_filtro
-    usecase "Selecionar\nvárias entidades" as UC_multi
-  }
-  package "O quê e quando" {
-    usecase "Escolher camada\nde modelo" as UC_camada
-    usecase "Controlar tempo\n(histórico, agora, horizonte)" as UC_tempo
-  }
-  package "Saídas" {
-    usecase "Ver feed de insights" as UC_feed
-    usecase "Abrir insight no mapa" as UC_abrir
-    usecase "Ver diagnóstico\nda entidade" as UC_diag
-    usecase "Gerar plano de ação" as UC_plano
-    usecase "Informar restrição\n(orçamento, equipes)" as UC_restr
-    usecase "Exportar relatório" as UC_rel
-    usecase "Perguntar em\ntexto livre" as UC_perg <<V2>>
-    usecase "Simular cenário" as UC_sim <<V2>>
-  }
-  package "Aprendizado" {
-    usecase "Registrar resultado\nde inspeção" as UC_result
-    usecase "Avaliar insight\n(útil / falso)" as UC_aval
-    usecase "Calibrar detectores\ne monitorar modelos" as UC_calib
-  }
-}
-
-usuario --> UC_nav
-usuario --> UC_busca
-usuario --> UC_filtro
-usuario --> UC_camada
-usuario --> UC_tempo
-usuario --> UC_feed
-usuario --> UC_diag
-usuario --> UC_aval
-usuario --> UC_perg
-usuario --> UC_sim
-gerente --> UC_plano
-planejador --> UC_rel
-campo --> UC_result
-cientista --> UC_calib
-
-UC_multi .> UC_filtro : <<extend>>
-UC_abrir .> UC_feed : <<extend>>
-UC_abrir ..> UC_diag : <<include>>
-UC_plano ..> UC_restr : <<include>>
-UC_rel ..> UC_diag : <<include>>
-
-legend right
-  Casos <<V2>>: roadmap
-  O "onde" nunca é desenhado à mão:
-  vem da hierarquia, da busca ou do filtro.
-  Ingestão e ciclo de modelos: ver arquitetura
-end legend
-@enduml
-
-' ===========================================================================
-' 6. Sessão típica: do feed ao plano e ao resultado
-' ===========================================================================
-@startuml sessao-usuario
-title Sessão típica — gerente de recuperação de energia
-
-skinparam defaultFontName Helvetica
-skinparam shadowing false
-skinparam roundcorner 8
-skinparam sequenceMessageAlign left
-skinparam ParticipantBorderColor #1C568C
-skinparam ParticipantBackgroundColor #F4F8FC
-skinparam DatabaseBorderColor #1C568C
-skinparam DatabaseBackgroundColor #EAF1F8
-skinparam NoteBackgroundColor #FFF8E6
-
-actor "Gerente" as ger
-participant "Mapa" as mapa
-participant "Feed" as feed
-participant "Painel da\nentidade" as painel
-participant "Planejador" as plan
-database "Camadas e\ninsights" as db
-actor "Equipe de\ncampo" as campo
-
-== Abrir a plataforma (nenhum input) ==
-ger -> mapa : abre
-mapa -> db : camadas da área de concessão
-feed -> db : insights publicados, ranqueados
-feed --> ger : "AL-04: perda subiu de 7% para 18% em 3 meses"
-
-== Seguir o insight ==
-ger -> feed : clica no insight
-feed -> mapa : foco em AL-04, liga camada de perda
-mapa --> ger : transformadores coloridos por perda (P50)
-feed -> painel : abre AL-04
-painel --> ger : comparação, tendência, variáveis que pesaram
-
-== Descer na hierarquia ==
-ger -> mapa : clica no transformador T-1183
-mapa -> painel : abre T-1183 (trilha: Concessão › SE Centro › AL-04 › T-1183)
-painel --> ger : balanço negativo, 40 unidades com queda de consumo
-
-== Pedir a decisão ==
-ger -> painel : "Gerar plano de inspeção"
-painel -> ger : pede restrição
-ger -> painel : 50 inspeções, 2 equipes, próxima semana
-painel -> plan : seleção + restrição
-plan -> db : probabilidades e energia estimada por alvo
-plan --> mapa : 50 alvos e 2 rotas
-mapa --> ger : energia recuperável estimada (faixa)
-ger -> plan : aprova
-plan -> campo : ordens de serviço no app de campo
-
-== Fechar o ciclo ==
-campo -> db : resultado de cada inspeção
-note right of db
-  Cada resultado vira rótulo
-  para o próximo ciclo de treino,
-  e o insight passa a "Resolvido"
-end note
 @enduml

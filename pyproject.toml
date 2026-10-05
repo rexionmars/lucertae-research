@@ -1,7 +1,7 @@
 [project]
-name = "terra-energy-research"
+name = "lucertae-research"
 version = "0.1.0"
-description = "Previsão da restrição (curtailment) de geração solar e eólica no SIN com dados abertos do ONS"
+description = "Séries abertas do setor elétrico brasileiro como tarefas de aprendizado de máquina, com adversário declarado e controle antes do número"
 readme = "README.md"
 authors = [
     { name = "rexionmars", email = "opensource.leonardi@gmail.com" }
@@ -14,15 +14,27 @@ dependencies = [
     "jupyter>=1.1.1",
     "lightgbm>=4.7.0",
     "matplotlib>=3.11.2",
+    "nbclient>=0.11.0",
     "nbconvert>=7.17.1",
+    "numpy>=2.5.2",
     "pandas>=3.0.5",
     "psycopg[binary]>=3.3.5",
+    "pvlib>=0.15.2",
     "pyarrow>=25.0.1",
+    "pypdf>=6.16.2",
+    "rasterio>=1.5.1",
     "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
     "shapely>=2.1.2",
     "sqlalchemy>=2.0.54",
 ]
 
+[project.scripts]
+lucertae = "lucertae.cli:main"
+
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "lucertae"
