@@ -1,0 +1,316 @@
+% =====================================================================
+%  Preâmbulo base: pacotes, tipografia e convenções de todo documento
+%  LaTeX do repositório
+%
+%  Origem: `config/preambulo.tex` do documento de projeto do rhae-sensor.
+%  As seções abaixo seguem a ordem de lá, e o que difere está marcado
+%  com DIFERENÇA.
+%
+%  Convenções tipográficas e de apresentação adotadas
+%    ISO 216        formato A4
+%    ISO 80000-1    números e unidades (vírgula decimal, espaço fino entre
+%                   grupos de três algarismos, unidade em tipo romano)
+%    Tabelas sem filetes verticais (booktabs); legenda de tabela acima,
+%    de figura abaixo.
+%
+%  Uso, antes do `\begin{document}`:
+%    report/*.tex          via `\usepackage{estilo-reporte}`, que carrega este
+%    docs/product/*.tex    \input{../../report/config/preambulo}
+%
+%  FORMA DE MANUAL TÉCNICO. Fonte, números, legendas e pacotes vêm da
+%  origem. A forma da página não: é de manual de referência, e não de
+%  artigo. Coluna única, títulos recuados para a esquerda do texto,
+%  rodapé com identificação e "página X de Y" em toda página, avisos com
+%  palavra de sinal (ANSI Z535.6), passos numerados e histórico de
+%  revisões (IEC/IEEE 82079-1). O desenho de página segue a classe
+%  `refman` do CTAN.
+%
+%  O documento carrega `babel` ANTES deste arquivo. Documento deitado, que
+%  existe para caber tabela larga, carrega também `geometry` antes; aí a
+%  margem de manual não entra e os títulos não avançam.
+%
+%  Motor: pdflatex. Charis SIL, newtxmath e Bera Mono entram como Type 1
+%  em T1, e a matemática do newtxmath não passa pelo `unicode-math`.
+% =====================================================================
+\RequirePackage{iftex}
+\RequirePDFTeX
+% Este arquivo entra tanto de um `.tex` quanto de dentro do
+% `estilo-reporte.sty`, onde o `@` ja e letra. O codigo de categoria e
+% devolvido como estava, e nao forcado a "outro" no fim.
+\edef\pbrestauraarroba{\catcode`\noexpand\@=\the\catcode`\@\relax}
+\makeatletter
+
+% ---------------------------------------------------------------------
+%  Fontes, idioma e microtipografia
+% ---------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+% DIFERENÇA: o idioma é do documento, porque há documento em inglês.
+\@ifpackageloaded{babel}{}{\usepackage[brazilian]{babel}}
+\usepackage{CharisSIL}
+\usepackage[charter]{newtxmath}
+\usepackage[scaled=0.83]{beramono}
+\usepackage[protrusion=true,expansion=true,tracking=true]{microtype}
+\SetTracking{encoding=*,shape=sc}{40}
+% DIFERENÇA: a origem não usa sem serifa. Os documentos daqui pedem
+% `\sffamily` em título, tabela e nota; sem esta linha ela cairia na
+% Computer Modern Sans, que não pertence ao conjunto. Uma família só.
+\renewcommand{\sfdefault}{\rmdefault}
+
+% DIFERENÇA: mancha de manual, e não a coluna de 468 pt da origem. A4 com
+% 22 mm de margem de cada lado, 166 mm úteis. O texto corre em 152 mm e
+% os 14 mm da esquerda são o recuo dos títulos: o bastante para o título
+% sair do alinhamento do texto, sem deixar coluna vazia ao lado dele. A
+% primeira versão reservava 40 mm, e a margem ficava em branco em toda
+% página que não fosse título; o documento crescia um terço só por isso.
+% `\margemmanual` é quanto os títulos, o cabeçalho e o rodapé avançam
+% para a esquerda; vale zero quando o documento traz mancha própria.
+% A altura é de 253 mm, a mesma da mancha anterior, porque as tabelas
+% deitadas foram dimensionadas para ela.
+\newlength{\margemmanual}
+\@ifpackageloaded{geometry}{\setlength{\margemmanual}{0pt}}{%
+  \setlength{\margemmanual}{14mm}%
+  \usepackage[a4paper,left=36mm,right=22mm,top=20mm,bottom=24mm,
+              headheight=14pt,headsep=7mm,footskip=12mm]{geometry}}
+
+\usepackage{amsmath}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xltabular}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{rotating}
+% Página com o conteúdo girado, mas exibida em retrato no leitor de PDF
+\newenvironment{paisagemretrato}{\begingroup\def\PLS@AddRotate##1{}\landscape}{\endlandscape\endgroup}
+\usepackage{enumitem}
+\usepackage{changepage}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{csquotes}
+\usepackage{siunitx}
+% DIFERENÇA: sem `biblatex`. Nenhum documento daqui tem `.bib`; as
+% referências são listas escritas à mão.
+\usepackage{xurl}
+\usepackage[hidelinks,pdfusetitle]{hyperref}
+
+% ---------------------------------------------------------------------
+%  Números e unidades (ISO 80000-1)
+% ---------------------------------------------------------------------
+\sisetup{
+  output-decimal-marker = {,},
+  group-separator       = {\,},
+  group-minimum-digits  = 4,
+  exponent-product      = \cdot,
+  uncertainty-mode      = separate,
+  range-phrase          = {\,a\,},
+  list-pair-separator   = {\ e\ },
+  list-final-separator  = {\ e\ },
+  per-mode              = symbol,
+}
+
+% ---------------------------------------------------------------------
+%  Parágrafo, listas e flutuantes
+% ---------------------------------------------------------------------
+% DIFERENÇA: parágrafo em bloco, separado por espaço e sem recuo, que é
+% o de manual; a origem recua 1 em.
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em plus 0.1em}
+\linespread{1.04}
+\setlist{itemsep=0.1em,topsep=0.3em,leftmargin=1.4em}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\setlength{\LTpre}{0.8em}
+\setlength{\LTpost}{0.4em}
+
+% Legendas no padrão Elsevier: \enquote{Fig. 1.} seguido do texto, alinhado à esquerda;
+% \enquote{Tabela 1} numa linha e o título na linha seguinte
+\DeclareCaptionLabelSeparator{travessao}{\ — }
+% `babel` guarda os nomes por idioma, e o nome da opção varia entre os
+% documentos. Entra em cada um que estiver carregado.
+\@for\pb@idioma:=brazilian,brazil,portuguese,portuges,american,english\do{%
+  \@ifundefined{captions\pb@idioma}{}{%
+    \expandafter\addto\csname captions\pb@idioma\endcsname{\renewcommand{\figurename}{Fig.}}}}
+\captionsetup{font=footnotesize,labelfont=bf,justification=justified,
+              singlelinecheck=false,skip=5pt}
+\captionsetup[figure]{position=bottom,labelsep=period}
+\captionsetup[table]{position=top,labelsep=newline}
+% DIFERENÇA: a origem fixa todo flutuante onde aparece (`H`). Aqui ele
+% tenta o lugar e, se não couber no resto da página, sobe para a seguinte
+% e o texto continua: com `H`, a tabela que não cabia deixava o fim da
+% página em branco.
+\floatplacement{table}{!htbp}
+\floatplacement{figure}{!htbp}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.75}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% ---------------------------------------------------------------------
+%  Títulos de seção (ISO 2145)
+% ---------------------------------------------------------------------
+% DIFERENÇA: título de manual. Seção e subseção avançam 14 mm para a
+% esquerda do texto e ocupam a largura útil; a seção leva um fio acima.
+% Número sem ponto final, três níveis numerados. Os três níveis têm o
+% corpo do texto ou pouco mais: o nível se lê pelo fio, pelo recuo e
+% pelo itálico do terceiro, e não pelo tamanho.
+\setcounter{secnumdepth}{3}
+\titleformat{\section}[block]
+  {\titlerule[0.8pt]\vspace{0.5ex}\normalfont\large\bfseries\raggedright}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries\raggedright}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries\itshape\raggedright}{\thesubsubsection}{0.8em}{}
+\titlespacing*{\section}{-\margemmanual}{1.5em plus 0.4em minus 0.2em}{0.5em plus 0.1em}
+\titlespacing*{\subsection}{-\margemmanual}{1.1em plus 0.3em minus 0.2em}{0.3em plus 0.1em}
+\titlespacing*{\subsubsection}{0pt}{0.9em plus 0.2em minus 0.2em}{0.2em}
+
+% ---------------------------------------------------------------------
+%  Identificação, cabeçalho e rodapé
+% ---------------------------------------------------------------------
+% Todo campo é do documento, por `\renewcommand` depois deste arquivo.
+% Sem isso: o código é o nome do arquivo, a data é a da compilação em
+% ISO 8601, e versão e responsável ficam vazios e somem.
+\providecommand{\doctitulo}{}
+\providecommand{\docsubtitulo}{}
+\providecommand{\doccodigo}{\jobname}
+\providecommand{\docversao}{}
+\providecommand{\docresponsavel}{}
+\providecommand{\docdata}{\the\year-\two@digits\month-\two@digits\day}
+
+% Cabeçalho: título à esquerda, seção corrente à direita. Rodapé: código,
+% versão e data à esquerda, "página X de Y" à direita. Os dois ocupam a
+% largura útil, margem de título incluída.
+\newcommand{\pb@identificacao}{%
+  \texttt{\doccodigo}%
+  \ifx\docversao\@empty\else\enspace\textperiodcentered\enspace versão \docversao\fi
+  \enspace\textperiodcentered\enspace\docdata}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhfoffset[L]{\margemmanual}
+\fancyhead[L]{\footnotesize\bfseries\doctitulo}
+\fancyhead[R]{\footnotesize\itshape\nouppercase{\rightmark}}
+\fancyfoot[L]{\footnotesize\pb@identificacao}
+\fancyfoot[R]{\footnotesize\thepage\ de \pageref*{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancypagestyle{plain}{}
+% Página de rosto: sem cabeçalho, porque o título já está nela.
+\fancypagestyle{rosto}{\fancyhead{}\renewcommand{\headrulewidth}{0pt}}
+
+% ---------------------------------------------------------------------
+%  Marca
+% ---------------------------------------------------------------------
+% DIFERENÇA: a origem não tem marca. Aqui todo documento abre com o
+% logotipo Solara, versão para fundo claro. O caminho depende de onde se
+% compila: `report/` ou `docs/product/`.
+\IfFileExists{../docs/img/solara-logo-on-light.png}%
+  {\newcommand{\marcaarquivo}{../docs/img/solara-logo-on-light.png}}%
+  {\newcommand{\marcaarquivo}{../img/solara-logo-on-light.png}}
+% \marcadoc[largura]: o logotipo tem proporção 7:1, então 30 mm dão
+% 4,3 mm de altura.
+\newcommand{\marcadoc}[1][30mm]{\includegraphics[width=#1]{\marcaarquivo}}
+
+% ---------------------------------------------------------------------
+%  Rosto e histórico de revisões
+% ---------------------------------------------------------------------
+% \rosto: marca, título, subtítulo e a tabela de identificação. Lê os
+% campos `\doc...`; linha de campo vazio não sai.
+\newcommand{\pb@linha}[2]{\ifx#2\@empty\else #1 & #2 \\\fi}
+\newcommand{\rosto}{%
+  \thispagestyle{rosto}%
+  \begin{adjustwidth}{-\margemmanual}{0pt}
+    \raggedright
+    \marcadoc[45mm]\par\vspace{16mm}
+    {\fontsize{24}{29}\selectfont\bfseries\doctitulo\par}
+    \ifx\docsubtitulo\@empty\else
+      \vspace{3mm}{\Large\color{cinza}\docsubtitulo\par}\fi
+    \vspace{9mm}{\hrule height 0.8pt}\vspace{4mm}
+    {\small\renewcommand{\arraystretch}{1.25}%
+     \begin{tabular}{@{}>{\bfseries}p{28mm}p{110mm}@{}}
+       Documento & \texttt{\doccodigo} \\
+       \pb@linha{Versão}{\docversao}%
+       Data & \docdata \\
+       \pb@linha{Responsável}{\docresponsavel}%
+     \end{tabular}\par}
+  \end{adjustwidth}
+  \vspace{10mm}}
+
+% Histórico de revisões: uma linha por versão, a mais recente em cima.
+%   \begin{historico}
+%     0.2 & 2026-10-03 & O que mudou \\
+%   \end{historico}
+\newenvironment{historico}
+  {\par\medskip\noindent\small
+   \begin{tabular}{@{}p{16mm}p{24mm}p{\dimexpr\linewidth-40mm-4\tabcolsep\relax}@{}}
+   \toprule \textbf{Versão} & \textbf{Data} & \textbf{Alteração} \\ \midrule}
+  {\bottomrule\end{tabular}\par\medskip}
+
+% ---------------------------------------------------------------------
+%  Avisos (ANSI Z535.6) e nota
+% ---------------------------------------------------------------------
+% Quatro palavras de sinal, em hierarquia fixa. As três primeiras são de
+% dano a pessoa; AVISO é de dano a equipamento ou a dado. Cada mensagem
+% diz o risco, como evitar e a consequência. NOTA não é aviso: é
+% informação de apoio.
+\definecolor{sinalperigo}{HTML}{C8102E}
+\definecolor{sinalatencao}{HTML}{E87722}
+\definecolor{sinalcuidado}{HTML}{F2C200}
+\definecolor{sinalaviso}{HTML}{00539B}
+\definecolor{sinalnota}{HTML}{5F5F5F}
+% #1 palavra, #2 cor da faixa, #3 cor da letra sobre a faixa
+\newtcolorbox{pb@mensagem}[3]{enhanced,breakable,sharp corners,
+  boxrule=0pt,frame hidden,borderline west={3pt}{0pt}{#2},
+  colback=#2!7,left=9pt,right=7pt,top=5pt,bottom=5pt,
+  before skip=0.9em,after skip=0.9em,fontupper=\small,
+  before upper={\colorbox{#2}{\textcolor{#3}{\footnotesize\bfseries #1}}\enspace}}
+\newenvironment{perigo}{\csname pb@mensagem\endcsname{PERIGO}{sinalperigo}{white}}{\csname endpb@mensagem\endcsname}
+\newenvironment{atencao}{\csname pb@mensagem\endcsname{ATENÇÃO}{sinalatencao}{black}}{\csname endpb@mensagem\endcsname}
+\newenvironment{cuidado}{\csname pb@mensagem\endcsname{CUIDADO}{sinalcuidado}{black}}{\csname endpb@mensagem\endcsname}
+\newenvironment{aviso}{\csname pb@mensagem\endcsname{AVISO}{sinalaviso}{white}}{\csname endpb@mensagem\endcsname}
+\newenvironment{nota}{\csname pb@mensagem\endcsname{NOTA}{sinalnota}{white}}{\csname endpb@mensagem\endcsname}
+
+% ---------------------------------------------------------------------
+%  Procedimento
+% ---------------------------------------------------------------------
+% Passos numerados, uma ação por passo, no imperativo. A pré-condição vem
+% antes da lista e o resultado esperado depois.
+\newlist{passos}{enumerate}{2}
+\setlist[passos,1]{label=\textbf{\arabic*.},leftmargin=2.2em,itemsep=0.45em,topsep=0.6em}
+\setlist[passos,2]{label=\alph*),leftmargin=1.8em,itemsep=0.2em,topsep=0.2em}
+\newcommand{\precondicao}[1]{\par\smallskip\noindent\textbf{Antes de começar.}\enspace#1\par}
+\newcommand{\resultado}[1]{\par\smallskip\noindent\textbf{Resultado.}\enspace#1\par}
+
+% Bloco na largura útil inteira, margem de título incluída: para tabela
+% ou figura que não cabe nos 152 mm do texto.
+\newenvironment{larga}{\begin{adjustwidth}{-\margemmanual}{0pt}}{\end{adjustwidth}}
+% O mesmo dentro de `table` ou `figure`, onde `adjustwidth` não alcança:
+% uma caixa na largura útil, puxada para a margem. Não quebra página.
+% Dentro dela a largura é `\linewidth`, e não `\textwidth`.
+\newenvironment{tabelalarga}
+  {\noindent\hspace*{-\margemmanual}%
+   \begin{minipage}{\dimexpr\linewidth+\margemmanual\relax}\centering}
+  {\end{minipage}}
+
+% ---------------------------------------------------------------------
+%  Campos e figuras
+% ---------------------------------------------------------------------
+\definecolor{cinza}{gray}{0.40}
+
+% \figuradoc[largura]{caminho}; sem o arquivo, uma caixa marca a pendência
+\newcommand{\figuradoc}[2][\linewidth]{%
+  \IfFileExists{#2}%
+    {\includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{#2}}%
+    {\fbox{\parbox[c][45mm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}%
+      {\centering\small\color{cinza}\itshape[figura em preparação]}}}}
+
+\pbrestauraarroba

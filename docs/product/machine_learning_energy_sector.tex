@@ -1,0 +1,1545 @@
+\documentclass[10pt,a4paper,oneside]{article}
+
+% ---------------------------------------------------------------------------
+% ml-setor-energetico-en.tex -- en-US version of `ml-setor-energetico.tex`.
+%
+% PARITY WITH THE PORTUGUESE FILE. This is a translation, not a fork: both
+% documents carry the same sections, the same equations, the same numbers and
+% the same references. A change in one belongs in the other.
+%
+% DELIBERATE DIVERGENCES FROM THE SOURCE FILE:
+%
+%   `babel` loads `american`. The cover block, the footer and the NOTE box
+%   come from the shared preamble with Portuguese labels; they are redefined
+%   below, locally, so the preamble keeps serving the Portuguese documents
+%   unchanged.
+%
+%   Numbers follow en-US: decimal point, comma as thousands separator.
+%
+%   Agency names, program names, acronyms of Brazilian indicators (MMGD, PLD,
+%   DEC, FEC, DIC, FIC, DMIC) and law numbers stay as in the source: they are
+%   identifiers. Each one is glossed in English at first use. The superscript
+%   PNT of the loss balance is NTL (non-technical losses).
+%
+% Base preamble of the repository: font, type area, packages, caption, title
+% and header. Compile from inside `docs/product/`.
+% ---------------------------------------------------------------------------
+\usepackage[american]{babel}
+\input{../../report/config/preambulo}
+\renewcommand{\doctitulo}{Machine learning and deep learning in the energy sector}
+\renewcommand{\docsubtitulo}{Applications, technical foundations and product view}
+\renewcommand{\docresponsavel}{Mapeamento Energético}
+\renewcommand{\docdata}{2026-09}
+
+% English labels for the cover block, the footer and the note box.
+\makeatletter
+\renewcommand{\pb@identificacao}{%
+  \texttt{\doccodigo}%
+  \ifx\docversao\@empty\else\enspace\textperiodcentered\enspace version \docversao\fi
+  \enspace\textperiodcentered\enspace\docdata}
+\fancyfoot[R]{\footnotesize\thepage\ of \pageref*{LastPage}}
+\renewcommand{\rosto}{%
+  \thispagestyle{rosto}%
+  \begin{adjustwidth}{-\margemmanual}{0pt}
+    \raggedright
+    \marcadoc[45mm]\par\vspace{16mm}
+    {\fontsize{24}{29}\selectfont\bfseries\doctitulo\par}
+    \ifx\docsubtitulo\@empty\else
+      \vspace{3mm}{\Large\color{cinza}\docsubtitulo\par}\fi
+    \vspace{9mm}{\hrule height 0.8pt}\vspace{4mm}
+    {\small\renewcommand{\arraystretch}{1.25}%
+     \begin{tabular}{@{}>{\bfseries}p{28mm}p{110mm}@{}}
+       Document & \texttt{\doccodigo} \\
+       \pb@linha{Version}{\docversao}%
+       Date & \docdata \\
+       \pb@linha{Owner}{\docresponsavel}%
+     \end{tabular}\par}
+  \end{adjustwidth}
+  \vspace{10mm}}
+\renewenvironment{nota}{\csname pb@mensagem\endcsname{NOTE}{sinalnota}{white}}{\csname endpb@mensagem\endcsname}
+\makeatother
+
+% en-US numbers: decimal point, comma as thousands separator.
+\sisetup{
+  output-decimal-marker = {.},
+  group-separator       = {,},
+  range-phrase          = {\,to\,},
+  list-pair-separator   = {\ and\ },
+  list-final-separator  = {\ and\ },
+}
+
+% `L` here is a left-aligned `X` column, and the tables of this document use
+% it that way; it overrides the `L{width}` of the base preamble.
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\definecolor{notecolor}{RGB}{110,110,110}
+
+% Product view: subsection with the full title in the table of contents and
+% the short form in the header, where the full title would run into the
+% document title.
+\newcommand{\visaoproduto}[1]{%
+  \let\subsectionmarkbase\subsectionmark
+  \renewcommand{\subsectionmark}[1]{\markright{\thesubsection\ Product view}}%
+  \subsection{Product view: #1}%
+  \let\subsectionmark\subsectionmarkbase}
+
+\begin{document}
+
+\rosto
+
+\begin{abstract}
+This document describes four application areas of machine learning (ML) and
+deep learning (DL) in the power sector: (1)~forecasting of load, renewable
+generation and price; (2)~grid operation and optimization; (3)~fault
+detection, protection and predictive maintenance; and (4)~distribution and the
+end consumer. For each area it presents the business problem, the
+mathematical formulation, the model families, the required data, the
+evaluation metrics and the practical challenges. Each section ends with a
+product view: who the user is, which problem is addressed, the minimum viable
+scope, the reference architecture, the success metrics, the business model
+and the risks. The Brazilian regulatory and operational context (ONS, CCEE,
+ANEEL, distribution utilities) is used as the reference where applicable.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Introduction}
+% ===========================================================================
+
+The power sector is undergoing three simultaneous transformations that widen
+the scope for ML/DL:
+
+\begin{enumerate}
+  \item \textbf{Decarbonization}: the growing share of wind and solar
+    sources, which are variable and non-dispatchable, shifts the central
+    problem of operation from ``serving a predictable load with controllable
+    generation'' to ``balancing uncertainties on both sides''.
+  \item \textbf{Decentralization}: distributed micro and mini generation
+    (MMGD, from the Portuguese \textit{micro e minigeração distribuída}),
+    batteries and electric vehicles turn the consumer into an active agent
+    and make the distribution grid bidirectional.
+  \item \textbf{Digitalization}: smart meters, phasor measurement units
+    (PMUs), sensors on assets, drones and satellite imagery generate volumes
+    of data that classical methods do not exploit well.
+\end{enumerate}
+
+Despite the large volume of research, recent reviews converge on one
+diagnosis: there are many pilots and few systems at scale, and the main
+barrier is not model accuracy but integration with legacy systems,
+reliability and acceptance by operators~\cite{energyinformatics2025,trustworthy2024}.
+For this reason, each section of this document treats the model and the
+product as equally important problems.
+
+% ===========================================================================
+\section{Forecasting: load, renewable generation and price}
+% ===========================================================================
+
+\subsection{Context and importance}
+
+Forecasting is one of the most mature applications of ML in the sector.
+Operational and commercial decisions depend on an estimate of the future:
+
+\begin{itemize}
+  \item the \textbf{system operator} (in Brazil, ONS) needs to forecast load
+    and renewable generation to schedule dispatch, size reserves and assess
+    security;
+  \item \textbf{generators and trading companies} need to forecast production
+    and price to contract, hedge and avoid exposure to the short-term
+    market;
+  \item \textbf{distribution utilities} need to forecast demand for energy
+    purchases in auctions, expansion planning and management of transformer
+    loading.
+\end{itemize}
+
+A frequently cited case of value generated is that of DeepMind with Google: a
+neural network trained on weather forecasts and turbine history started to
+forecast the generation of 700\,MW of wind farms 36 hours ahead. With that
+forecast, Google started to offer the energy in the day-ahead market, and the
+company reports an increase of about 20\% in the value of the wind
+energy~\cite{deepmindwind}.
+
+\subsection{Forecast horizons}
+
+\begin{table}[h]
+\centering
+\caption{Forecast horizons and their uses.}
+\begin{tabularx}{\textwidth}{l l L}
+\toprule
+\textbf{Horizon} & \textbf{Typical range} & \textbf{Main use} \\
+\midrule
+Very short term & seconds to 1\,h & frequency control, ramps, intra-hour
+  dispatch, inverter control \\
+Short term & 1\,h to 7 days & daily operation scheduling, day-ahead market,
+  unit commitment \\
+Medium term & weeks to months & operation planning (PMO), maintenance,
+  reservoir management, contracting \\
+Long term & years & generation and transmission expansion, auctions, tariff
+  planning \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each horizon has different data, models and metrics. At very short horizons,
+local high-resolution data predominate (measurements, sky cameras, satellite
+images). In the short term, numerical weather prediction (NWP) is the main
+explanatory variable. In the medium and long term, macroeconomic and climate
+scenarios enter, and the problem is closer to structural modeling than to
+pure ML.
+
+\subsection{Problem formulation}
+
+Let $y_t$ be the target variable (load, generated power or price) at time
+$t$, $\mathbf{x}_t$ a vector of observed covariates (temperature, measured
+irradiance, etc.) and $\mathbf{z}_{t+h}$ covariates known or forecast for the
+future (calendar, holidays, NWP). The point forecast with horizon $h$ and
+context window $L$ is
+\begin{equation}
+  \hat{y}_{t+h} = f_\theta\big(y_{t-L+1:t},\; \mathbf{x}_{t-L+1:t},\;
+  \mathbf{z}_{t+1:t+h}\big).
+\end{equation}
+
+In practice, the decision rarely depends on the expected value alone. Sizing
+reserve, bidding in a market or deciding whether to start a thermal plant
+requires knowing the \emph{distribution} of the future. For this reason the
+trend is toward \textbf{probabilistic forecasting}, usually through quantiles
+$q_\tau$ trained with the pinball loss:
+\begin{equation}
+  \mathcal{L}_\tau(y, q_\tau) =
+  \max\big(\tau\,(y - q_\tau),\; (\tau - 1)\,(y - q_\tau)\big),
+  \qquad \tau \in (0,1).
+\end{equation}
+The quality of the full distribution is measured by the Continuous Ranked
+Probability Score (CRPS), where $F$ is the forecast distribution:
+\begin{equation}
+  \mathrm{CRPS}(F, y) = \int_{-\infty}^{\infty}
+  \big(F(z) - \mathbb{1}\{z \ge y\}\big)^2 \, dz.
+\end{equation}
+The two measures are related: the CRPS is the pinball loss integrated over
+all quantiles,
+\begin{equation}
+  \mathrm{CRPS}(F, y) = 2 \int_0^1 \mathcal{L}_\tau\big(y, F^{-1}(\tau)\big)\, d\tau,
+\end{equation}
+and it reduces to the absolute error when the forecast is a point forecast.
+
+The quantile that matters depends on the decision. If each MWh
+under-forecast costs $c_{-}$ and each MWh over-forecast costs $c_{+}$, the
+forecast that minimizes the expected cost is the quantile
+\begin{equation}
+  \tau^{*} = \frac{c_{-}}{c_{-} + c_{+}},
+\end{equation}
+which coincides with the median only when the two costs are equal. A fixed
+set of quantiles (P10, P50, P90) serves the decision only if $\tau^{*}$ is
+one of them.
+
+\subsection{Load forecasting}
+
+\paragraph{Load drivers.} Aggregate electrical load has strong and relatively
+stable patterns:
+\begin{itemize}
+  \item \textbf{multiple seasonality}: daily, weekly and annual;
+  \item \textbf{calendar effects}: holidays, bridge days, daylight saving
+    time (where it exists), large events;
+  \item \textbf{weather}: temperature is the main variable (a nonlinear,
+    U-shaped relationship, because of air conditioning and heating),
+    followed by humidity, apparent temperature and cloud cover;
+  \item \textbf{economy}: industrial and commercial activity, shocks such as
+    the 2020 pandemic.
+\end{itemize}
+
+\paragraph{Gross load versus net load.} With the expansion of solar MMGD,
+what the operator observes at the connection points is the \emph{net load}:
+consumption minus behind-the-meter generation. On sunny days, the net load
+drops at midday and rises abruptly in the late afternoon, forming the
+so-called ``duck curve''. Forecasting the net load directly mixes two
+phenomena with different dynamics. For this reason, the common practice is
+to decompose:
+\begin{equation}
+  \text{net load}_t = \text{gross load}_t - \text{MMGD}_t,
+\end{equation}
+forecasting each term with its own covariates. For this reason, ONS maintains
+a dedicated system for forecasting photovoltaic MMGD generation, with a
+72-hour horizon~\cite{onssolar}.
+
+The decomposition has two conditions. The first is one of identification:
+only the net load is measured. Behind-the-meter MMGD has to be estimated
+(registered installed capacity and irradiance), and the gross load is
+reconstructed from that estimate, so the error of the estimate enters both
+terms. The second is one of variance: with $e_b$ and $e_m$ the forecast
+errors of the gross load and of MMGD,
+\begin{equation}
+  \mathrm{Var}(e_b - e_m) = \mathrm{Var}(e_b) + \mathrm{Var}(e_m)
+  - 2\,\mathrm{Cov}(e_b, e_m),
+\end{equation}
+and the decomposition outperforms the direct forecast only if this variance
+is smaller than the error variance of the direct model. The comparison is
+made by backtesting.
+
+\paragraph{Hierarchical forecasting.} Load exists at several levels
+(subsystem, area, substation, feeder, transformer, consumer). Independent
+forecasts at each level do not add up coherently. \textbf{Hierarchical
+reconciliation} techniques (such as MinT) adjust the forecasts so that the
+levels are consistent with each other, and they tend to improve accuracy at
+all levels.
+
+\subsection{Wind generation forecasting}
+
+The power extracted from the wind grows with the cube of the speed:
+\begin{equation}
+  P = \tfrac{1}{2}\,\rho\, A\, C_p(\lambda, \beta)\, v^3,
+\end{equation}
+where $\rho$ is the air density, $A$ the swept area, $C_p$ the power
+coefficient and $v$ the wind speed. With constant $C_p$, the relative error
+triples: $\delta P / P \approx 3\,\delta v / v$, and an error of 10\% in the
+wind corresponds to 33\% in power ($1.1^3 = 1.331$). The relationship holds
+in the cubic region of the power curve; above rated speed the power is
+limited and the sensitivity to wind falls to zero.
+
+The cube also biases the conversion. For wind with mean $\bar{v}$ and
+turbulence intensity $I = \sigma_v / \bar{v}$,
+\begin{equation}
+  \mathbb{E}\big[v^3\big] \approx \bar{v}^3\,\big(1 + 3I^2\big),
+\end{equation}
+so applying the power curve to the mean wind forecast underestimates the mean
+power: with $I = 0.15$, $\mathbb{E}[v^3]$ exceeds $\bar{v}^3$ by 6.75\%. Near
+rated speed the curve is concave and the bias changes sign.
+
+The typical architecture of short-term forecasting has two stages:
+\begin{enumerate}
+  \item \textbf{Weather forecast}: global or regional NWP models provide wind
+    at several heights, direction, temperature and pressure. AI-based weather
+    models (such as GraphCast, GenCast and Aurora) have come to compete with
+    physical NWP on several metrics, at a much lower computational cost.
+  \item \textbf{Conversion model}: an ML model (usually gradient boosting or
+    neural networks) learns the relationship between the forecast weather
+    and the measured power of the farm. This model corrects NWP biases, wake
+    effects, unavailability and losses.
+\end{enumerate}
+
+ONS developed its own wind forecasting model, aimed at the Northeast and
+South regions, to reduce the need for power reserve~\cite{onseolico}.
+
+\begin{nota}
+\textbf{Caution with curtailment.} When the operator restricts the generation
+of a farm (in Brazil, the so-called \textit{constrained-off}, which has
+become relevant for wind and solar plants in the Northeast), the measured
+power no longer reflects the available resource. A model trained on these
+data without filtering them underestimates generation. The periods of
+restriction need to be flagged and excluded, or the \emph{available} power
+modeled instead of the \emph{delivered} power.
+\end{nota}
+
+\subsection{Solar generation forecasting}
+
+The irradiance that reaches the surface is dominated by a deterministic
+component (the position of the sun) and a stochastic component (clouds and
+aerosols). The standard normalization is the \textbf{clear-sky index}:
+\begin{equation}
+  k^{\mathrm{cs}}_t = \frac{\mathrm{GHI}_t}{\mathrm{GHI}^{\mathrm{cs}}_t},
+\end{equation}
+where $\mathrm{GHI}^{\mathrm{cs}}$ is the global horizontal irradiance
+computed by a clear-sky model. Forecasting $k^{\mathrm{cs}}_t$ instead of GHI
+removes the astronomical seasonality and restricts the problem to the
+stochastic component: the clouds. The clear-sky index is not the clearness
+index, which divides GHI by the extraterrestrial irradiance and is usually
+written $k_t$.
+
+The denominator tends to zero at sunrise and sunset, and the ratio amplifies
+the measurement error at those times. For this reason the index is computed
+and evaluated only above a minimum solar elevation (of the order of
+$5^\circ$). The index also exceeds 1 in episodes of reflection at cloud
+edges.
+
+The data sources and models vary with the horizon:
+\begin{itemize}
+  \item \textbf{minutes}: all-sky imagers and CNNs that estimate cloud
+    motion;
+  \item \textbf{up to 6 hours}: geostationary satellite images (in Brazil,
+    GOES-East) and video/spatiotemporal models (ConvLSTM, U-Net);
+  \item \textbf{day ahead and beyond}: NWP as input to ML models.
+\end{itemize}
+
+The conversion from irradiance to power involves module temperature
+(efficiency falls with heat), orientation, shading, soiling and the inverter
+power limit (clipping). A Brazilian study uses LSTM for hourly forecasting of
+photovoltaic generation~\cite{pvlstm}.
+
+\subsection{Price forecasting}
+
+In bid-based markets (Europe, USA), deep networks are among the methods with
+the lowest reported error for day-ahead price forecasting. Brazil is
+different: the Settlement Price for Differences (PLD, \textit{Preço de
+Liquidação das Diferenças}) does not result from bids; it is computed by CCEE
+from the chain of hydrothermal optimization models (NEWAVE, DECOMP and
+DESSEM, developed by CEPEL). Since 2021 the PLD has been hourly and computed
+by DESSEM.
+
+This opens two ML strategies:
+\begin{enumerate}
+  \item \textbf{Direct PLD forecasting} from variables such as inflows,
+    storage, load and forecast renewable generation;
+  \item \textbf{Emulation of the official models} (surrogate modeling):
+    training a network to approximate the output of DESSEM/DECOMP as a
+    function of the inputs, which allows thousands of scenarios to be run in
+    seconds. It is useful for the risk analysis of trading companies.
+\end{enumerate}
+
+\subsection{Model families}
+
+\begin{table}[h]
+\small
+\caption{Model families for forecasting in energy.}
+\begin{tabelalarga}
+\begin{tabularx}{\linewidth}{l L L}
+\toprule
+\textbf{Family} & \textbf{Strengths} & \textbf{Limitations} \\
+\midrule
+Statistical (ARIMA, ETS, regression) & interpretable, low cost, suitable as
+  baselines & capture nonlinearities and many covariates poorly \\
+Gradient boosting (XGBoost, LightGBM) & good performance on tabular data
+  with rich covariates; widely used in industry & requires feature
+  engineering (lags, windows) \\
+RNN (LSTM, GRU) & model temporal dependence directly & slower training; do
+  not consistently outperform GBM \\
+Temporal CNNs (TCN) & parallelizable, long receptive field & less used with
+  future covariates \\
+N-BEATS, N-HiTS & deep MLPs with interpretable decomposition & univariate in
+  the original form \\
+Transformers (TFT, PatchTST) & heterogeneous covariates, multiple horizons,
+  quantiles (TFT)~\cite{tft} & require more data and tuning \\
+Foundation models (Chronos, TimesFM, Moirai) & zero-shot forecasting without
+  local training~\cite{chronos,timesfm} & limited covariate support;
+  inference cost \\
+\bottomrule
+\end{tabularx}
+\end{tabelalarga}
+\end{table}
+
+\paragraph{Time series foundation models.} These are models pretrained on
+large collections of heterogeneous time series, able to forecast unseen
+series without retraining. The line started with TimeGPT (2023) and continued
+with Lag-Llama, Chronos, TimesFM and, more recently, Sundial and
+Kairos~\cite{fmreview}. Results from 2025--2026 in energy:
+\begin{itemize}
+  \item in load benchmarks at several grid levels, time series Transformers
+    outperformed the established methods~\cite{loadbenchmark};
+  \item foundation models run on consumer hardware with good zero-shot
+    performance, but with sensitivity to context length and to distribution
+    shift~\cite{tsfmconsumer};
+  \item the incorporation of covariates (weather, calendar) improves the
+    performance of the models and allows the forecasts to be
+    explained~\cite{tsfmxai};
+  \item at low voltage, where the series are noisy and short, the models
+    were applied to probabilistic peak forecasting~\cite{lvpeak};
+  \item energy-specific models, such as GridFM, jointly forecast load,
+    price, emissions and renewables, incorporating physical
+    constraints~\cite{gridfm}.
+\end{itemize}
+The main practical benefit is the \textbf{cold start}: new farms, new
+feeders or new customers receive forecasts on the first day, before there is
+history to train a dedicated model.
+
+\subsection{Evaluation}
+
+\paragraph{Metrics.}
+\begin{itemize}
+  \item \textbf{MAE, RMSE}: in the unit of the variable; the RMSE penalizes
+    large errors more, which matters for ramps.
+  \item \textbf{MAPE}: popular for load, but \emph{unsuitable for solar},
+    which is zero at night (division by zero) and has small values at the
+    start and end of the day. For renewables, the error normalized by
+    installed capacity is used (nMAE, nRMSE).
+  \item \textbf{Skill score}: relative gain over a naive reference
+    (persistence or climatology),
+    $\mathrm{SS} = 1 - \mathrm{RMSE}_{\text{model}}/\mathrm{RMSE}_{\text{ref}}$.
+    Without this comparison, absolute error numbers are not very
+    informative.
+  \item \textbf{Probabilistic}: pinball loss, CRPS, coverage and width of
+    the intervals (calibration and sharpness).
+  \item \textbf{Value metrics}: avoided imbalance cost, saved reserve,
+    additional revenue. These are the metrics that matter to the business.
+\end{itemize}
+
+\paragraph{Validation.} Two common errors artificially inflate the results:
+\begin{enumerate}
+  \item \textbf{Random cross-validation} on time series leaks the future
+    into training. The appropriate procedure is backtesting with a rolling
+    origin, which respects temporal order.
+  \item \textbf{Covariate leakage}: using the \emph{observed} weather in
+    place of the \emph{forecast} available at decision time. In production
+    only the forecast exists, issued at a specific time. Training needs to
+    reproduce what would have been available at each moment.
+\end{enumerate}
+
+\subsection{Challenges}
+\begin{itemize}
+  \item \textbf{Extreme events}: heat waves, storms and blackouts are rare
+    in the history and are the ones with the largest consequences.
+  \item \textbf{Structural changes}: growth of MMGD, electrification, changes
+    in habits. Models need drift monitoring and continuous retraining.
+  \item \textbf{Data quality}: missing measurements, telemetry errors,
+    unflagged curtailment.
+  \item \textbf{User trust}: the operator needs to understand why the
+    forecast changed. Explainability (covariate importance, decomposition)
+    is a requirement.
+\end{itemize}
+
+\visaoproduto{Forecasting platform for renewables and load}
+
+\paragraph{Problem.}
+Wind and solar generators are exposed to imbalance penalties, curtailment and
+the short-term price. Trading companies need reliable forecasts to contract.
+Distribution utilities and large consumers have an increasingly uncertain
+net load because of MMGD. Many of these agents use spreadsheets, generic
+forecasts from foreign vendors or persistence.
+
+\paragraph{Users and personas.}
+\begin{itemize}
+  \item \textbf{Commercial operations analyst of a generator}: needs the
+    generation forecast per farm for scheduling and for declarations to the
+    operator.
+  \item \textbf{Trader at a trading company}: needs forecasts of aggregate
+    generation, load and PLD, with uncertainty, to decide positions.
+  \item \textbf{Distribution utility planner}: needs the load per
+    substation/feeder and the MMGD per region.
+\end{itemize}
+
+\paragraph{Value proposition.}
+Probabilistic forecasts per asset, with horizons from minutes to 15 days,
+available through an API and a dashboard, calibrated for the Brazilian
+context (NWP and satellite over the territory, national calendar, curtailment
+flagging), with a measured gain over the reference that the customer already
+uses.
+
+\paragraph{MVP scope.}
+\begin{enumerate}
+  \item Day-ahead and intraday forecasting of wind and solar generation for
+    farms with available telemetry.
+  \item Quantiles (P10, P50, P90), not only a point value.
+  \item Dashboard with a daily comparison of forecast versus actual and
+    skill score against persistence.
+  \item REST API for integration with the customer's systems.
+  \item Onboarding of new farms with a zero-shot foundation model, replaced
+    by a fitted model once there is history.
+\end{enumerate}
+
+\paragraph{Evolution (roadmap).}
+\begin{itemize}
+  \item \textbf{V2}: nowcasting with satellite images (0--6\,h); automatic
+    detection of curtailment and unavailability.
+  \item \textbf{V3}: forecasting of PLD and of load per submarket; joint
+    scenarios (generation, load, price) for risk analysis.
+  \item \textbf{V4}: optimization of bids and of battery dispatch coupled to
+    the forecasts (from forecast to decision).
+\end{itemize}
+
+\paragraph{Reference architecture.}
+\begin{itemize}
+  \item \textbf{Ingestion}: NWP (multiple providers), satellite, SCADA
+    telemetry of the farms, open data from ONS and CCEE.
+  \item \textbf{Feature store} with temporal versioning (``what was known at
+    each instant'') to avoid leakage.
+  \item \textbf{Training} per asset or global (one model for several farms),
+    with automatic selection by backtesting.
+  \item \textbf{Inference service} scheduled according to the arrival of
+    each NWP run.
+  \item \textbf{Monitoring} of error in production, drift and alerts for
+    missing data.
+\end{itemize}
+
+\paragraph{Success metrics.}
+\begin{itemize}
+  \item Technical: nMAE and CRPS per asset; skill score over persistence and
+    over the customer's current vendor.
+  \item Business: reduction in imbalance cost (R\$/MWh), additional revenue,
+    analyst hours saved.
+  \item Product: onboarding time for a new farm, API availability, customer
+    retention.
+\end{itemize}
+
+\paragraph{Business model.}
+Subscription per monitored MW or per asset, with tiers (day ahead; intraday;
+nowcasting; price). A free or low-cost pilot in shadow mode, compared with
+the customer's current forecast, is the main sales instrument: the gain
+appears in the customer's own numbers.
+
+\paragraph{Risks.}
+\begin{itemize}
+  \item Dependence on third-party NWP (cost, availability, version changes
+    that alter the input distribution).
+  \item Access to the customer's telemetry (bureaucracy, information
+    security).
+  \item A market with established international competitors; differentiation
+    needs to come from local accuracy and integration with the Brazilian
+    regulatory context.
+\end{itemize}
+
+% ===========================================================================
+\section{Grid operation and optimization}
+% ===========================================================================
+
+\subsection{Context}
+
+Operating a power system in real time involves repeatedly solving analysis
+and optimization problems:
+\begin{itemize}
+  \item \textbf{Power flow}: given the state of generation and load, compute
+    voltages and flows across the whole grid;
+  \item \textbf{Contingency analysis}: check whether the system remains
+    secure after the loss of any element ($N-1$ criterion), which requires
+    thousands of power flows;
+  \item \textbf{Optimal power flow (OPF)}: choose the lowest-cost dispatch
+    that respects all physical limits;
+  \item \textbf{State estimation}: reconstruct the most likely state of the
+    grid from noisy and incomplete measurements;
+  \item \textbf{Control}: voltage and reactive power, redispatch, switching
+    (topology), batteries.
+\end{itemize}
+
+With more renewables, these problems need to be solved more often, for more
+scenarios and with more uncertainty. Classical solvers are reliable, but the
+computational cost grows rapidly with the size of the grid and the number of
+scenarios. ML enters here mainly as an \textbf{accelerator} and as
+\textbf{decision support}, not as a substitute for the physical methods.
+
+\subsection{Formulation: AC power flow}
+
+For each bus $i$ of the grid, the active and reactive power injections are
+\begin{align}
+  P_i &= \sum_{j} |V_i||V_j| \big(G_{ij}\cos\theta_{ij} + B_{ij}\sin\theta_{ij}\big), \\
+  Q_i &= \sum_{j} |V_i||V_j| \big(G_{ij}\sin\theta_{ij} - B_{ij}\cos\theta_{ij}\big),
+\end{align}
+where $V_i$ is the voltage phasor, $\theta_{ij} = \theta_i - \theta_j$ and
+$G_{ij} + jB_{ij}$ are the elements of the nodal admittance matrix. The
+system is nonlinear and is solved by Newton--Raphson.
+
+The OPF adds an objective function and constraints:
+\begin{equation}
+\begin{aligned}
+  \min_{p, q, |V|, \theta} \quad & \sum_{g} c_g(p_g) \\
+  \text{s.t.} \quad
+  & P_i = \sum_{g \in \mathcal{G}_i} p_g - P^{d}_i, \qquad
+    Q_i = \sum_{g \in \mathcal{G}_i} q_g - Q^{d}_i, \\
+  & V_i^{\min} \le |V_i| \le V_i^{\max}, \\
+  & p_g^{\min} \le p_g \le p_g^{\max}, \qquad
+    q_g^{\min} \le q_g \le q_g^{\max}, \\
+  & |S_{ij}| \le S_{ij}^{\max}, \qquad |S_{ji}| \le S_{ij}^{\max}, \\
+  & \theta_{\mathrm{ref}} = 0.
+\end{aligned}
+\end{equation}
+Here $p_g$ and $q_g$ are the active and reactive power of generator $g$,
+$\mathcal{G}_i$ is the set of generators at bus $i$, $P^{d}_i$ and $Q^{d}_i$
+are the load at the bus, and $P_i$ and $Q_i$ are the injections of the power
+flow equations. The flow limit applies at both terminals of the line,
+because losses make $|S_{ij}| \ne |S_{ji}|$, and the reference bus fixes the
+origin of the angles. The problem is nonconvex and, in large systems with
+security constraints, costly to solve within real-time deadlines.
+
+\subsection{Graph neural networks (GNNs)}
+
+A power grid can be represented as a graph: buses are nodes, lines and
+transformers are edges. GNNs process this type of data by message passing:
+\begin{equation}
+  \mathbf{h}_i^{(k+1)} = \phi\Big(\mathbf{h}_i^{(k)},\;
+  \bigoplus_{j \in \mathcal{N}(i)} \psi\big(\mathbf{h}_i^{(k)}, \mathbf{h}_j^{(k)}, \mathbf{e}_{ij}\big)\Big),
+\end{equation}
+where $\mathbf{h}_i$ is the representation of bus $i$ (load, generation,
+type), $\mathbf{e}_{ij}$ are attributes of the line (impedance, limit) and
+$\bigoplus$ is a permutation-invariant aggregation (sum, mean). After $K$
+layers, the representation of each bus incorporates its $K$-hop
+neighborhood.
+
+This structure brings two advantages over MLPs that receive a fixed vector:
+\begin{enumerate}
+  \item \textbf{Topological generalization}: the same GNN accepts as input
+    the grid without a line or with the topology changed, because the
+    parameters are shared among nodes and edges.
+  \item \textbf{Scalability}: the cost grows with the number of edges, and
+    models trained on smaller grids can be applied to larger grids.
+\end{enumerate}
+
+Accepting the input does not guarantee a correct output. Power flow is a
+global problem: in the linear approximation, the voltages are
+$\mathbf{V} = \mathbf{Y}^{-1}\mathbf{I}$, and $\mathbf{Y}^{-1}$ is dense even
+when $\mathbf{Y}$ is sparse, so the voltage at one bus depends on the
+injections of the whole grid. A GNN with $K$ smaller than the diameter of
+the graph does not represent this dependence. Two limits to the advantages
+above follow from this: the outage of a line redistributes flow beyond the
+$K$ hops, and a larger grid has a larger diameter, which requires more
+layers or global aggregation. The error under these two conditions is
+measured by testing with topologies and sizes outside the training set.
+
+\paragraph{Main applications.}
+\begin{itemize}
+  \item \textbf{Power flow surrogate}: predicting voltages and flows
+    directly, in milliseconds, for fast contingency screening. A recent
+    study reports GNNs that scale to larger systems with a computation time
+    lower than that of traditional solvers~\cite{gnnpf}.
+  \item \textbf{OPF warm start}: the GNN provides an initial point close to
+    the solution, and the classical solver converges in fewer iterations,
+    which preserves the feasibility guarantee~\cite{gnnopfinit}.
+  \item \textbf{Network reconfiguration}: predicting the topology before the
+    optimization stage, which reduces the combinatorial search
+    space~\cite{gnnreconf}.
+\end{itemize}
+
+\subsection{Learning to optimize and the feasibility problem}
+
+Training a network to map inputs (load, costs) directly to OPF solutions
+(optimization proxies) has a limitation: the network does not guarantee that
+the solution respects the constraints. A violation of a thermal or voltage
+limit is not a ``small error''; it is an unacceptable solution. The main
+strategies are:
+\begin{itemize}
+  \item \textbf{Penalization} of the violations in the loss function (low
+    implementation cost, no guarantee);
+  \item \textbf{Lagrangian duality} during training, adjusting the weights of
+    the constraints;
+  \item \textbf{Correction and completion}: the network predicts part of the
+    variables and the others are obtained by solving the equalities,
+    followed by correction steps for the inequalities (as in
+    DC3~\cite{dc3});
+  \item \textbf{Projection} of the output onto the feasible set, or use of
+    the prediction only as a warm start for an exact solver.
+\end{itemize}
+In industrial practice, the most accepted approach is the last one: ML
+accelerates, the solver certifies.
+
+\subsection{Reinforcement learning (RL)}
+
+Sequential control problems, such as deciding switching actions, redispatch
+or battery cycles over time, can be formulated as Markov decision processes.
+The agent observes the state $s_t$ (flows, voltages, forecasts), chooses an
+action $a_t$ and receives a reward $r_t$ (avoided cost, security margin). The
+objective is
+\begin{equation}
+  \max_\pi \; \mathbb{E}_\pi\Big[\sum_{t=0}^{T} \gamma^t r(s_t, a_t)\Big].
+\end{equation}
+
+\paragraph{Topology control.} The \textit{Learning to Run a Power Network}
+(L2RPN) competition, organized by RTE (the French operator), popularized the
+use of RL to keep the grid operating through topology changes in
+substations, redispatch and curtailment~\cite{l2rpn}. Agents that combine
+GNNs with RL (graph RL), sometimes pretrained by imitation learning and then
+refined with PPO, were proposed to handle topology changes caused by extreme
+weather or maintenance~\cite{graphrlsurvey,ppognn}.
+
+\paragraph{Batteries and microgrids.} RL is used to decide when to charge
+and discharge batteries considering price, generation forecast and
+degradation. PINN-based surrogates allow agents to be trained without
+interacting with the real system~\cite{rlpinn}.
+
+\paragraph{Safe RL.} In physical systems, exploring bad actions has a real
+cost. The standard formulation is the constrained MDP:
+\begin{equation}
+  \max_\pi \; \mathbb{E}_\pi\Big[\sum_t \gamma^t r_t\Big]
+  \quad \text{s.t.} \quad
+  \mathbb{E}_\pi\Big[\sum_t \gamma^t c_t\Big] \le d,
+\end{equation}
+where $c_t$ measures violations (overload, undervoltage). The constraint
+holds in expectation and with discounting: a policy satisfies it even with
+occasional overloads, as long as the discounted mean stays below $d$. A
+physical limit calls for a per-instant constraint, in chance form,
+\begin{equation}
+  \Pr\big(c_t > 0\big) \le \epsilon \quad \text{for all } t,
+\end{equation}
+or a constraint on the tail of the cost distribution (CVaR). Other
+techniques include shielding (a module checks and blocks dangerous actions
+before execution) and offline training from historical operator
+data~\cite{saferl}.
+
+\subsection{Physics-informed neural networks (PINNs)}
+
+PINNs incorporate physical equations into the loss function:
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\text{data}} + \lambda\, \mathcal{L}_{\text{physics}},
+\end{equation}
+where $\mathcal{L}_{\text{physics}}$ penalizes the residual of the equations
+(for example, of the power flow equations or of the differential equations
+of machine dynamics)~\cite{pinn}. The reported benefits are a lower need for
+labeled data, closer adherence to physical laws and better extrapolation.
+PINNs are used in state estimation, transient stability analysis and as
+simulators for training RL agents.
+
+\subsection{Challenges}
+\begin{itemize}
+  \item \textbf{Certification and liability}: operators and regulators
+    require guarantees; a model that is correct in 99.9\% of the cases can
+    still fail in the critical contingency. In a sweep of \num{5000}
+    contingencies with independent errors, the probability of at least one
+    error is $1 - 0.999^{5000} \approx 99.3\%$.
+  \item \textbf{Generalization}: the real grid changes (new lines, new
+    plants), and models trained on past scenarios may not cover future
+    situations~\cite{gridgeneralization}.
+  \item \textbf{Integration with legacy EMS}: energy management systems are
+    critical, closed and have long update cycles.
+  \item \textbf{Data}: detailed grid models and operational data are
+    sensitive; research depends heavily on synthetic test systems (IEEE,
+    PGLib).
+  \item \textbf{Human factor}: full autonomy is not realistic in the short
+    term. The viable role is that of a copilot for the operator.
+\end{itemize}
+
+\visaoproduto{Grid operation copilot}
+
+\paragraph{Problem.}
+Control center operators (in transmission or distribution) need to make fast
+decisions in the face of a growing number of scenarios: renewable
+variability, curtailment, contingencies, transmission constraints. The
+analysis tools are slow for exploring many alternatives in real time, and
+the experience of senior operators is not codified.
+
+\paragraph{Users and personas.}
+\begin{itemize}
+  \item \textbf{Real-time operator} of a transmission company or of the
+    distribution operation center (COD);
+  \item \textbf{Electrical studies engineer} who prepares the operation of
+    the following day;
+  \item \textbf{Operator of renewable farms and batteries} who needs to
+    decide dispatch and storage.
+\end{itemize}
+
+\paragraph{Value proposition.}
+Contingency screening and recommendation of corrective actions in seconds,
+with each recommendation verified by a physical solver before it is
+presented. The operator remains in command; the system increases the number
+of scenarios the operator can evaluate.
+
+\paragraph{MVP scope.}
+\begin{enumerate}
+  \item GNN-based power flow surrogate, trained on simulations of the
+    customer's grid model.
+  \item Fast screening of $N-1$ contingencies for the next intervals, using
+    load and renewable forecasts, with the critical cases confirmed by a
+    full power flow.
+  \item ``Hot spot'' dashboard: which lines and buses are at risk and when.
+  \item Operation in \textbf{shadow mode}: the system runs in parallel,
+    without acting, and the recommendations are recorded against the actual
+    decisions.
+\end{enumerate}
+
+\paragraph{Evolution (roadmap).}
+\begin{itemize}
+  \item \textbf{V2}: recommendation of corrective actions (redispatch,
+    switching), ranked and verified by the solver.
+  \item \textbf{V3}: RL agent trained on historical decisions and in
+    simulation, suggesting sequences of actions with security constraints.
+  \item \textbf{V4}: coordinated optimization of batteries and curtailment
+    in real time for hybrid farms.
+\end{itemize}
+
+\paragraph{Reference architecture.}
+\begin{itemize}
+  \item \textbf{Digital twin} of the grid (electrical model synchronized
+    with the current topology).
+  \item \textbf{Scenario generator} to create synthetic training data from
+    the physical solver.
+  \item \textbf{Models}: power flow GNN; contingency ranker; RL policy with
+    a shield.
+  \item \textbf{Verification layer}: every output passes through the solver
+    before reaching the operator.
+  \item \textbf{Integration} with SCADA/EMS through standard protocols (such
+    as ICCP and CIM), in read-only mode at first.
+\end{itemize}
+
+\paragraph{Success metrics.}
+\begin{itemize}
+  \item Technical: voltage and flow error of the surrogate; recall of
+    critical contingencies (missing a critical one is the unacceptable
+    error); speed-up relative to the solver.
+  \item Operational: reduction of avoidable curtailment, reduction of
+    violations, response time to events.
+  \item Adoption: percentage of recommendations accepted by the operators.
+\end{itemize}
+
+\paragraph{Business model.}
+Software license per control center, with a service for deploying and
+calibrating the digital twin. For transmission companies and distribution
+utilities, R\&D projects regulated by ANEEL are an entry route for pilots.
+
+\paragraph{Risks.}
+\begin{itemize}
+  \item Long sales cycle and risk aversion of the customers.
+  \item Access to the grid model and to operational data.
+  \item Cybersecurity requirements for any integration with control systems.
+  \item Liability in case of a wrong recommendation; the
+    ``human in control'' design and the physical verification mitigate it
+    but do not eliminate it.
+\end{itemize}
+
+% ===========================================================================
+\section{Fault detection, protection and predictive maintenance}
+% ===========================================================================
+
+\subsection{Context}
+
+Equipment failures cause supply interruptions, damage to costly assets and
+safety risks. In Brazil, ANEEL measures continuity of supply through
+collective indicators (DEC and FEC, the equivalent duration and frequency of
+interruption per consumer unit) and individual ones (DIC, FIC, DMIC), and
+the violation of the individual limits generates compensation paid to
+consumers. Reducing the frequency and duration of failures therefore has
+direct financial value.
+
+Maintenance evolves in four stages:
+\begin{enumerate}
+  \item \textbf{Corrective}: repair after failure;
+  \item \textbf{Preventive}: periodic interventions by calendar;
+  \item \textbf{Condition-based}: intervene when measured indicators exceed
+    limits;
+  \item \textbf{Predictive}: estimate when the failure is expected to occur
+    and act before it.
+\end{enumerate}
+ML enables the move from the third to the fourth stage at large scale.
+
+\subsection{Fault detection, classification and location}
+
+A fault (short circuit) on a line produces voltage and current transients
+recorded by digital relays and fault recorders. The analysis involves three
+tasks~\cite{faultsurvey}:
+\begin{itemize}
+  \item \textbf{Detection}: was there a fault?
+  \item \textbf{Classification}: of which type (phase-to-ground,
+    phase-to-phase, three-phase, etc.)?
+  \item \textbf{Location}: at what distance from the terminal?
+\end{itemize}
+
+\paragraph{Approaches.}
+\begin{itemize}
+  \item \textbf{Feature extraction + classifier}: wavelet or Fourier
+    transform of the signals, followed by SVM, trees or shallow networks.
+  \item \textbf{End-to-end learning}: 1D CNNs on the raw waveforms or 2D CNNs
+    on time-frequency representations (spectrograms, scalograms).
+  \item \textbf{PMU data}: synchronized phasor measurements at a high rate
+    allow oscillations and events to be detected across the whole grid;
+    spatiotemporal models (GNN + temporal networks) exploit the topology.
+  \item \textbf{Distribution grids}: location is harder because of the
+    branched radial topology and the lower level of instrumentation; ML
+    combines data from smart meters, customer calls and reclosers.
+\end{itemize}
+
+Real fault data are scarce. For this reason, the models are often trained on
+\textbf{electromagnetic transient simulations} (ATP/EMTP, PSCAD), which
+creates the gap between simulation and reality (sim-to-real), one of the
+main risks of these applications.
+
+\subsection{Predictive maintenance of assets}
+
+\paragraph{Power transformers.} They are among the most costly and critical
+assets. \textbf{Dissolved gas analysis} (DGA) of the insulating oil is the
+main diagnostic source: different types of internal fault (partial
+discharges, arcing, overheating) generate characteristic proportions of
+hydrogen, methane, ethylene, acetylene and other gases. Classical methods,
+such as the Duval triangle, are graphical rules; ML allows DGA to be
+combined with load history, temperature, age and tests to produce a health
+index and a failure probability.
+
+\paragraph{Wind turbines.} The SCADA systems of the turbines record, every
+10 minutes, dozens of variables (bearing and gearbox temperatures, power,
+wind, rotation). A widely used technique is the \textbf{normal behavior
+model}:
+\begin{enumerate}
+  \item a model is trained to predict one variable (for example, bearing
+    temperature) from the others, using only healthy periods;
+  \item in operation, the residual $r_t = y_t - \hat{y}_t$ is monitored;
+  \item a persistent deviation of the residual indicates degradation, often
+    weeks before the failure.
+\end{enumerate}
+A ``persistent deviation'' needs a defined statistic, because the threshold
+fixes the false alarm rate. A $3\sigma$ threshold applied to each sample,
+with a Gaussian and independent residual, fires on 0.27\% of the samples:
+0.39 false alarms per day per variable (144 samples of 10 minutes) and about
+390 per day in a fleet of 100 turbines with 10 monitored variables.
+Statistics that accumulate the deviation over time (CUSUM, EWMA) reduce this
+rate for the same detection power.
+High-frequency vibration sensors allow a finer diagnosis (bearings, gears)
+with CNNs on spectra.
+
+\paragraph{Photovoltaic plants.} Detection of underperforming strings by
+comparison with neighboring strings and with the expected irradiance;
+inverter failures; degradation and soiling (which also guides the cleaning
+schedule).
+
+\paragraph{Remaining useful life (RUL).} When there are enough failures in
+the history, the time to failure can be estimated with survival models (Cox,
+random survival forests, survival networks) or direct regression with
+recurrent networks. The result feeds the optimization of the maintenance
+plan, which weighs the cost of the intervention, the failure probability and
+the consequence.
+
+\subsection{Computer vision for inspection}
+
+\begin{itemize}
+  \item \textbf{Transmission and distribution lines}: detection of damaged
+    insulators, missing dampers, corrosion and nests in images from drones
+    and helicopters, with object detectors (YOLO family, DETR).
+  \item \textbf{Vegetation}: LiDAR point clouds and satellite images to
+    measure the distance between canopies and conductors and to prioritize
+    pruning; contact with vegetation is one of the main causes of failures
+    in distribution.
+  \item \textbf{Thermography}: hot spots in connections, switches and solar
+    panels.
+  \item \textbf{Electroluminescence}: microcracks in photovoltaic cells.
+\end{itemize}
+The gain is one of scale: an inspection that would require crews covering
+thousands of kilometers becomes an image screening problem, with humans
+reviewing only the flagged cases.
+
+\subsection{Data challenges}
+\begin{itemize}
+  \item \textbf{Extreme imbalance}: failures are rare. Overall accuracy is
+    not informative; precision, recall, the PR curve and the cost of false
+    positives (unnecessary visit) versus false negatives (unpredicted
+    failure) are used instead. Precision depends on the prevalence $\pi$:
+    \begin{equation}
+      \text{precision} = \frac{\pi\,\mathrm{TPR}}
+        {\pi\,\mathrm{TPR} + (1 - \pi)\,\mathrm{FPR}}.
+    \end{equation}
+    With $\pi = 1\%$, a recall (TPR) of 90\% and a false positive rate (FPR)
+    of 5\%, the precision is 15\%: of every 100 alerts, 85 are false.
+  \item \textbf{Poor labels}: work orders in free text, causes recorded
+    inconsistently. Natural language processing (today with LLMs) helps to
+    structure the maintenance history.
+  \item \textbf{Scattered data}: SCADA, maintenance systems, oil laboratory
+    and inspections in different systems, without a common key.
+  \item \textbf{Asset heterogeneity}: different manufacturers, models and
+    ages reduce the volume of comparable data. Transfer learning and
+    semi-supervised models help.
+\end{itemize}
+
+\visaoproduto{Asset health platform (APM)}
+
+\paragraph{Problem.}
+Transmission companies, distribution utilities and generators maintain large
+fleets of assets with maintenance plans based mainly on the calendar. This
+produces unnecessary maintenance on healthy assets and unexpected failures
+on degraded assets, with repair costs, lost revenue, continuity compensation
+and safety risk.
+
+\paragraph{Users and personas.}
+\begin{itemize}
+  \item \textbf{Maintenance engineer}: wants to know which assets need
+    attention and why;
+  \item \textbf{Asset manager}: wants to prioritize the maintenance and
+    replacement budget based on risk;
+  \item \textbf{Inspection crew}: wants prioritized routes and work orders.
+\end{itemize}
+
+\paragraph{Value proposition.}
+A health and risk index per asset, updated continuously, with the
+explanation of the signals behind it, integrated with the work order system.
+The decision moves from ``maintain everything every $N$ months'' to
+``maintain what is degrading, when it is degrading''.
+
+\paragraph{MVP scope.}
+Start with \textbf{one asset class} for which the data and the value are
+established:
+\begin{itemize}
+  \item \textbf{Option A (wind generation)}: normal behavior models on
+    turbine SCADA for gearbox, generator and bearings, with alerts and a
+    dashboard per farm;
+  \item \textbf{Option B (transmission/distribution)}: transformer health
+    index from DGA, loading, age and test history.
+\end{itemize}
+In both cases: ranking of assets by risk, explanation of the alerts and
+recording of the engineer's feedback (useful or false alert), which becomes
+a label for the next training cycle.
+
+\paragraph{Evolution (roadmap).}
+\begin{itemize}
+  \item \textbf{V2}: computer vision module for drone inspection (lines,
+    substations, solar panels).
+  \item \textbf{V3}: estimation of remaining useful life and optimization of
+    the maintenance plan under budget and crew constraints.
+  \item \textbf{V4}: automatic analysis of fault records for fault
+    classification and location, integrated with restoration.
+\end{itemize}
+
+\paragraph{Reference architecture.}
+\begin{itemize}
+  \item \textbf{Ingestion} from SCADA/historians (such as PI), laboratory
+    reports, maintenance management systems and images.
+  \item \textbf{Unified asset register} (the key that links the data, in
+    practice the largest task of the project).
+  \item \textbf{Models} per asset class, with a common layer of alerts and
+    explainability.
+  \item \textbf{Workflow}: alert $\rightarrow$ engineer's analysis
+    $\rightarrow$ work order $\rightarrow$ inspection result
+    $\rightarrow$ label.
+\end{itemize}
+
+\paragraph{Success metrics.}
+\begin{itemize}
+  \item Technical: alert precision (proportion of confirmed alerts), mean
+    lead time between alert and failure, failure recall.
+  \item Operational: reduction of unscheduled failures, reduction of
+    unnecessary maintenance, improvement of DEC/FEC and reduction of
+    compensation.
+  \item Financial: maintenance cost per asset and generation availability.
+\end{itemize}
+
+\paragraph{Business model.}
+Subscription per monitored asset (per turbine, per transformer) plus a
+deployment service. Outcome-based contracts (part of the value tied to the
+reduction of failures) are possible when there is a defined baseline.
+
+\paragraph{Risks.}
+\begin{itemize}
+  \item \textbf{Alert fatigue}: many false positives lead users to ignore
+    the system. The precision of the alerts weighs more than their number.
+  \item Quality and integration of legacy data.
+  \item Competition from manufacturers (OEMs), which offer monitoring of
+    their own equipment; the differentiation is to be multi-vendor.
+\end{itemize}
+
+% ===========================================================================
+\section{Distribution and the end consumer}
+% ===========================================================================
+
+\subsection{Context}
+
+Distribution is the segment in which the transformation is most visible:
+MMGD grew after the legal framework for distributed generation (Law
+14.300/2022), smart metering is advancing, and new services (time-of-use
+tariffs, demand response, electric vehicles, a free market for smaller
+consumers) change the relationship with the consumer. At the same time, old
+problems, such as non-technical losses, continue to carry a large financial
+weight for Brazilian distribution utilities.
+
+\subsection{Non-technical losses}
+
+\paragraph{The problem.} The losses of a distribution utility are the
+difference between the energy injected into the grid and the energy billed.
+Part of them are \emph{technical losses} (Joule effect in conductors and
+transformers); the remainder are \emph{non-technical losses}: theft (illegal
+connections), fraud (meter tampering), and metering and registration errors.
+In the tariff reviews, ANEEL defines regulatory loss levels that can be
+passed through to the tariff; whatever exceeds that level is a loss for the
+utility. In some concession areas, non-technical losses are a relevant
+fraction of the low-voltage market.
+
+\paragraph{Formulation as classification.} For each consumer unit $u$, the
+probability of irregularity
+$p_u = P(\text{irregular} \mid \mathbf{x}_u)$ is estimated from attributes
+such as:
+\begin{itemize}
+  \item \textbf{consumption profile}: abrupt drops, zero consumption, low
+    variance, deviation from neighbors with the same profile;
+  \item \textbf{history}: previous inspections, confirmed irregularities,
+    meter replacements, complaints;
+  \item \textbf{registration}: class, activity, declared load, meter type;
+  \item \textbf{spatial context}: irregularity rate in the neighborhood and
+    at the transformer;
+  \item \textbf{energy balance}: when there is metering at the transformer,
+    \begin{equation}
+      E^{\text{NTL}}_{k} = E^{\text{transformer}}_{k} - \sum_{u \in k} E^{\text{metered}}_{u}
+      - \hat{E}^{\text{technical}}_{k},
+    \end{equation}
+    indicates how much is lost under each transformer $k$ and helps to
+    locate where to look. The balance is a small difference between large
+    terms, and its uncertainty adds those of the terms:
+    \begin{equation}
+      \sigma^2\big(E^{\text{NTL}}_{k}\big) = \sigma^2_{\text{transformer}}
+      + \sum_{u \in k} \sigma^2_{u} + \sigma^2_{\text{technical}}.
+    \end{equation}
+    The technical loss varies with the square of the current and depends on
+    the shape of the load curve, not only on the energy of the period. The
+    sum over $u \in k$ also assumes that the link between consumer and
+    transformer is correct.
+\end{itemize}
+The output is a prioritized list of inspection targets.
+
+\paragraph{Selection bias.} The labels come from inspections, and
+inspections are not random: historically, they were carried out where there
+was suspicion. The model therefore learns to reproduce the old selection
+criteria, and not necessarily to identify fraud~\cite{ntlreview}. In formal
+terms, training estimates
+$P(\text{irregular} \mid \mathbf{x}_u, \text{inspected})$, which equals $p_u$
+only if, given $\mathbf{x}_u$, the choice of whom to inspect does not depend
+on the irregularity. Mitigations:
+\begin{itemize}
+  \item reserving part of the inspections for random or exploratory sampling
+    (the exploration--exploitation balance);
+  \item learning from positive and unlabeled examples (PU learning), treating
+    the uninspected units as unlabeled and not as regular. The standard form
+    of the method assumes that the labeled positives are a random sample of
+    the positives, which selection by suspicion violates; the applicable
+    variant models the probability of inspection as a function of
+    $\mathbf{x}_u$ and weights the examples by it;
+  \item unsupervised anomaly detection models as a complement.
+\end{itemize}
+
+\paragraph{Metrics.} Because inspection capacity is limited, the relevant
+metrics are the \textbf{hit rate at the top of the list} (precision at $k$)
+and the \textbf{energy recovered per inspection}, and not global metrics
+such as AUC. The two metrics call for different orderings. Precision at $k$
+is maximized by ordering by $p_u$; the energy recovered is maximized by
+ordering by the expected value $p_u\,\hat{E}_u$, where $\hat{E}_u$ is the
+estimated recoverable energy of the unit. The second ordering requires a
+calibrated $p_u$, because the product uses the value of the probability and
+not only its rank.
+
+\subsection{Load disaggregation (NILM)}
+
+Non-intrusive load monitoring estimates the consumption of each appliance
+from a single aggregate measurement~\cite{hart}:
+\begin{equation}
+  P(t) = \sum_{i=1}^{N} p_i(t) + \varepsilon(t).
+\end{equation}
+It is an ill-posed source separation problem: many combinations of
+appliances explain the same aggregate.
+
+\paragraph{Methods.}
+\begin{itemize}
+  \item \textbf{Classical}: event detection (power steps) and factorial
+    hidden Markov models.
+  \item \textbf{Deep learning}: networks that map a window of the aggregate
+    to the consumption of one appliance, either the whole window (seq2seq)
+    or the central point (seq2point)~\cite{kelly,seq2point}. They are trained
+    on public datasets such as REDD and UK-DALE.
+\end{itemize}
+
+\paragraph{Practical limitation.} Quality depends strongly on the sampling
+rate. With meters that record every 15 minutes or 1 hour, only loads with
+high power and prolonged use can be identified (air conditioning, heater,
+electric vehicle charger). A high and short load is diluted in the interval
+mean: a 5\,kW electric shower switched on for 5 minutes appears as 1.67\,kW
+in a 15-minute window. Fine disaggregation requires data at a resolution of
+seconds or finer, obtained with additional devices.
+
+\subsection{Distribution grid with MMGD and electric vehicles}
+
+\begin{itemize}
+  \item \textbf{Low-voltage forecasting}: series per transformer or per
+    consumer are noisy and hard to forecast individually. Probabilistic peak
+    forecasting, including with foundation models, is an approach under
+    evaluation~\cite{lvpeak}.
+  \item \textbf{Hosting capacity}: how much MMGD or how many chargers a
+    feeder supports without violating voltage and loading limits. ML
+    surrogates accelerate studies that would require thousands of
+    simulations.
+  \item \textbf{Topology and phase identification}: records of which
+    consumer is on which transformer and phase are frequently wrong; the
+    correlation between voltage series from smart meters allows them to be
+    corrected.
+  \item \textbf{Detection of unregistered MMGD} from the consumption
+    profile.
+\end{itemize}
+
+\subsection{Demand response and efficiency}
+
+\begin{itemize}
+  \item \textbf{Time-of-use tariffs}: with the Tarifa Branca (the Brazilian
+    time-of-use tariff for low-voltage consumers) and, in the future, more
+    granular tariffs, the consumer needs to understand when to shift
+    consumption. Forecasting and recommendation models personalize this
+    guidance.
+  \item \textbf{Control of flexible loads}: air conditioning, water heating,
+    vehicle charging and batteries can be scheduled by model predictive
+    control (MPC) or RL to minimize cost while respecting comfort.
+  \item \textbf{Commercial buildings and industry}: consumption forecasting
+    and anomaly detection identify waste (equipment switched on outside
+    working hours, degradation of HVAC systems). The DeepMind case, with a
+    reduction of up to 40\% in the cooling energy of data centers,
+    illustrates the potential~\cite{deepmindcooling}.
+  \item \textbf{Customer segmentation}: clustering of load curves for tariff
+    design, efficiency campaigns and offers in the free market.
+\end{itemize}
+
+\subsection{Privacy and regulation}
+
+High-resolution consumption data reveal habits (schedules, presence,
+appliances). In Brazil, they are personal data under the LGPD (Law
+13.709/2018). This requires a legal basis for processing, minimization,
+transparency and security. Techniques such as aggregation, federated
+learning and differential privacy reduce the exposure. The rollout of smart
+metering in Brazil is also more gradual than in Europe, which limits the
+availability of high-resolution data at large scale.
+
+\visaoproduto{Loss and grid intelligence for distribution utilities}
+
+\paragraph{Problem.}
+Distribution utilities lose revenue to non-technical losses above the
+regulatory level and carry out inspections with a low hit rate. At the same
+time, they need to handle an increasingly complex low-voltage grid (MMGD,
+electric vehicles) with inaccurate records and little observability.
+
+\paragraph{Users and personas.}
+\begin{itemize}
+  \item \textbf{Energy recovery manager}: wants to maximize the energy
+    recovered with the available inspection budget;
+  \item \textbf{Field crew}: wants prioritized routes and targets, with
+    low-effort recording of the result;
+  \item \textbf{Distribution planning engineer}: wants to know where the
+    grid will saturate with MMGD and new loads.
+\end{itemize}
+
+\paragraph{Value proposition.}
+More energy recovered per inspection, with a prioritized and explained list
+of targets that improves at each cycle with the results of the inspections
+themselves. Afterwards, the same database supports the visibility of the
+low-voltage grid.
+
+\paragraph{MVP scope.}
+\begin{enumerate}
+  \item Model for prioritizing inspection targets with billing,
+    registration and inspection history data.
+  \item Explanation per target (why this customer was indicated).
+  \item Closed loop: the inspection result returns as a label; part of the
+    inspections is reserved for exploration, which corrects the selection
+    bias.
+  \item Results dashboard: hit rate and energy recovered compared with the
+    utility's current method (A/B test by region or by batch).
+\end{enumerate}
+
+\paragraph{Evolution (roadmap).}
+\begin{itemize}
+  \item \textbf{V2}: energy balance per transformer where there is metering,
+    combining location (where the loss occurs) with prioritization (whom to
+    investigate).
+  \item \textbf{V3}: correction of topology and phase records, detection of
+    unregistered MMGD, forecasting of transformer loading.
+  \item \textbf{V4}: hosting capacity studies and a consumer-facing product
+    (disaggregation, tariff and efficiency recommendations).
+\end{itemize}
+
+\paragraph{Reference architecture.}
+\begin{itemize}
+  \item \textbf{Ingestion} from the commercial system (billing,
+    registration), the work order management system, smart metering where
+    available, and georeferenced grid data.
+  \item \textbf{Prioritization engine} with supervised models (gradient
+    boosting is the standard) and an unsupervised anomaly component.
+  \item \textbf{Field application} to record inspection results in a
+    structured form.
+  \item \textbf{Data governance} in accordance with the LGPD (access
+    control, anonymization in aggregate analyses, record of processing).
+\end{itemize}
+
+\paragraph{Success metrics.}
+\begin{itemize}
+  \item Technical: precision at the top of the list; calibration of the
+    probabilities.
+  \item Business: energy recovered (MWh and R\$) per inspection; reduction
+    of the non-technical loss index; cost per productive inspection.
+  \item Adoption: percentage of inspections generated by the system;
+    percentage of results recorded.
+\end{itemize}
+
+\paragraph{Business model.}
+Subscription plus a variable component tied to the energy recovered (success
+fee). The gain is measurable in reais and appears early, which helps the
+sale. R\&D contracts regulated by ANEEL can also fund the grid modules that
+are still experimental.
+
+\paragraph{Risks.}
+\begin{itemize}
+  \item Label quality and selection bias; without an exploratory cycle the
+    model becomes self-referential.
+  \item Social and legal sensitivity: the indication of an irregularity
+    needs a fair procedure; the model prioritizes inspections and does not
+    constitute evidence.
+  \item Geographic or socioeconomic bias, which needs to be monitored to
+    avoid an unjustified concentration of inspections on certain groups.
+  \item Compliance with the LGPD and security of consumer data.
+\end{itemize}
+
+% ===========================================================================
+\section{Comparative summary}
+% ===========================================================================
+
+\begin{table}[h]
+\small
+\caption{Comparison of the four areas.}
+\begin{tabelalarga}
+\begin{tabularx}{\linewidth}{l L L L l}
+\toprule
+\textbf{Area} & \textbf{Core techniques} & \textbf{Product} &
+  \textbf{Main customer} & \textbf{Maturity} \\
+\midrule
+Forecasting & GBM, LSTM, Transformers, foundation models &
+  Forecasting platform & generators, trading companies, distribution
+  utilities & high \\
+Grid operation & GNN, PINN, safe RL & Operation copilot &
+  transmission companies, distribution utilities, renewable operators &
+  medium/low \\
+Faults and maintenance & CNN, normal behavior models, survival &
+  Asset health platform & generators, transmission companies, distribution
+  utilities & high \\
+Distribution and consumer & GBM, PU learning, NILM, MPC &
+  Loss and grid intelligence & distribution utilities & high (losses),
+  medium (grid) \\
+\bottomrule
+\end{tabularx}
+\end{tabelalarga}
+\end{table}
+
+\paragraph{Patterns common to the four areas.}
+\begin{enumerate}
+  \item \textbf{Data before models}: in all areas, the largest deployment
+    effort is integrating and cleaning data from legacy systems, not
+    training networks.
+  \item \textbf{Physics as an ally}: models that respect physical laws
+    (PINNs, verification by solver, normalizations such as the clear-sky
+    index) tend to generalize better and to be more readily accepted by
+    engineers.
+  \item \textbf{Human in control}: the products that are viable in the short
+    term support decisions instead of making them alone, and they learn
+    from user feedback.
+  \item \textbf{Shadow mode as a sales strategy}: running in parallel and
+    showing the gain with the customer's own data reduces the perceived
+    risk.
+  \item \textbf{Suggested order of entry}: forecasting and non-technical
+    losses have early and measurable value and serve as the entry point;
+    predictive maintenance comes next; the operation copilot is the bet
+    with the longest horizon and the highest barrier to entry.
+\end{enumerate}
+
+% ===========================================================================
+% References
+% ===========================================================================
+\begin{thebibliography}{99}
+\small
+
+\bibitem{energyinformatics2025}
+Machine learning applications in energy systems: current trends, challenges,
+and research directions. \textit{Energy Informatics}, 2025.
+\url{https://energyinformatics.springeropen.com/articles/10.1186/s42162-025-00524-6}
+
+\bibitem{trustworthy2024}
+Trustworthy artificial intelligence in the energy sector: landscape analysis
+and evaluation framework. arXiv:2412.07782, 2024.
+
+\bibitem{deepmindwind}
+DeepMind. Machine learning can boost the value of wind energy, 2019. Case
+summarized at
+\url{https://bestpractice.ai/ai-use-cases/case-studies/energy-utilities/deepmind-increases-value-of-wind-power-by-20-by-predicting-supply-36-hours-in-advance}
+
+\bibitem{deepmindcooling}
+DeepMind. DeepMind AI reduces Google data centre cooling bill by 40\%, 2016.
+\url{https://deepmind.google/blog/deepmind-ai-reduces-google-data-centre-cooling-bill-by-40/}
+
+\bibitem{onssolar}
+ONS. Avaliação e diagnóstico do sistema de previsão da irradiância solar e
+geração. Workshop presentation.
+\url{https://www.ons.org.br/AcervoDigitalDocumentosEPublicacoes/Apresentacao_Workshop.pdf}
+
+\bibitem{onseolico}
+Desenvolvimento e implantação no ONS de um modelo de previsão de geração
+eólica. ABEEólica.
+\url{https://abeeolica.org.br/wp-content/uploads/2017/07/Art.pdf}
+
+\bibitem{pvlstm}
+Previsão horária de geração fotovoltaica utilizando deep learning.
+\textit{Observatorio de la Economía Latinoamericana}.
+\url{https://ojs.observatoriolatinoamericano.com/ojs/index.php/olel/article/view/11654}
+
+\bibitem{tft}
+B.~Lim, S.~Ö.~Arık, N.~Loeff, T.~Pfister. Temporal Fusion Transformers for
+interpretable multi-horizon time series forecasting. \textit{International
+Journal of Forecasting}, 2021.
+
+\bibitem{chronos}
+A.~F.~Ansari et al. Chronos: learning the language of time series.
+\textit{Transactions on Machine Learning Research}, 2024.
+
+\bibitem{timesfm}
+A.~Das, W.~Kong, R.~Sen, Y.~Zhou. A decoder-only foundation model for
+time-series forecasting. \textit{ICML}, 2024.
+
+\bibitem{fmreview}
+Foundation models for clean energy forecasting: a comprehensive review.
+arXiv:2507.23147, 2025.
+
+\bibitem{loadbenchmark}
+A benchmark for electrical load forecasting across grid levels: time-series
+transformers outperform established methods. arXiv:2607.15705, 2026.
+
+\bibitem{tsfmconsumer}
+Time series foundation models for energy load forecasting on consumer
+hardware: a multi-dimensional zero-shot benchmark. arXiv:2602.10848, 2026.
+
+\bibitem{tsfmxai}
+Explainable load forecasting with covariate-informed time series foundation
+models. arXiv:2604.28149, 2026.
+
+\bibitem{lvpeak}
+Probabilistic low-voltage peak load forecasting with time series foundation
+models evaluated on application-oriented metrics. arXiv:2607.01966, 2026.
+
+\bibitem{gridfm}
+GridFM: a physics-informed foundation model for multi-task energy forecasting
+using real-time NYISO data. \textit{Energies}, 19(2):357, 2026.
+\url{https://doi.org/10.3390/en19020357}
+
+\bibitem{gnnpf}
+Graph neural networks for efficient AC power flow prediction in power grids.
+arXiv:2502.05702, 2025.
+
+\bibitem{gnnopfinit}
+Initial estimate of AC optimal power flow with graph neural networks.
+\textit{Electric Power Systems Research}, 2024.
+
+\bibitem{gnnreconf}
+Graph neural network-accelerated network-reconfigured optimal power flow.
+arXiv:2410.17460, 2024.
+
+\bibitem{dc3}
+P.~L.~Donti, D.~Rolnick, J.~Z.~Kolter. DC3: a learning method for optimization
+with hard constraints. \textit{ICLR}, 2021.
+
+\bibitem{l2rpn}
+A.~Marot et al. Learning to run a power network challenge for training
+topology controllers. \textit{Electric Power Systems Research}, 2020.
+
+\bibitem{graphrlsurvey}
+Graph reinforcement learning for power grids: a comprehensive survey.
+\textit{Energy and AI}, 2025.
+
+\bibitem{ppognn}
+Proximal policy optimization with graph neural networks for optimal power
+flow. arXiv:2212.12470, 2022.
+
+\bibitem{rlpinn}
+Optimizing energy management of smart grid using reinforcement learning aided
+by surrogate models built using physics-informed neural networks.
+arXiv:2510.17380, 2025.
+
+\bibitem{saferl}
+A review of safe reinforcement learning methods for modern power systems.
+arXiv:2407.00304, 2024.
+
+\bibitem{gridgeneralization}
+Towards systematic generalization for power grid optimization problems.
+arXiv:2605.02026, 2026.
+
+\bibitem{pinn}
+M.~Raissi, P.~Perdikaris, G.~E.~Karniadakis. Physics-informed neural
+networks. \textit{Journal of Computational Physics}, 378:686--707, 2019.
+
+\bibitem{faultsurvey}
+Survey on methods for detection, classification and location of faults in
+power systems using artificial intelligence. arXiv:2507.10011, 2025.
+
+\bibitem{ntlreview}
+P.~Glauner et al. The challenge of non-technical loss detection using
+artificial intelligence: a survey. \textit{International Journal of
+Computational Intelligence Systems}, 2017.
+
+\bibitem{hart}
+G.~W.~Hart. Nonintrusive appliance load monitoring. \textit{Proceedings of
+the IEEE}, 80(12):1870--1891, 1992.
+
+\bibitem{kelly}
+J.~Kelly, W.~Knottenbelt. Neural NILM: deep neural networks applied to energy
+disaggregation. \textit{ACM BuildSys}, 2015.
+
+\bibitem{seq2point}
+C.~Zhang, M.~Zhong, Z.~Wang, N.~Goddard, C.~Sutton. Sequence-to-point
+learning with neural networks for non-intrusive load monitoring.
+\textit{AAAI}, 2018.
+
+\end{thebibliography}
+
+\end{document}
